@@ -41,6 +41,6 @@
     - Follow the directory structure defined in `MainWindow::onShowUpdateCheck`.
   - Make `depends` source files [available](https://featherwallet.org/files/sources/):
     - `make -C contrib/depends download`
-- Announce release on social media (irc/Matrix, Twitter, Lemmy)
+- Announce release on irc/Matrix
 - Update websocket servers to notify clients of new release
   - Wait up to 7 days to allow for bug reports before major rollout
