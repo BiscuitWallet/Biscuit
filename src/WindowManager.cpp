@@ -480,8 +480,8 @@ void WindowManager::handleDeviceError(const QString &error, Utils::Message &msg)
         msg.helpItems = {"The device might be in use by a different application."};
 #if defined(Q_OS_LINUX)
         msg.helpItems.append("On Linux you may need to follow the instructions in the link below before the device can be opened:\n"
-                         "https://support.ledger.com/hc/en-us/articles/115005165269-Fix-connection-issues");
-        msg.link = "https://support.ledger.com/hc/en-us/articles/115005165269-Fix-connection-issues";
+                         "https://support.ledger.com/article/115005165269-zd");
+        msg.link = "https://support.ledger.com/article/115005165269-zd";
 #endif
     }
 
@@ -499,8 +499,8 @@ void WindowManager::handleDeviceError(const QString &error, Utils::Message &msg)
         msg.helpItems = {"Make sure the device is connected to your computer and unlocked."};
 #if defined(Q_OS_LINUX)
         msg.helpItems.append("On Linux you may need to follow the instructions in the link below before the device can be opened:\n"
-                         "https://wiki.trezor.io/Udev_rules");
-        msg.link = "https://wiki.trezor.io/Udev_rules";
+                         "https://trezor.io/guides/trezorctl/udev-rules");
+        msg.link = "https://trezor.io/guides/trezorctl/udev-rules";
 #endif
     }
     else if (error.contains("Failed to acquire device")) {
