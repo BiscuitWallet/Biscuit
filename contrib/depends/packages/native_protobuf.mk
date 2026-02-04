@@ -1,8 +1,8 @@
 package=native_protobuf
-$(package)_version=32.0
+$(package)_version=33.5
 $(package)_download_path=https://github.com/protocolbuffers/protobuf/releases/download/v$($(package)_version)
 $(package)_file_name=protobuf-$($(package)_version).tar.gz
-$(package)_sha256_hash=9dfdf08129f025a6c5802613b8ee1395044fecb71d38210ca59ecad283ef68bb
+$(package)_sha256_hash=c6c7c27fadc19d40ab2eaa23ff35debfe01f6494a8345559b9bb285ce4144dd1
 $(package)_dependencies=native_abseil
 
 define $(package)_set_vars
