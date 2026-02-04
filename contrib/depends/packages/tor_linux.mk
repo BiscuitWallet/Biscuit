@@ -1,8 +1,8 @@
 package=tor_linux
-$(package)_version=0.4.8.20
+$(package)_version=0.4.8.22
 $(package)_download_path=https://dist.torproject.org/
 $(package)_file_name=tor-$($(package)_version).tar.gz
-$(package)_sha256_hash=1bb22328cdd1ee948647bfced571efa78c12fc5064187b41d5254085b5282fa7
+$(package)_sha256_hash=c88620d9278a279e3d227ff60975b84aa41359211f8ecff686019923b9929332
 $(package)_dependencies=libevent openssl zlib
 
 define $(package)_set_vars
