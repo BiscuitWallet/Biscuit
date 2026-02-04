@@ -1,9 +1,8 @@
 package=boost
-$(package)_version=1.85.0
-$(package)_download_path=https://archives.boost.io/release/$($(package)_version)/source/
-$(package)_file_name=$(package)_$(subst .,_,$($(package)_version)).tar.gz
-$(package)_sha256_hash=be0d91732d5b0cc6fbb275c7939974457e79b54d6f07ce2e3dfdd68bef883b0b
-$(package)_patches=disable_addr2line.patch filesystem_macos_sdk.patch
+$(package)_version=1.90.0
+$(package)_download_path=https://github.com/boostorg/boost/releases/download/boost-$($(package)_version)
+$(package)_file_name=boost-$($(package)_version)-b2-nodocs.tar.gz
+$(package)_sha256_hash=e848446c6fec62d8a96b44ed7352238b3de040b8b9facd4d6963b32f541e00f5
 
 define $(package)_set_vars
 $(package)_config_opts=variant=release
@@ -28,8 +27,6 @@ $(package)_cxxflags_freebsd=-fPIC
 endef
 
 define $(package)_preprocess_cmds
-  patch -p1 -i $($(package)_patch_dir)/disable_addr2line.patch && \
-  patch -p1 -i $($(package)_patch_dir)/filesystem_macos_sdk.patch && \
   echo "using $(boost_toolset_$(host_os)) : : $($(package)_cxx) : <cxxflags>\"$($(package)_cxxflags) $($(package)_cppflags)\" <linkflags>\"$($(package)_ldflags)\" <archiver>\"$(boost_archiver_$(host_os))\" <arflags>\"$($(package)_arflags)\" <striper>\"$(host_STRIP)\"  <ranlib>\"$(host_RANLIB)\" <rc>\"$(host_WINDRES)\" : ;" > user-config.jam
 endef
 
