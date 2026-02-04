@@ -1,8 +1,8 @@
 package=native_wayland
-$(package)_version=1.23.1
-$(package)_download_path := https://gitlab.freedesktop.org/wayland/wayland/-/releases/$($(package)_version)/downloads/
-$(package)_file_name := wayland-$($(package)_version).tar.xz
-$(package)_sha256_hash := 864fb2a8399e2d0ec39d56e9d9b753c093775beadc6022ce81f441929a81e5ed
+$(package)_version=1.24.0
+$(package)_download_path := https://gitlab.freedesktop.org/wayland/wayland/-/archive/$($(package)_version)/
+$(package)_file_name := wayland-$($(package)_version).tar.gz
+$(package)_sha256_hash := 7800858844751fc7113d7df3678dc6b58b26a056176a65c49a059763045bffd5
 $(package)_dependencies := native_expat native_libffi
 
 define $(package)_config_cmds
