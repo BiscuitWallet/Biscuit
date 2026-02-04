@@ -1,8 +1,9 @@
 package=openssl
-$(package)_version=3.6.0
+$(package)_version=3.6.1
 $(package)_download_path=https://github.com/openssl/openssl/releases/download/openssl-$($(package)_version)
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=b6a5f44b7eb69e3fa35dbf15524405b44837a481d43d81daddde3ff21fcbb8e9
+$(package)_sha256_hash=b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e
+$(package)_patches=fix-mingw64.patch
 
 define $(package)_set_vars
 $(package)_config_env=AR="$($(package)_ar)" ARFLAGS=$($(package)_arflags) RANLIB="$($(package)_ranlib)" CC="$($(package)_cc)"
@@ -51,6 +52,7 @@ endef
 
 define $(package)_preprocess_cmds
   sed -i.old 's|crypto ssl apps util tools fuzz providers doc|crypto ssl util tools providers|' build.info &&\
+  patch -p1 < $($(package)_patch_dir)/fix-mingw64.patch && \
   rm -rf doc demos apps test
 endef
 
