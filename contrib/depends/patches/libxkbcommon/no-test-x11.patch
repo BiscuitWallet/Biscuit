@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index c044c099..c2ff2d3a 100644
+index 92483c54..651f7a60 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -917,30 +917,6 @@ test(
+@@ -1192,36 +1192,6 @@ test(
          dependencies: test_dep),
      env: test_env,
  )
@@ -25,7 +25,13 @@ index c044c099..c2ff2d3a 100644
 -    )
 -    test(
 -        'x11comp',
--        executable('test-x11comp', 'test/x11comp.c', dependencies: x11_xvfb_test_dep),
+-        executable(
+-            'test-x11comp',
+-            'test/x11comp.c',
+-            'test/utils-text.c',
+-            'test/utils-text.h',
+-            dependencies: x11_xvfb_test_dep
+-        ),
 -        env: test_env,
 -        is_parallel : false,
 -    )
@@ -33,7 +39,7 @@ index c044c099..c2ff2d3a 100644
  if get_option('enable-xkbregistry')
      test(
          'registry',
-@@ -1077,13 +1053,6 @@ benchmark(
+@@ -1365,13 +1335,6 @@ benchmark(
      executable('bench-atom', 'bench/atom.c', dependencies: test_dep),
      env: bench_env,
  )
