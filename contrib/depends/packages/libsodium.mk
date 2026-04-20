@@ -1,9 +1,9 @@
 package=libsodium
-$(package)_version=1.0.21
+$(package)_version=1.0.22
 $(package)_download_path=https://download.libsodium.org/libsodium/releases/
 $(package)_file_name=libsodium-$($(package)_version).tar.gz
-$(package)_sha256_hash=9e4285c7a419e82dedb0be63a72eea357d6943bc3e28e6735bf600dd4883feaf
-$(package)_patches=fix-aarch64.patch fix-blake2b-symbol-naming.patch
+$(package)_sha256_hash=adbdd8f16149e81ac6078a03aca6fc03b592b89ef7b5ed83841c086191be3349
+$(package)_patches=fix-blake2b-symbol-naming.patch
 
 define $(package)_set_vars
   $(package)_config_opts=--enable-static --disable-shared
@@ -13,8 +13,7 @@ endef
 define $(package)_preprocess_cmds
   rm -rf builds/msvc &&\
   cp -f $(BASEDIR)/config.guess $(BASEDIR)/config.sub build-aux/ && \
-  patch -p1 -i $($(package)_patch_dir)/fix-blake2b-symbol-naming.patch && \
-  patch -p1 -i $($(package)_patch_dir)/fix-aarch64.patch
+  patch -p1 -i $($(package)_patch_dir)/fix-blake2b-symbol-naming.patch
 endef
 
 define $(package)_config_cmds
