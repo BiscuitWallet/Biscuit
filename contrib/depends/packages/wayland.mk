@@ -1,8 +1,8 @@
 package=wayland
-$(package)_version=1.24.0
+$(package)_version=1.25.0
 $(package)_download_path := https://gitlab.freedesktop.org/wayland/wayland/-/archive/$($(package)_version)/
 $(package)_file_name := wayland-$($(package)_version).tar.gz
-$(package)_sha256_hash := 7800858844751fc7113d7df3678dc6b58b26a056176a65c49a059763045bffd5
+$(package)_sha256_hash := 95413723f6cd0462770eda207a1c78d142d0a1bba9b0572a4ed1da6a9b27059c
 $(package)_dependencies=native_wayland libffi expat
 $(package)_patches = toolchain.txt
 
