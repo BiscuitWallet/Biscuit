@@ -1,12 +1,17 @@
 package=zxing-cpp
-$(package)_version=2.3.0
-$(package)_download_path=https://github.com/$(package)/$(package)/archive/refs/tags
-$(package)_download_file=v$($(package)_version).tar.gz
+$(package)_version=3.0.2
+$(package)_download_path=https://github.com/zxing-cpp/zxing-cpp/releases/download/v$($(package)_version)
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=64e4139103fdbc57752698ee15b5f0b0f7af9a0331ecbdc492047e0772c417ba
+$(package)_sha256_hash=e957f13e2ad4e31badb3d9af3f6ba8999a3ca3c9cc4d6bafc98032f9cce1a090
 
 define $(package)_set_vars
-  $(package)_config_opts=-DBUILD_WRITERS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF
+  $(package)_config_opts += -DZXING_WRITERS=OFF
+  $(package)_config_opts += -DZXING_EXAMPLES=OFF
+  $(package)_config_opts += -DZXING_C_API=OFF
+  $(package)_config_opts += -DZXING_EXAMPLES_QT=OFF
+  $(package)_config_opts += -DZXING_BLACKBOX_TESTS=OFF
+  $(package)_config_opts += -DBUILD_SHARED_LIBS=OFF
+  $(package)_config_opts += -DZXING_TEST_DOTNET=OFF
 endef
 
 define $(package)_preprocess_cmds

@@ -3,7 +3,7 @@
 
 #include "QrCodeUtils.h"
 
-Result QrCodeUtils::ReadBarcode(const QImage& img, const ZXing::DecodeHints& hints)
+Result QrCodeUtils::ReadBarcode(const QImage& img, const ZXing::ReaderOptions& hints)
 {
     auto ImgFmtFromQImg = [](const QImage& img){
         switch (img.format()) {
@@ -50,7 +50,7 @@ Result QrCodeUtils::ReadBarcode(const QImage& img, const ZXing::DecodeHints& hin
 
 
 QString QrCodeUtils::scanImage(const QImage &img) {
-    const auto hints = ZXing::DecodeHints()
+    const auto hints = ZXing::ReaderOptions()
             .setFormats(ZXing::BarcodeFormat::QRCode | ZXing::BarcodeFormat::DataMatrix)
             .setTryHarder(true)
             .setBinarizer(ZXing::Binarizer::FixedThreshold);

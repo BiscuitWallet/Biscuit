@@ -27,7 +27,7 @@ private:
 class QrCodeUtils {
 public:
     static QString scanImage(const QImage &img);
-    static Result ReadBarcode(const QImage& img, const ZXing::DecodeHints& hints = { });
+    static Result ReadBarcode(const QImage& img, const ZXing::ReaderOptions& hints = { });
 };
 
 #endif //FEATHER_QRCODEUTILS_H

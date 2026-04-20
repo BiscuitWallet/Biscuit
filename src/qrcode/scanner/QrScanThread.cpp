@@ -15,7 +15,7 @@ QrScanThread::QrScanThread(QObject *parent)
 
 void QrScanThread::processQImage(const QImage &qimg)
 {
-    const auto hints = ZXing::DecodeHints()
+    const auto hints = ZXing::ReaderOptions()
             .setFormats(ZXing::BarcodeFormat::QRCode)
             .setTryHarder(true)
             .setMaxNumberOfSymbols(1);
