@@ -1,8 +1,8 @@
 package=libgpg-error
-$(package)_version=1.55
+$(package)_version=1.59
 $(package)_download_path=https://www.gnupg.org/ftp/gcrypt/libgpg-error/
 $(package)_file_name=libgpg-error-$($(package)_version).tar.gz
-$(package)_sha256_hash=bda09f51d7ed64565e41069d782bfcc4984aed908ae68bee01fb692b64ea96e2
+$(package)_sha256_hash=e14e36687fb2d63991007504ba228e94268be67b8445807e7d9fd2510daaf723
 $(package)_patches=no-programs.patch
 
 define $(package)_set_vars
