@@ -1,6 +1,7 @@
 name: ci/gh-actions/guix
 
-on: [push, pull_request]
+# Biscuit: reproducible release builds are heavy, run them manually only
+on: [workflow_dispatch]
 
 jobs:
   cache-sources:

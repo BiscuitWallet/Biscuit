@@ -31,6 +31,14 @@ Remarques :
 - Tor : Feather n'embarque pas Tor en build de développement. Pour tester l'option Tor,
   lancer `brew services start tor`, ou compiler avec `-DTOR_DIR=/chemin/vers/tor`.
 
+## Tests unitaires
+
+```bash
+cmake .. -DBUILD_TESTS=ON
+cmake --build . -j "$(sysctl -n hw.ncpu)"
+ctest --test-dir tests --output-on-failure
+```
+
 ## Linux
 
 À documenter (voir `HACKING.md` en attendant).

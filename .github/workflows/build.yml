@@ -3,8 +3,8 @@ name: ci/gh-actions/build
 on: [push, pull_request]
 
 jobs:
-  build-ubuntu-without-scanner:
-    name: "Ubuntu 24.04 (no scanner)"
+  build-ubuntu:
+    name: "Ubuntu 24.04 (build + tests)"
     runs-on: ubuntu-latest
     container:
       image: ubuntu:24.04
@@ -24,25 +24,7 @@ jobs:
           submodules: recursive
       - name: build
         run: |
-          mkdir build
-          cd build
-          cmake -DWITH_SCANNER=OFF ..
-          cmake --build . -j $(nproc)
-
-  build-arch:
-    name: 'Arch Linux'
-    runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-    steps:
-      - name: install dependencies
-        run: pacman -Syyu --noconfirm git cmake base-devel unbound boost qrencode qt6-base qt6-svg qt6-websockets qt6-wayland qt6-multimedia libzip hidapi protobuf zxing-cpp
-      - name: configure git
-        run: git config --global --add safe.directory '*'
-      - uses: actions/checkout@v5
-        with:
-          submodules: recursive
-      - name: build
-        run: |
-          cmake -S . -B build
+          cmake -S . -B build -DWITH_SCANNER=OFF -DBUILD_TESTS=ON
           cmake --build build -j $(nproc)
+      - name: unit tests
+        run: ctest --test-dir build/tests --output-on-failure

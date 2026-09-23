@@ -30,6 +30,7 @@ option(STACK_TRACE "Dump stack trace on crash (Linux only)" OFF)
 
 # Biscuit : les services en ligne de Feather (ws.featherwallet.org) sont coupés par défaut
 option(WITH_FEATHER_SERVICES "Allow connecting to the Feather websocket service" OFF)
+option(BUILD_TESTS "Build Biscuit unit tests" OFF)
 
 # internal configuration options
 option(TOR_INSTALLED "Is Tor installed on the filesystem?" OFF)
@@ -271,6 +272,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MINGW_FLAG} ${CXX_SECURITY_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${STATIC_FLAGS}")
 
 add_subdirectory(src)
+
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 configure_file("${CMAKE_SOURCE_DIR}/contrib/installers/windows/setup.nsi.in" "${CMAKE_SOURCE_DIR}/contrib/installers/windows/setup.nsi" @ONLY)
 
