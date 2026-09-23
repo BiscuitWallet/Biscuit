@@ -23,3 +23,8 @@ githash.txt
 
 # guix
 /guix
+
+# Biscuit : secrets partenaires (jamais dans le dépôt)
+/secrets/
+*.secrets
+secrets.cmake
