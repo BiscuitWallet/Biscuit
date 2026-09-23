@@ -266,7 +266,7 @@ void CoinsWidget::onSweepOutputs() {
             return;
         }
 #else
-        Utils::showError(this, "Can't open offline transaction signing wizard", "Feather was built without webcam QR scanner support");
+        Utils::showError(this, "Can't open offline transaction signing wizard", "Biscuit was built without webcam QR scanner support");
         return;
 #endif
     }

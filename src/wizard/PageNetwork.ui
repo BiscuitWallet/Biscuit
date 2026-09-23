@@ -41,7 +41,7 @@
      <item>
       <widget class="QLabel" name="label_4">
        <property name="text">
-        <string>Feather needs to connect to a node to obtain the data required to scan for your transactions.</string>
+        <string>Biscuit needs to connect to a node to obtain the data required to scan for your transactions.</string>
        </property>
        <property name="wordWrap">
         <bool>true</bool>
@@ -51,7 +51,7 @@
      <item>
       <widget class="QLabel" name="label_5">
        <property name="text">
-        <string>In most cases you want to let Feather pick one at random. Nodes are hosted by the developers and trusted members of the Monero community. </string>
+        <string>In most cases you want to let Biscuit pick one at random. Nodes are picked from a built-in list of public nodes run by trusted members of the Monero community. </string>
        </property>
        <property name="wordWrap">
         <bool>true</bool>
@@ -111,7 +111,7 @@
       <item>
        <widget class="QLabel" name="label_nodeDetected">
         <property name="text">
-         <string>Feather detected a local node on port 18081.</string>
+         <string>Biscuit detected a local node on port 18081.</string>
         </property>
        </widget>
       </item>

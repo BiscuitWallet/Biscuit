@@ -85,11 +85,11 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
 
     Application app(argc, argv);
 
-    QApplication::setApplicationName("FeatherWallet");
+    QApplication::setApplicationName("Biscuit");
     QApplication::setApplicationVersion(FEATHER_VERSION);
 
     QCommandLineParser parser;
-    parser.setApplicationDescription("Feather - a free Monero desktop wallet");
+    parser.setApplicationDescription("Biscuit - a light multi-coin desktop wallet based on Feather");
     QCommandLineOption helpOption = parser.addHelpOption();
     QCommandLineOption versionOption = parser.addVersionOption();
 
@@ -112,7 +112,7 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     }
 
     if (app.isAlreadyRunning()) {
-        qWarning() << "Another instance of Feather is already running";
+        qWarning() << "Another instance of Biscuit is already running";
         return EXIT_SUCCESS;
     }
 
@@ -148,7 +148,7 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     // Setup logging
     QString logPath = QString("%1/libwallet.log").arg(configDir);
     Monero::Utils::onStartup();
-    Monero::Wallet::init("", "feather", logPath.toStdString(), true);
+    Monero::Wallet::init("", "biscuit", logPath.toStdString(), true);
 
     bool logLevelFromEnv;
     int logLevel = qEnvironmentVariableIntValue("MONERO_LOG_LEVEL", &logLevelFromEnv);
@@ -182,7 +182,7 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
 
     if (!quiet) {
         QList<QPair<QString, QString>> info;
-        info.emplace_back("Feather", FEATHER_VERSION);
+        info.emplace_back("Biscuit", FEATHER_VERSION);
         info.emplace_back("Monero", MONERO_VERSION);
         info.emplace_back("Qt", QT_VERSION_STR);
         info.emplace_back("Tor", TOR_VERSION);

@@ -23,14 +23,14 @@
       </font>
      </property>
      <property name="text">
-      <string>How should Feather route its network traffic?</string>
+      <string>How should Biscuit route its network traffic?</string>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>By default, Feather routes most traffic over Tor. </string>
+      <string>By default, Biscuit routes most traffic over Tor. </string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

@@ -17,7 +17,7 @@ PageMenu::PageMenu(WizardFields *fields, WalletKeysFilesModel *wallets, QWidget 
     ui->setupUi(this);
     this->setButtonText(QWizard::FinishButton, "Open recent wallet");
 
-    ui->label_version->setText(QString("Feather %1 — by featherwallet.org").arg(FEATHER_VERSION));
+    ui->label_version->setText(QString("Biscuit %1 — based on Feather").arg(FEATHER_VERSION));
     QTimer::singleShot(0, [this] {
         ui->frame_seedBump->setVisible(false);
     });

@@ -2,18 +2,19 @@ cmake_minimum_required(VERSION 3.18)
 
 project(feather
   VERSION "2.9.1"
-  DESCRIPTION "A free Monero desktop wallet"
+  DESCRIPTION "Biscuit - a light multi-coin desktop wallet based on Feather"
   LANGUAGES CXX C ASM
 )
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(PACKAGE_NAME ${PROJECT_NAME})
-set(PACKAGE_BUGREPORT "https://github.com/feather-wallet/feather/issues")
-set(PACKAGE_URL "https://featherwallet.org/")
+set(PACKAGE_NAME "biscuit")
+set(PACKAGE_BUGREPORT "https://github.com/OWNER/biscuit/issues")
+set(PACKAGE_URL "https://github.com/OWNER/biscuit")
 set(COPYRIGHT_YEAR "2026")
 set(COPYRIGHT_HOLDERS "The Monero Project")
+set(BISCUIT_BUNDLE_ID "io.github.OWNER.biscuit" CACHE STRING "macOS bundle identifier")
 
 cmake_policy(SET CMP0074 NEW)
 
@@ -27,15 +28,18 @@ option(USE_DEVICE_TREZOR "Trezor support compilation" ON)
 option(WITH_SCANNER "Enable webcam QR scanner" ON)
 option(STACK_TRACE "Dump stack trace on crash (Linux only)" OFF)
 
+# Biscuit : les services en ligne de Feather (ws.featherwallet.org) sont coupés par défaut
+option(WITH_FEATHER_SERVICES "Allow connecting to the Feather websocket service" OFF)
+
 # internal configuration options
 option(TOR_INSTALLED "Is Tor installed on the filesystem?" OFF)
 
 # Plugins
-option(WITH_PLUGIN_HOME "Include Home tab plugin" ON)
-option(WITH_PLUGIN_TICKERS "Include Tickers Home plugin" ON)
-option(WITH_PLUGIN_CROWDFUNDING "Include Crowdfunding Home plugin" ON)
-option(WITH_PLUGIN_REVUO "Include Revuo Home plugin" ON)
-option(WITH_PLUGIN_CALC "Include Calc tab plugin" ON)
+option(WITH_PLUGIN_HOME "Include Home tab plugin (Feather servers)" OFF)
+option(WITH_PLUGIN_TICKERS "Include Tickers Home plugin (Feather servers)" OFF)
+option(WITH_PLUGIN_CROWDFUNDING "Include Crowdfunding Home plugin (Feather servers)" OFF)
+option(WITH_PLUGIN_REVUO "Include Revuo Home plugin (Feather servers)" OFF)
+option(WITH_PLUGIN_CALC "Include Calc tab plugin (Feather servers)" OFF)
 
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake")
 include(CheckCCompilerFlag)

@@ -138,7 +138,7 @@ void SendWidget::scanClicked() {
     this->onDataFromQR(dialog->decodedString());
     dialog->deleteLater();
 #else
-    Utils::showError(this, "Can't open QR scanner", "Feather was built without webcam QR scanner support");
+    Utils::showError(this, "Can't open QR scanner", "Biscuit was built without webcam QR scanner support");
 #endif
 }
 
@@ -253,7 +253,7 @@ void SendWidget::sendClicked() {
             return;
         }
         #else
-        Utils::showError(this, "Can't open offline transaction signing wizard", "Feather was built without webcam QR scanner support");
+        Utils::showError(this, "Can't open offline transaction signing wizard", "Biscuit was built without webcam QR scanner support");
         return;
         #endif
     }

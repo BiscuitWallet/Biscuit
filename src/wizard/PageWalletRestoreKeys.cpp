@@ -72,7 +72,7 @@ PageWalletRestoreKeys::PageWalletRestoreKeys(WizardFields *fields, QWidget *pare
     });
 #else
     ui->btn_scanUR->setEnabled(false);
-    ui->btn_scanUR->setToolTip("Can't scan QR code: Feather was built without webcam scanner support.");
+    ui->btn_scanUR->setToolTip("Can't scan QR code: Biscuit was built without webcam scanner support.");
 #endif
 }
 

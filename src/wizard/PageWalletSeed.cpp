@@ -26,9 +26,9 @@ PageWalletSeed::PageWalletSeed(WizardFields *fields, QWidget *parent)
 
     ui->frame_notice->setInfo(icons()->icon("seed"), "The following **16** words can be used to recover access to your wallet.\n\n"
                                                    "Write them down and store them somewhere safe and secure.\n\n"
-                                                   "Feather uses **Polyseed**. For more information click **Help**.");
+                                                   "Biscuit uses **Polyseed**. For more information click **Help**.");
 
-    ui->frame_invalidSeed->setInfo(icons()->icon("warning"), "Feather was unable to generate a valid seed.\n"
+    ui->frame_invalidSeed->setInfo(icons()->icon("warning"), "Biscuit was unable to generate a valid seed.\n"
                                                              "This should never happen.\n"
                                                              "Please contact the developers immediately.");
 

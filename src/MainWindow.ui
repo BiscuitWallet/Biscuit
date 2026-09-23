@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Feather</string>
+   <string>Biscuit</string>
   </property>
   <property name="windowIcon">
    <iconset resource="assets.qrc">
@@ -290,7 +290,7 @@
             <item>
              <widget class="QLabel" name="label_2">
               <property name="text">
-               <string>Feather supports two airgapped transaction signing methods:</string>
+               <string>Biscuit supports two airgapped transaction signing methods:</string>
               </property>
              </widget>
             </item>

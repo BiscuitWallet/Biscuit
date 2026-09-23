@@ -1,4 +1,10 @@
-Feather <feather_version>
+Biscuit <feather_version>, based on Feather
+
+Biscuit modifications: Copyright (c) 2026, The Biscuit developers
+Feather: Copyright (c) 2020-2026, The Monero Project (see below)
+
+---
+
 
 Copyright (c) 2020-2026, The Monero Project
 

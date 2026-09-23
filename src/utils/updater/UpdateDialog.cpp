@@ -63,7 +63,7 @@ void UpdateDialog::checkForUpdates() {
 
 void UpdateDialog::noUpdateAvailable() {
     m_waitingTimer.stop();
-    this->setStatus("Feather is up-to-date.", true);
+    this->setStatus("Biscuit is up-to-date.", true);
 }
 
 void UpdateDialog::updateAvailable() {
@@ -73,7 +73,7 @@ void UpdateDialog::updateAvailable() {
     ui->btn_installUpdate->hide();
     ui->btn_restart->hide();
     ui->progressBar->hide();
-    ui->label_header->setText(QString("New Feather version %1 is available").arg(m_updater->version));
+    ui->label_header->setText(QString("New Biscuit version %1 is available").arg(m_updater->version));
     ui->label_body->setText("Do you want to download and verify the new version?");
 }
 
@@ -243,9 +243,9 @@ void UpdateDialog::onInstallUpdate() {
     }
 
     if (m_updater->platformTag == "win-installer") {
-        this->setStatus("Installer written. Click 'Restart Feather' to close Feather and start the installer.");
+        this->setStatus("Installer written. Click 'Restart Biscuit' to close Biscuit and start the installer.");
     } else {
-        this->setStatus("Installation successful. Do you want to restart Feather now?");
+        this->setStatus("Installation successful. Do you want to restart Biscuit now?");
     }
     ui->btn_restart->show();
     ui->btn_restart->setFocus();
@@ -304,7 +304,7 @@ void UpdateDialog::installUpdateMac() {
 
     file.remove();
 
-    this->setStatus(QString("Installation successful: Do you want to restart Feather now?").arg(m_updatePath));
+    this->setStatus(QString("Installation successful: Do you want to restart Biscuit now?").arg(m_updatePath));
     ui->btn_restart->show();
 }
 

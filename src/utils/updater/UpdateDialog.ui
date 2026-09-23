@@ -17,7 +17,7 @@
    <item>
     <widget class="QLabel" name="label_header">
      <property name="text">
-      <string>New Feather version is available.</string>
+      <string>New Biscuit version is available.</string>
      </property>
     </widget>
    </item>
@@ -107,7 +107,7 @@
         <item>
          <widget class="QPushButton" name="btn_restart">
           <property name="text">
-           <string>Restart Feather</string>
+           <string>Restart Biscuit</string>
           </property>
           <property name="default">
            <bool>true</bool>

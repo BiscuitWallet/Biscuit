@@ -27,7 +27,7 @@
 WalletWizard::WalletWizard(QWidget *parent)
     : QWizard(parent)
 {
-    this->setWindowTitle("Welcome to Feather Wallet");
+    this->setWindowTitle("Welcome to Biscuit");
     this->setWindowIcon(QIcon(":/assets/images/appicons/64x64.png"));
 
     m_walletKeysFilesModel = new WalletKeysFilesModel(this);

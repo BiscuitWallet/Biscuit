@@ -149,7 +149,7 @@ bool dirExists(const QString &path) {
 }
 
 QString portablePath() {
-    return Utils::applicationPath() + "/feather_data";
+    return Utils::applicationPath() + "/biscuit_data";
 }
 
 bool isPortableMode() {
@@ -172,31 +172,31 @@ QString defaultWalletDir() {
     if (TailsOS::detect()) {
 #ifdef SELF_CONTAINED
         QString path = []{
-            // Starting in 1.1.0 the wallet and config directory were moved from ./.feather to ./feather_data
+            // Starting in 1.1.0 the wallet and config directory were moved from ./.feather to ./biscuit_data
             // A user might accidentally delete the folder containing the file hidden folder after moving the AppImage
             // We return the old path if it still exists
 
             QString appImagePath = qgetenv("APPIMAGE");
             if (appImagePath.isEmpty()) {
                 qDebug() << "Not an appimage, using currentPath()";
-                if (QDir(QDir::currentPath() + "/.feather").exists()) {
-                    return QDir::currentPath() + "/.feather/Monero/wallets";
+                if (QDir(QDir::currentPath() + "/.biscuit").exists()) {
+                    return QDir::currentPath() + "/.biscuit/Monero/wallets";
                 }
-                return QDir::currentPath() + "/feather_data/wallets";
+                return QDir::currentPath() + "/biscuit_data/wallets";
             }
 
             QFileInfo appImageDir(appImagePath);
             QString absolutePath = appImageDir.absoluteDir().path();
-            if (QDir(absolutePath + "/.feather").exists()) {
-                return absolutePath + "/.feather/Monero/wallets";
+            if (QDir(absolutePath + "/.biscuit").exists()) {
+                return absolutePath + "/.biscuit/Monero/wallets";
             }
-            return absolutePath + "/feather_data/wallets";
+            return absolutePath + "/biscuit_data/wallets";
         }();
 
         return path;
 #else
         if (TailsOS::detectDataPersistence()) {
-            return QDir::homePath() + "/Persistent/feather_data/wallets";
+            return QDir::homePath() + "/Persistent/biscuit_data/wallets";
         }
 #endif
     }
@@ -303,13 +303,13 @@ void copyColumn(QModelIndex *index, int column) {
 QString xdgDesktopEntry(){
     return QString(
             "[Desktop Entry]\n"
-            "Name=Feather Wallet\n"
+            "Name=Biscuit\n"
             "Comment=A free Monero desktop wallet\n"
             "Keywords=Monero;\n"
             "Exec=\"%1\"\n"
             "Terminal=false\n"
             "Type=Application\n"
-            "Icon=feather\n"
+            "Icon=biscuit\n"
             "Categories=Network;\n"
             "StartupNotify=false\n"
     ).arg(applicationFilePath());
@@ -338,12 +338,12 @@ bool xdgDesktopEntryRegister() {
 #endif
 
     QPixmap appIcon(":assets/images/appicons/64x64.png");
-    QString iconPathSuffix = "%1/.local/share/icons/feather.png";
+    QString iconPathSuffix = "%1/.local/share/icons/biscuit.png";
     QString iconPath = iconPathSuffix.arg(QDir::homePath());
     if (!fileExists(iconPath)) {
         pixmapWrite(iconPath, appIcon);
     }
-    xdgDesktopEntryWrite(QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation) + "/feather-wallet.desktop");
+    xdgDesktopEntryWrite(QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation) + "/biscuit.desktop");
 
     // Also write to dotfiles persistence
     if (TailsOS::detect() && TailsOS::detectDotPersistence()) {
@@ -352,7 +352,7 @@ bool xdgDesktopEntryRegister() {
         if (!fileExists(iconPath)) {
             pixmapWrite(iconPath, appIcon);
         }
-        xdgDesktopEntryWrite(basePath + "/.local/share/applications/feather-wallet.desktop");
+        xdgDesktopEntryWrite(basePath + "/.local/share/applications/biscuit.desktop");
     }
 
     xdgRefreshApplications();

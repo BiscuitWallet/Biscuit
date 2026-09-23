@@ -87,7 +87,7 @@
      <item>
       <widget class="QCheckBox" name="checkBox_websocketList">
        <property name="text">
-        <string>Let Feather manage this list</string>
+        <string>Let Biscuit manage this list</string>
        </property>
       </widget>
      </item>

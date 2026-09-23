@@ -43,7 +43,7 @@ WindowManager::WindowManager(QObject *parent)
     connect(qApp, &QGuiApplication::lastWindowClosed, this, &WindowManager::quitAfterLastWindow);
 
     m_tray = new QSystemTrayIcon(icons()->icon("appicons/64x64.png"));
-    m_tray->setToolTip("Feather Wallet");
+    m_tray->setToolTip("Biscuit");
     this->buildTrayMenu();
     m_tray->setVisible(conf()->get(Config::showTrayIcon).toBool());
 
@@ -133,7 +133,7 @@ void WindowManager::restartApplication(const QString &binaryFilename) {
 
 void WindowManager::startupWarning() {
     // Stagenet / Testnet
-    auto worthlessWarning = QString("Feather wallet is currently running in %1 mode. This is meant "
+    auto worthlessWarning = QString("Biscuit is currently running in %1 mode. This is meant "
                                     "for developers only. Your coins are WORTHLESS.");
     if (constants::networkType == NetworkType::STAGENET && conf()->get(Config::warnOnStagenet).toBool()) {
         this->showWarningMessageBox("Warning", worthlessWarning.arg("stagenet"));
@@ -297,7 +297,7 @@ void WindowManager::onWalletOpened(Wallet *wallet) {
         }
         else if (errMsg.startsWith("failed to read file")) {
 #if defined(Q_OS_MACOS)
-            Utils::Message message{nullptr, Utils::ERROR, "Unable to open wallet", errMsg, {"You may need to give Feather permission to access the folder", "In the System Settings app, go to 'Privacy & Security' -> 'Files & Folders'"}};
+            Utils::Message message{nullptr, Utils::ERROR, "Unable to open wallet", errMsg, {"You may need to give Biscuit permission to access the folder", "In the System Settings app, go to 'Privacy & Security' -> 'Files & Folders'"}};
 #else
             Utils::Message message{nullptr, Utils::ERROR, "Unable to open wallet", errMsg, {"You may need to change the permissions on the wallet directory."}};
 #endif
@@ -472,7 +472,7 @@ void WindowManager::handleDeviceError(const QString &error, Utils::Message &msg)
     // Ledger
     if (error.contains("No device found")) {
         msg.description = "No Ledger device found.";
-        msg.helpItems = {"Make sure the Monero app is open on the device.", "If the problem persists, try restarting Feather."};
+        msg.helpItems = {"Make sure the Monero app is open on the device.", "If the problem persists, try restarting Biscuit."};
         msg.doc = "create_wallet_hardware_device";
     }
     else if (error.contains("Unable to open device")) {
@@ -556,7 +556,7 @@ void WindowManager::showCrashLogs() {
     dialog.setWindowTitle("Crash report");
 
     QVBoxLayout layout;
-    QLabel msg{"Feather encountered an unrecoverable error.\n\nPlease send a copy of these logs to the developers. Logs are not automatically reported.\n"};
+    QLabel msg{"Biscuit encountered an unrecoverable error.\n\nPlease send a copy of these logs to the developers. Logs are not automatically reported.\n"};
     QTextEdit logs;
     logs.setText(logString);
 
@@ -640,7 +640,7 @@ void WindowManager::buildTrayMenu() {
         submenu->addAction("Close", window, &MainWindow::close);
     }
     menu->addSeparator();
-    menu->addAction("Exit Feather", this, &WindowManager::close);
+    menu->addAction("Exit Biscuit", this, &WindowManager::close);
 }
 
 void WindowManager::notify(const QString &title, const QString &message, int duration) {

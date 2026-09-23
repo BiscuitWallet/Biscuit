@@ -46,7 +46,7 @@ NetworkProxyWidget::NetworkProxyWidget(QWidget *parent)
 #if !defined(HAS_TOR_BIN) && !defined(TOR_INSTALLED)
     ui->checkBox_torManaged->setChecked(false);
     ui->checkBox_torManaged->setEnabled(false);
-    ui->checkBox_torManaged->setToolTip("Feather was bundled without Tor");
+    ui->checkBox_torManaged->setToolTip("Biscuit was bundled without Tor");
 #else
     ui->checkBox_torManaged->setChecked(!conf()->get(Config::useLocalTor).toBool());
     connect(ui->checkBox_torManaged, &QCheckBox::toggled, [this](bool toggled){

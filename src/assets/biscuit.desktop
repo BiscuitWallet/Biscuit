@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Biscuit
+GenericName=Crypto Wallet
+Comment=A light multi-coin desktop wallet
+Icon=biscuit
+Exec=biscuit
+Terminal=false
+Categories=Network;
+StartupNotify=false
+StartupWMClass=biscuit
+Keywords=crypto;currency;XMR

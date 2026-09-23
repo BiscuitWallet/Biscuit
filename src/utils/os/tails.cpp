@@ -68,9 +68,9 @@ void TailsOS::showDataPersistenceDisabledWarning()
     msgBox.setText(QObject::tr("Warning: persistence disabled"));
     msgBox.setWindowTitle(QObject::tr("Warning: persistence disabled"));
     msgBox.setInformativeText(
-        QObject::tr("Feather has detected that Tails persistence is "
+        QObject::tr("Biscuit has detected that Tails persistence is "
                      "currently disabled. Any configurations and wallets you make inside "
-                     "Feather will not be permanently saved."
+                     "Biscuit will not be permanently saved."
                      "\n\n"
                      "Make sure to not save your wallet on the "
                      "filesystem, as it will be lost at shutdown."

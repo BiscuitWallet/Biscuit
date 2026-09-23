@@ -402,7 +402,7 @@ void MainWindow::initMenu() {
     ui->actionCheckForUpdates->setVisible(false);
 #endif
 
-    connect(ui->actionOfficialWebsite,   &QAction::triggered, [this](){Utils::externalLinkWarning(this, "https://featherwallet.org");});
+    connect(ui->actionOfficialWebsite,   &QAction::triggered, [this](){Utils::externalLinkWarning(this, "https://github.com/OWNER/biscuit");});
     connect(ui->actionDocumentation,     &QAction::triggered, this, &MainWindow::onShowDocumentation);
     connect(ui->actionReport_bug,        &QAction::triggered, this, &MainWindow::onReportBug);
     connect(ui->actionShow_debug_info,   &QAction::triggered, this, &MainWindow::showDebugInfo);
@@ -979,7 +979,7 @@ void MainWindow::onTransactionCreated(PendingTransaction *tx, const QVector<QStr
             return;
         }
 #else
-        Utils::showError(this, "Can't open offline transaction signing wizard", "Feather was built without webcam QR scanner support");
+        Utils::showError(this, "Can't open offline transaction signing wizard", "Biscuit was built without webcam QR scanner support");
         return;
 #endif
     }
@@ -1166,7 +1166,7 @@ void MainWindow::showKeyImageSyncWizard() {
         wizard.exec();
     }
 #else
-    Utils::showError(this, "Can't open offline transaction signing wizard", "Feather was built without webcam QR scanner support");
+    Utils::showError(this, "Can't open offline transaction signing wizard", "Biscuit was built without webcam QR scanner support");
 #endif
 }
 
@@ -1399,7 +1399,7 @@ void MainWindow::showURDialog() {
     URDialog dialog{this};
     dialog.exec();
 #else
-    Utils::showError(this, "Unable to open UR dialog", "Feather was built without webcam scanner support");
+    Utils::showError(this, "Unable to open UR dialog", "Biscuit was built without webcam scanner support");
 #endif
 }
 
@@ -1441,7 +1441,7 @@ void MainWindow::importTransaction() {
 
         auto result = QMessageBox::warning(this, "Warning", "Using this feature may allow a remote node to associate the transaction with your IP address.\n"
                                                             "\n"
-                                                            "Connect to a trusted node or run Feather over Tor if network level metadata leakage is included in your threat model.",
+                                                            "Connect to a trusted node or run Biscuit over Tor if network level metadata leakage is included in your threat model.",
                                            QMessageBox::Ok | QMessageBox::Cancel);
         if (result != QMessageBox::Ok) {
             return;
@@ -1638,7 +1638,7 @@ void MainWindow::showUpdateNotification() {
 
     QString versionDisplay{m_updater->version};
     versionDisplay.replace("beta", "Beta");
-    QString updateText = QString("Update to Feather %1 is available").arg(versionDisplay);
+    QString updateText = QString("Update to Biscuit %1 is available").arg(versionDisplay);
     m_statusUpdateAvailable->setText(updateText);
     m_statusUpdateAvailable->setToolTip("Click to Download update.");
     m_statusUpdateAvailable->show();
@@ -1677,7 +1677,7 @@ void MainWindow::onKeysCorrupted() {
                          "WARNING!\n\n"
                          "To prevent LOSS OF FUNDS do NOT continue to use this wallet file.\n\n"
                          "Restore your wallet from seed, keys, or device.\n\n"
-                         "Please report this incident to the Feather developers.\n\n"
+                         "Please report this incident to the Biscuit developers.\n\n"
                          "WARNING!", {}, "report_an_issue");
         m_sendWidget->disallowSending();
     }
@@ -1778,7 +1778,7 @@ void MainWindow::updateTitle() {
         title += " [view-only]";
     }
 
-    title += " - Feather";
+    title += " - Biscuit";
 
     this->setWindowTitle(title);
 }

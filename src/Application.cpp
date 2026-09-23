@@ -24,7 +24,7 @@ Application::Application(int& argc, char** argv)
     if (userName.isEmpty()) {
         userName = qgetenv("USERNAME");
     }
-    QString identifier = "feather";
+    QString identifier = "biscuit";
     if (!userName.isEmpty()) {
         identifier += "-" + userName;
     }

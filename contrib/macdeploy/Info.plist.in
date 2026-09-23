@@ -34,13 +34,13 @@
   <string>????</string>
 
   <key>CFBundleExecutable</key>
-  <string>feather</string>
+  <string>biscuit</string>
 
   <key>CFBundleName</key>
-  <string>Feather</string>
+  <string>Biscuit</string>
 
   <key>CFBundleIdentifier</key>
-  <string>org.monero-project.feather</string>
+  <string>@BISCUIT_BUNDLE_ID@</string>
 
   <key>NSCameraUsageDescription</key>
   <string>Camera is used to scan QR codes on demand.</string>

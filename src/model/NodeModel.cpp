@@ -74,9 +74,9 @@ QVariant NodeModel::data(const QModelIndex &index, int role) const {
         switch (index.column()) {
             case NodeModel::URL: {
                 if (node.isConnecting)
-                    return QString("Feather is connecting to this node.");
+                    return QString("Biscuit is connecting to this node.");
                 if (node.isActive)
-                    return QString("Feather is connected to this node.");
+                    return QString("Biscuit is connected to this node.");
             }
         }
     }

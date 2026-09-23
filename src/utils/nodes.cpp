@@ -271,7 +271,7 @@ void Nodes::autoConnect(bool forceReconnect) {
 
     if (wsMode && !m_wsNodesReceived && websocketNodes().count() == 0) {
         // this situation should rarely onneccur due to the usage of the websocket node cache on startup.
-        qInfo() << "Feather is in websocket connection mode but was not able to receive any nodes (yet).";
+        qInfo() << "Biscuit is in websocket connection mode but was not able to receive any nodes (yet).";
         return;
     }
 

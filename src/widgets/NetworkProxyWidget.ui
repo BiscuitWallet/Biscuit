@@ -146,7 +146,7 @@
               <item>
                <widget class="QCheckBox" name="checkBox_torManaged">
                 <property name="text">
-                 <string>Let Feather start and manage a Tor daemon</string>
+                 <string>Let Biscuit start and manage a Tor daemon</string>
                 </property>
                </widget>
               </item>
@@ -260,7 +260,7 @@
       <item>
        <widget class="QLabel" name="label_notice">
         <property name="text">
-         <string>Feather is connected to a local node. Proxy settings ignored for node traffic.</string>
+         <string>Biscuit is connected to a local node. Proxy settings ignored for node traffic.</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>

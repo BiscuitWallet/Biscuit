@@ -31,7 +31,11 @@ void PageNetworkProxy::initializePage() {
 }
 
 int PageNetworkProxy::nextId() const {
+#ifdef WITH_FEATHER_SERVICES
     return WalletWizard::Page_NetworkWebsocket;
+#else
+    return WalletWizard::Page_Menu;
+#endif
 }
 
 bool PageNetworkProxy::validatePage() {

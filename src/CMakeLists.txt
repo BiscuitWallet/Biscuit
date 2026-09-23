@@ -147,6 +147,7 @@ add_executable(feather ${EXECUTABLE_FLAG} main.cpp
 
 set_target_properties(feather PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        OUTPUT_NAME "biscuit"
         LINK_FLAGS_RELEASE -s
 )
 
@@ -188,6 +189,10 @@ target_include_directories(feather PUBLIC
 target_compile_definitions(feather PRIVATE FEATHER_VERSION="${PROJECT_VERSION}")
 target_compile_definitions(feather PRIVATE FEATHER_TARGET_TRIPLET="${FEATHER_TARGET_TRIPLET}")
 target_compile_definitions(feather PRIVATE TOR_VERSION="${TOR_VERSION}")
+
+if(WITH_FEATHER_SERVICES)
+    target_compile_definitions(feather PRIVATE WITH_FEATHER_SERVICES=1)
+endif()
 
 if(WITH_SCANNER)
     target_include_directories(feather PUBLIC
@@ -347,14 +352,14 @@ else()
     )
 
     if (UNIX AND NOT APPLE)
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/feather.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/32x32.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/32x32/apps RENAME "feather.png")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/48x48.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps RENAME "feather.png")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/64x64.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/64x64/apps RENAME "feather.png")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/96x96.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/96x96/apps RENAME "feather.png")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/128x128.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps RENAME "feather.png")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/256x256.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps RENAME "feather.png")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/512x512.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/512x512/apps RENAME "feather.png")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/biscuit.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/32x32.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/32x32/apps RENAME "biscuit.png")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/48x48.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps RENAME "biscuit.png")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/64x64.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/64x64/apps RENAME "biscuit.png")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/96x96.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/96x96/apps RENAME "biscuit.png")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/128x128.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps RENAME "biscuit.png")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/256x256.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps RENAME "biscuit.png")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/images/appicons/512x512.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/512x512/apps RENAME "biscuit.png")
     endif()
 endif()
 
@@ -368,7 +373,7 @@ if(APPLE)
             LINK_FLAGS_RELEASE -s
     )
 
-    file(COPY "${CMAKE_SOURCE_DIR}/src/assets/images/appicons/appicon.icns" DESTINATION "${CMAKE_SOURCE_DIR}/installed/feather.app/Contents/Resources/" )
+    file(COPY "${CMAKE_SOURCE_DIR}/src/assets/images/appicons/appicon.icns" DESTINATION "${CMAKE_SOURCE_DIR}/installed/biscuit.app/Contents/Resources/" )
 endif()
 
 qt_finalize_executable(feather)

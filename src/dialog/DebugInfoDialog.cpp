@@ -145,7 +145,7 @@ QString DebugInfoDialog::statusToString(Wallet::ConnectionStatus status) {
 void DebugInfoDialog::copyToClipboard() {
     // Two spaces at the end of each line are for newlines in Markdown
     QString text = "";
-    text += QString("Feather version: %1  \n").arg(ui->label_featherVersion->text());
+    text += QString("Biscuit version: %1  \n").arg(ui->label_featherVersion->text());
 
     text += QString("Wallet height: %1  \n").arg(ui->label_walletHeight->text());
     text += QString("Daemon height: %1  \n").arg(ui->label_daemonHeight->text());

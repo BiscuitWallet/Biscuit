@@ -17,7 +17,7 @@ PageNetwork::PageNetwork(QWidget *parent)
     , m_portOpenWatcher(new QFutureWatcher<QPair<bool, QString>>(this))
 {
     ui->setupUi(this);
-    this->setTitle("Welcome to Feather");
+    this->setTitle("Welcome to Biscuit");
 
     ui->frame_nodeDetected->hide();
     ui->frame_customNode->hide();
@@ -40,7 +40,7 @@ PageNetwork::PageNetwork(QWidget *parent)
         bool nodeFound = res.first;
         if (nodeFound) {
             ui->frame_nodeDetected->show();
-            ui->label_nodeDetected->setText(QString("Feather detected a local node on %1").arg(res.second));
+            ui->label_nodeDetected->setText(QString("Biscuit detected a local node on %1").arg(res.second));
 
             ui->btnGroup_network->button(Button::CUSTOM)->click();
             ui->line_customNode->setText(res.second);

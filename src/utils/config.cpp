@@ -75,7 +75,11 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::lockOnMinimize, {QS("lockOnMinimize"), false}},
         {Config::showTrayIcon, {QS("showTrayIcon"), true}},
         {Config::minimizeToTray, {QS("minimizeToTray"), false}},
+#ifdef WITH_FEATHER_SERVICES
         {Config::disableWebsocket, {QS("disableWebsocket"), false}},
+#else
+        {Config::disableWebsocket, {QS("disableWebsocket"), true}},
+#endif
         {Config::offlineMode, {QS("offlineMode"), false}},
 
         // Transactions
@@ -215,24 +219,24 @@ QDir Config::defaultConfigDir() {
             QString appImagePath = qgetenv("APPIMAGE");
             if (appImagePath.isEmpty()) {
                 qDebug() << "Not an appimage, using currentPath()";
-                if (QDir(QDir::currentPath() + "/.feather").exists()) {
-                    return QDir::currentPath() + "/.feather/.config/feather";
+                if (QDir(QDir::currentPath() + "/.biscuit").exists()) {
+                    return QDir::currentPath() + "/.biscuit/.config/biscuit";
                 }
-                return QDir::currentPath() + "/feather_data";
+                return QDir::currentPath() + "/biscuit_data";
             }
 
             QFileInfo appImageDir(appImagePath);
             QString absolutePath = appImageDir.absoluteDir().path();
-            if (QDir(absolutePath + "/.feather").exists()) {
-                return absolutePath + "/.feather/.config/feather";
+            if (QDir(absolutePath + "/.biscuit").exists()) {
+                return absolutePath + "/.biscuit/.config/biscuit";
             }
-            return absolutePath + "/feather_data";
+            return absolutePath + "/biscuit_data";
         }();
 
         return QDir(path);
 #else
         if (TailsOS::detectDataPersistence()) {
-            return QDir::homePath() + "/Persistent/feather_data";
+            return QDir::homePath() + "/Persistent/biscuit_data";
         }
 #endif
     }
@@ -242,7 +246,7 @@ QDir Config::defaultConfigDir() {
 #elif defined(Q_OS_MACOS)
     return QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
 #else
-    return QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/feather");
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/biscuit");
 #endif
 }
 

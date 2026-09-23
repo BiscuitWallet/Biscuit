@@ -116,7 +116,7 @@ QString ReceiveWidget::getAddress(quint32 minorIndex) {
                                  "Potential wallet file corruption detected.\n\n"
                                  "To prevent LOSS OF FUNDS do NOT continue to use this wallet file.\n\n"
                                  "Restore your wallet from seed, keys, or device.\n\n"
-                                 "Please report this incident to the Feather developers.\n\n"
+                                 "Please report this incident to the Biscuit developers.\n\n"
                                  "WARNING!").arg(reason), {}, "report_an_issue");
         return {};
     }

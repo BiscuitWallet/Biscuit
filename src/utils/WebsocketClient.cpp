@@ -45,6 +45,11 @@ void WebsocketClient::sendMsg(const QByteArray &data) {
 }
 
 void WebsocketClient::start() {
+#ifndef WITH_FEATHER_SERVICES
+    // Biscuit: never contact the Feather websocket service unless explicitly built with it
+    return;
+#endif
+
     if (m_stopped) {
         return;
     }
