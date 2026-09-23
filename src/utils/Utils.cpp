@@ -202,9 +202,9 @@ QString defaultWalletDir() {
     }
 
 #if defined(Q_OS_LINUX) or defined(Q_OS_MAC)
-    return QString("%1/Monero/wallets").arg(QDir::homePath());
+    return QString("%1/Biscuit/wallets").arg(QDir::homePath()); // Biscuit: dedicated folder for all coins
 #elif defined(Q_OS_WIN)
-    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + "/Monero/wallets";
+    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + "/Biscuit/wallets";
 #endif
 }
 

@@ -77,7 +77,7 @@ void WalletKeysFilesModel::findWallets() {
     QStringList walletPaths;
 
     for(auto i = 0; i != m_walletDirectories.length(); i++) {
-        // Scan default wallet dir (~/Monero/)
+        // Scan default wallet dir (~/Biscuit/)
         walletPaths << Utils::fileFind(rx, m_walletDirectories[i], 0, i == 0 ? 2 : 0, 200);
     }
 
