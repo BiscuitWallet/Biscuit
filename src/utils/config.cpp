@@ -116,7 +116,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::cryptoSymbols, {QS("cryptoSymbols"), QStringList{"BTC", "ETH", "LTC", "XMR", "ZEC"}}},
 
         // Tor
-        {Config::proxy, {QS("proxy"), Config::Proxy::Tor}},
+        {Config::proxy, {QS("proxy"), Config::Proxy::None}}, // Biscuit: Tor is opt-in
         {Config::torPrivacyLevel, {QS("torPrivacyLevel"), 1}},
         {Config::torOnlyAllowOnion, {QS("torOnlyAllowOnion"), false}},
         {Config::socks5Host, {QS("socks5Host"), "127.0.0.1"}},
