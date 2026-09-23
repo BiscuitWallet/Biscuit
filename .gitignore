@@ -28,3 +28,7 @@ githash.txt
 /secrets/
 *.secrets
 secrets.cmake
+
+# Fichiers générés par le build macOS
+/installed/
+contrib/macdeploy/Info.plist
