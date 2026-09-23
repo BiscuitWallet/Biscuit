@@ -12,3 +12,9 @@ function(biscuit_add_test name)
 endfunction()
 
 biscuit_add_test(test_semanticversion test_semanticversion.cpp)
+
+# Swap core
+foreach(_test test_amount test_quote_ranking test_trade_status test_trocador_api)
+    biscuit_add_test(${_test} ${_test}.cpp)
+    target_link_libraries(${_test} PRIVATE biscuit_swap_core)
+endforeach()

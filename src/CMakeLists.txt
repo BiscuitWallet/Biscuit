@@ -269,6 +269,7 @@ if (DEPENDS)
 endif()
 
 target_link_libraries(feather PRIVATE
+        biscuit_swap_core
         wallet_api
         epee
         easylogging
