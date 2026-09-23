@@ -1,6 +1,7 @@
 # Compiler Biscuit
 
-Biscuit est un fork de Feather 2.9.1. Les instructions détaillées d'origine sont dans
+Biscuit est un fork de Feather 2.9.1. Les services en ligne de Feather sont coupés
+par défaut (option CMake `WITH_FEATHER_SERVICES=OFF`). Les instructions détaillées d'origine sont dans
 `HACKING.md`. Ce fichier résume ce qui a été testé.
 
 ## macOS (Apple Silicon, testé sur macOS 27.2)
@@ -20,7 +21,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DSTACK_TRACE=OFF \
   -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix openssl);$(brew --prefix expat)"
 cmake --build . -j "$(sysctl -n hw.ncpu)"
 
-open bin/feather.app
+open bin/biscuit.app
 ```
 
 Remarques :
