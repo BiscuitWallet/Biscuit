@@ -53,6 +53,14 @@ CoinWallet::CoinWallet(HdAccount account, const QJsonObject &cache, QObject *par
         for (int i = 0; i < changeNext + int(gapLimit); ++i) scriptHash({HdAccount::Change, quint32(i)});
         if (receiveNext > 0) m_scanner.setUsed({HdAccount::Receive, quint32(receiveNext - 1)}, true);
         if (changeNext > 0) m_scanner.setUsed({HdAccount::Change, quint32(changeNext - 1)}, true);
+        const QJsonObject times = cache.value("blockTimes").toObject();
+        for (auto it = times.begin(); it != times.end(); ++it) {
+            m_blockTimes.insert(it.key().toInt(), qint64(it.value().toDouble()));
+        }
+        const QJsonObject seen = cache.value("firstSeen").toObject();
+        for (auto it = seen.begin(); it != seen.end(); ++it) {
+            m_firstSeen.insert(it.key(), qint64(it.value().toDouble()));
+        }
         m_height = cache.value("height").toInt();
         recompute();
     }
@@ -151,7 +159,7 @@ void CoinWallet::scanNext() {
     const auto batch = m_scanner.nextBatch();
     if (batch.isEmpty()) {
         if (m_scanner.done()) {
-            fetchMissingTransactions([this] {
+            fetchMissingTransactions([this] { fetchBlockTimes([this] {
                 recompute();
                 setStatus(Status::Synchronized);
                 // Be told when anything changes on our addresses.
@@ -161,7 +169,7 @@ void CoinWallet::scanNext() {
                 for (quint32 i = 0; i < m_scanner.firstUnused(HdAccount::Change) + 2; ++i) {
                     m_client->call("blockchain.scripthash.subscribe", {scriptHash({HdAccount::Change, i})}, nullptr);
                 }
-            });
+            }); });
         }
         return;
     }
@@ -214,6 +222,45 @@ void CoinWallet::fetchMissingTransactions(std::function<void()> then) {
     }
 }
 
+void CoinWallet::fetchBlockTimes(std::function<void()> then) {
+    QList<int> missing;
+    for (int height : m_heights) {
+        if (height > 0 && !m_blockTimes.contains(height) && !missing.contains(height)) missing.append(height);
+    }
+    if (missing.isEmpty()) {
+        then();
+        return;
+    }
+    auto remaining = std::make_shared<int>(missing.size());
+    for (int height : missing) {
+        m_client->call("blockchain.block.header", {height}, [this, height, remaining, then](const QJsonValue &result, const QString &error) {
+            if (!error.isEmpty()) {
+                return;
+            }
+            // 80-byte header; the time is the little-endian uint32 at offset 68.
+            const QByteArray header = QByteArray::fromHex(result.toString().toLatin1());
+            if (header.size() == 80) {
+                const auto *t = reinterpret_cast<const uchar *>(header.constData() + 68);
+                m_blockTimes.insert(height, qint64(t[0]) | qint64(t[1]) << 8 | qint64(t[2]) << 16 | qint64(t[3]) << 24);
+            }
+            if (--*remaining == 0) {
+                then();
+            }
+        });
+    }
+}
+
+QDateTime CoinWallet::transactionTime(const QString &txid) const {
+    const int height = m_heights.value(txid, 0);
+    if (height > 0 && m_blockTimes.contains(height)) {
+        return QDateTime::fromSecsSinceEpoch(m_blockTimes.value(height));
+    }
+    if (m_firstSeen.contains(txid)) {
+        return QDateTime::fromSecsSinceEpoch(m_firstSeen.value(txid));
+    }
+    return {};
+}
+
 void CoinWallet::refreshFees() {
     for (int target : feeTargets) {
         m_client->call("blockchain.estimatefee", {target}, [this, target](const QJsonValue &result, const QString &error) {
@@ -247,6 +294,10 @@ void CoinWallet::recompute() {
     for (auto it = m_scripts.constBegin(); it != m_scripts.constEnd(); ++it) scripts.insert(it.key());
 
     m_history = electrum::computeHistory(txs, m_heights, scripts);
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    for (const auto &e : m_history) {
+        if (!m_firstSeen.contains(e.txid)) m_firstSeen.insert(e.txid, now);
+    }
     m_utxos = electrum::computeUtxos(txs, m_heights, m_scripts);
     emit updated();
     emit cacheChanged();
@@ -336,6 +387,18 @@ QJsonObject CoinWallet::cache() const {
         {"receiveNext", int(m_scanner.firstUnused(HdAccount::Receive))},
         {"changeNext", int(m_scanner.firstUnused(HdAccount::Change))},
         {"height", m_height},
+        {"blockTimes", [this] {
+            QJsonObject o;
+            for (auto it = m_blockTimes.constBegin(); it != m_blockTimes.constEnd(); ++it) o.insert(QString::number(it.key()), double(it.value()));
+            return o;
+        }()},
+        {"firstSeen", [this, &txs] {
+            QJsonObject o;
+            for (auto it = m_firstSeen.constBegin(); it != m_firstSeen.constEnd(); ++it) {
+                if (txs.contains(it.key())) o.insert(it.key(), double(it.value()));
+            }
+            return o;
+        }()},
     };
 }
 

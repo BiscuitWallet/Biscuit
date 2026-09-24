@@ -5,6 +5,7 @@
 #include "ui_MainWindow.h"
 
 #include "Amount.h"
+#include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinVault.h"
 
@@ -231,7 +232,8 @@ void MainWindow::initPlugins() {
 void MainWindow::initWidgets() {
     // [History]
     m_historyWidget = new HistoryWidget(m_wallet, this);
-    ui->historyWidgetLayout->addWidget(m_historyWidget);
+    // Biscuit: all coins in one history (the Monero page is Feather's widget).
+    ui->historyWidgetLayout->addWidget(new biscuit::coins::CoinHistorySwitcher(m_wallet, m_historyWidget, this));
     connect(m_historyWidget, &HistoryWidget::viewOnBlockExplorer, this, &MainWindow::onViewOnBlockExplorer);
     connect(m_historyWidget, &HistoryWidget::resendTransaction, this, &MainWindow::onResendTransaction);
 

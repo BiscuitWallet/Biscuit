@@ -4,6 +4,7 @@
 #ifndef BISCUIT_COINWALLET_H
 #define BISCUIT_COINWALLET_H
 
+#include <QDateTime>
 #include <QJsonObject>
 #include <QMap>
 #include <QObject>
@@ -53,6 +54,8 @@ public:
 
     Balance balance() const;
     QList<electrum::HistoryEntry> history() const { return m_history; }
+    // Block time of a confirmed transaction, or when it was first seen.
+    QDateTime transactionTime(const QString &txid) const;
 
     // Next address never used to receive (a new one each time a payment arrives).
     QString receiveAddress() const;
@@ -79,6 +82,7 @@ private:
     void onNotification(const QString &method, const QJsonArray &params);
     void scanNext();
     void fetchMissingTransactions(std::function<void()> then);
+    void fetchBlockTimes(std::function<void()> then);
     void refreshFees();
     void recompute();
     void setStatus(Status status);
@@ -101,6 +105,8 @@ private:
     QMap<QString, int> m_heights;                           // txid -> height
     QMap<QString, electrum::ParsedTx> m_parsed;
     QMap<int, double> m_feeRates;                           // target blocks -> sat/vB
+    QMap<int, qint64> m_blockTimes;                         // height -> unix time (cache)
+    QMap<QString, qint64> m_firstSeen;                      // txid -> unix time (cache)
     QList<electrum::HistoryEntry> m_history;
     QList<electrum::WalletUtxo> m_utxos;
     int m_height = 0;
