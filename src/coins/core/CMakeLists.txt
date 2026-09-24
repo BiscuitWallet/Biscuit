@@ -11,6 +11,8 @@ add_library(biscuit_coins_core STATIC
         WallyInit.cpp
         WalletFile.cpp
         Transactions.cpp
+        Electrum.cpp
+        ElectrumServers.cpp
 )
 target_include_directories(biscuit_coins_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # libsodium (already used by Monero) for the wallet file encryption.
