@@ -5,6 +5,7 @@
 #include "ui_MainWindow.h"
 
 #include "Amount.h"
+#include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinVault.h"
 
 #include <QFileDialog>
@@ -240,7 +241,8 @@ void MainWindow::initWidgets() {
 
     // [Receive]
     m_receiveWidget = new ReceiveWidget(m_wallet, this);
-    ui->receiveWidgetLayout->addWidget(m_receiveWidget);
+    // Biscuit: coin selector (Monero page = Feather's receive widget).
+    ui->receiveWidgetLayout->addWidget(new biscuit::coins::CoinReceiveSwitcher(m_wallet, m_receiveWidget, this));
     connect(m_receiveWidget, &ReceiveWidget::showTransactions, [this](const QString &text) {
         m_historyWidget->setSearchText(text);
         ui->tabWidget->setCurrentIndex(this->findTab("History"));
