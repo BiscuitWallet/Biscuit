@@ -49,6 +49,7 @@ public:
     void setCustomServer(const ElectrumServer &server);
     void start();
     void stop();
+    bool isRunning() const { return m_running; }
 
     Balance balance() const;
     QList<electrum::HistoryEntry> history() const { return m_history; }

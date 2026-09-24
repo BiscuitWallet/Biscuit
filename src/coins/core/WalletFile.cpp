@@ -196,6 +196,28 @@ QByteArray Session::seal(const QByteArray &plaintext) const {
     return header + cipher;
 }
 
+std::optional<QByteArray> Session::unseal(const QByteArray &file) const {
+    if (!m_key || file.size() < headerLen + tagLen || !file.startsWith(QByteArray(magic, magicLen))) {
+        return std::nullopt;
+    }
+    const qsizetype kdfOffset = magicLen + 2;
+    if (file.mid(kdfOffset + 16, saltLen) != m_salt) {
+        return std::nullopt;   // written with another key
+    }
+    const QByteArray header = file.left(headerLen);
+    const QByteArray nonce = file.mid(kdfOffset + 16 + saltLen, nonceLen);
+    const QByteArray cipher = file.mid(headerLen);
+    QByteArray plain(cipher.size() - tagLen, Qt::Uninitialized);
+    unsigned long long plainLen = 0;
+    if (crypto_aead_xchacha20poly1305_ietf_decrypt(u(plain), &plainLen, nullptr, u(cipher), cipher.size(),
+                                                   u(header), header.size(), u(nonce), m_key) != 0) {
+        wipe(plain);
+        return std::nullopt;
+    }
+    plain.resize(static_cast<qsizetype>(plainLen));
+    return plain;
+}
+
 namespace {
     bool writeFile(const QString &path, const QByteArray &data, QString *error) {
         if (data.isEmpty()) {

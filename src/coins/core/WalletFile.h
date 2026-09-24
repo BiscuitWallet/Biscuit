@@ -63,6 +63,8 @@ namespace biscuit::coins::walletfile {
         ~Session();
 
         QByteArray seal(const QByteArray &plaintext) const;
+        // Decrypts a file written with this session's key (same salt).
+        std::optional<QByteArray> unseal(const QByteArray &file) const;
         bool save(const QString &path, const QByteArray &plaintext, QString *error = nullptr) const;
 
     private:

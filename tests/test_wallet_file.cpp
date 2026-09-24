@@ -121,6 +121,13 @@ private slots:
         QCOMPARE(walletfile::decrypt(resealed, password), std::optional<QByteArray>("updated"));
         QVERIFY(!walletfile::Session::open(file, "nope").has_value());
 
+        // The session decrypts its own files without the password.
+        QCOMPARE(opened->first.unseal(resealed), std::optional<QByteArray>("updated"));
+        QVERIFY(!opened->first.unseal(walletfile::encrypt(secret, password, walletfile::testKdf())).has_value());
+        QByteArray tampered = resealed;
+        tampered[tampered.size() - 1] = char(tampered.at(tampered.size() - 1) ^ 1);
+        QVERIFY(!opened->first.unseal(tampered).has_value());
+
         // A moved-from session holds no key anymore.
         walletfile::Session moved = std::move(opened->first);
         QVERIFY(opened->first.seal("x").isEmpty());
