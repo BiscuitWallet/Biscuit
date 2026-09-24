@@ -391,6 +391,12 @@ if(APPLE)
     )
 
     file(COPY "${CMAKE_SOURCE_DIR}/src/assets/images/appicons/appicon.icns" DESTINATION "${CMAKE_SOURCE_DIR}/installed/biscuit.app/Contents/Resources/" )
+
+    # Biscuit: also put the icon in the bundle built in build/bin (Feather only did it
+    # for the packaging copy in installed/), otherwise macOS shows a generic icon.
+    set(BISCUIT_ICNS "${CMAKE_SOURCE_DIR}/src/assets/images/appicons/appicon.icns")
+    set_source_files_properties(${BISCUIT_ICNS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+    target_sources(feather PRIVATE ${BISCUIT_ICNS})
 endif()
 
 qt_finalize_executable(feather)

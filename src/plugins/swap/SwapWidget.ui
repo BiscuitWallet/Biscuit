@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SwapWidget</class>
+ <widget class="QWidget" name="SwapWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>560</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Swap</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="InfoFrame" name="frame_demo">
+     <property name="frameShape">
+      <enum>QFrame::Shape::StyledPanel</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_new">
+      <attribute name="title">
+       <string>New swap</string>
+      </attribute>
+      <layout class="QFormLayout" name="formLayout">
+       <property name="fieldGrowthPolicy">
+        <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
+       </property>
+       <property name="rowWrapPolicy">
+        <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
+       </property>
+       <property name="verticalSpacing">
+        <number>9</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_send">
+         <property name="text">
+          <string>You send</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="layout_send">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="layout_sendAmount">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLineEdit" name="line_amount">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>100</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>200</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="placeholderText">
+              <string>0.0</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="combo_from"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_reverse">
+           <property name="maximumSize">
+            <size>
+             <width>36</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Swap direction</string>
+           </property>
+           <property name="text">
+            <string>⇄</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_send">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_get">
+         <property name="text">
+          <string>You get</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <layout class="QHBoxLayout" name="layout_get">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <item>
+          <widget class="QComboBox" name="combo_to"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_estimate">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_get">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_receiveAt">
+         <property name="text">
+          <string>Receive at</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QStackedWidget" name="stack_receive">
+         <widget class="QLineEdit" name="line_receive"/>
+         <widget class="QLabel" name="label_receiveWallet">
+          <property name="text">
+           <string>A new address of this wallet</string>
+          </property>
+         </widget>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_refundTo">
+         <property name="text">
+          <string>Refund to</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QStackedWidget" name="stack_refund">
+         <widget class="QLineEdit" name="line_refund"/>
+         <widget class="QLabel" name="label_refundWallet">
+          <property name="text">
+           <string>A new address of this wallet</string>
+          </property>
+         </widget>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_rate">
+         <property name="text">
+          <string>Rate</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <layout class="QHBoxLayout" name="layout_options">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <item>
+          <widget class="QComboBox" name="combo_rate">
+           <item>
+            <property name="text">
+             <string>Floating</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Fixed</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_kyc">
+           <property name="text">
+            <string>KYC</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="combo_kyc"/>
+         </item>
+         <item>
+          <spacer name="spacer_options">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_clear">
+           <property name="text">
+            <string>Clear</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_offers">
+           <property name="text">
+            <string>Get offers</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_offers">
+         <property name="text">
+          <string>Offers</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QTreeWidget" name="tree_offers">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>110</height>
+          </size>
+         </property>
+         <property name="rootIsDecorated">
+          <bool>false</bool>
+         </property>
+         <property name="uniformRowHeights">
+          <bool>true</bool>
+         </property>
+         <column>
+          <property name="text">
+           <string>Exchange</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>You get</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>KYC</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>ETA</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Via</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="label_transparency">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Biscuit may earn a commission from swap partners. It never affects the order: offers are ranked only by the amount you get, then by speed. You pay the same price as on the partner's website.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <layout class="QHBoxLayout" name="layout_create">
+         <item>
+          <widget class="QLabel" name="label_status">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_create">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Create swap</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_history">
+      <attribute name="title">
+       <string>History</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="layout_history">
+       <item>
+        <widget class="QTreeWidget" name="tree_trades">
+         <property name="rootIsDecorated">
+          <bool>false</bool>
+         </property>
+         <property name="uniformRowHeights">
+          <bool>true</bool>
+         </property>
+         <column>
+          <property name="text">
+           <string>Date</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Swap</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Sent</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Received</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Status</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Exchange</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="layout_historyButtons">
+         <item>
+          <widget class="QLabel" name="label_historyHint">
+           <property name="text">
+            <string>Stored encrypted in your wallet file.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_history">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_refresh">
+           <property name="text">
+            <string>Refresh</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_details">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Details</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>InfoFrame</class>
+   <extends>QFrame</extends>
+   <header>components.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

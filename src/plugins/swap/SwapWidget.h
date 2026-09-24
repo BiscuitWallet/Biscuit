@@ -10,62 +10,52 @@
 #include "swap/SwapManager.h"
 
 class QComboBox;
-class QLabel;
-class QLineEdit;
-class QPushButton;
-class QTreeWidget;
 class Wallet;
 
+namespace Ui {
+    class SwapWidget;
+}
+
 // Swap tab: XMR <-> other coins with an external address, in both directions.
+// One side of a swap is always XMR from or to this wallet.
 class SwapWidget : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SwapWidget(Wallet *wallet, QWidget *parent = nullptr);
+    ~SwapWidget() override;
 
 private slots:
-    void onDirectionChanged();
+    void onFromChanged();
+    void onToChanged();
+    void onReverse();
+    void onClear();
     void onGetOffers();
     void onCreateSwap();
-    void onTradeActivated();
+    void onShowTradeDetails();
     void refreshTrades();
 
 private:
-    enum Direction {
-        SendXmr = 0,     // XMR from this wallet -> coin to an external address
-        ReceiveXmr       // coin from outside -> XMR to this wallet
-    };
-
-    Direction direction() const;
-    biscuit::swap::Asset selectedCoin() const;
     biscuit::swap::Asset xmr() const;
+    static biscuit::swap::Asset assetOf(const QComboBox *combo);
+    static void selectAsset(QComboBox *combo, const biscuit::swap::Asset &asset);
+    bool sendsXmr() const;
+
     void loadAssets();
+    void updateForm();
+    void clearOffers();
     void setBusy(bool busy, const QString &status = {});
     QString newWalletAddress(const QString &label);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);
     void sendDeposit(const biscuit::swap::Trade &trade);
 
+    QScopedPointer<Ui::SwapWidget> ui;
     QPointer<Wallet> m_wallet;
     biscuit::swap::SwapManager *m_manager;
     QList<biscuit::swap::Quote> m_quotes;
-
-    QComboBox *m_direction = nullptr;
-    QComboBox *m_coin = nullptr;
-    QLineEdit *m_amount = nullptr;
-    QLabel *m_amountUnit = nullptr;
-    QLabel *m_payoutLabel = nullptr;
-    QLineEdit *m_payout = nullptr;
-    QLabel *m_refundLabel = nullptr;
-    QLineEdit *m_refund = nullptr;
-    QComboBox *m_rateType = nullptr;
-    QComboBox *m_minKyc = nullptr;
-    QPushButton *m_btnOffers = nullptr;
-    QTreeWidget *m_offers = nullptr;
-    QPushButton *m_btnCreate = nullptr;
-    QLabel *m_status = nullptr;
-    QTreeWidget *m_trades = nullptr;
+    bool m_updating = false;
 
     // Trade whose deposit is being sent from this wallet.
     QString m_pendingDepositProvider;

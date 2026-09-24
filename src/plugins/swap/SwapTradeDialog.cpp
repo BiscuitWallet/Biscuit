@@ -2,65 +2,41 @@
 // SPDX-FileCopyrightText: The Biscuit developers
 
 #include "SwapTradeDialog.h"
-
-#include <QDialogButtonBox>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QVBoxLayout>
+#include "ui_SwapTradeDialog.h"
 
 #include "DemoSwap.h"
 #include "qrcode/QrCode.h"
+#include "utils/Icons.h"
 #include "utils/Utils.h"
 
 using namespace biscuit::swap;
 
+namespace {
+    void setRowVisible(QLabel *title, QWidget *field, bool visible) {
+        title->setVisible(visible);
+        field->setVisible(visible);
+    }
+}
+
 SwapTradeDialog::SwapTradeDialog(SwapManager *manager, const QString &providerId, const QString &tradeId, QWidget *parent)
     : QDialog(parent)
+    , ui(new Ui::SwapTradeDialog)
     , m_manager(manager)
     , m_providerId(providerId)
     , m_tradeId(tradeId)
 {
-    this->setWindowTitle("Swap details");
-    auto *layout = new QVBoxLayout(this);
+    ui->setupUi(this);
 
-    m_status = new QLabel(this);
-    QFont bold = m_status->font();
+    QFont bold = ui->label_status->font();
     bold.setBold(true);
-    m_status->setFont(bold);
-    layout->addWidget(m_status);
+    ui->label_status->setFont(bold);
 
-    auto *body = new QHBoxLayout;
-    m_details = new QLabel(this);
-    m_details->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_details->setWordWrap(true);
-    m_qr = new QLabel(this);
-    m_qr->setFixedSize(180, 180);
-    body->addWidget(m_details, 1);
-    body->addWidget(m_qr, 0, Qt::AlignTop);
-    layout->addLayout(body);
-
-    m_support = new QLabel(this);
-    m_support->setWordWrap(true);
-    m_support->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_support->setFrameShape(QFrame::StyledPanel);
-    layout->addWidget(m_support);
-
-    auto *buttons = new QDialogButtonBox(this);
-    m_btnCopyAddress = buttons->addButton("Copy deposit address", QDialogButtonBox::ActionRole);
-    m_btnSend = buttons->addButton("Send from this wallet…", QDialogButtonBox::ActionRole);
-    auto *btnRefresh = buttons->addButton("Refresh", QDialogButtonBox::ActionRole);
-    buttons->addButton(QDialogButtonBox::Close);
-    layout->addWidget(buttons);
-
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(btnRefresh, &QPushButton::clicked, m_manager, &SwapManager::refreshNow);
-    connect(m_btnCopyAddress, &QPushButton::clicked, this, [this] {
-        if (const Trade *t = m_manager->trade(m_providerId, m_tradeId)) {
-            Utils::copyToClipboard(t->depositAddress);
-        }
+    connect(ui->btn_close, &QPushButton::clicked, this, &QDialog::accept);
+    connect(ui->btn_refresh, &QPushButton::clicked, m_manager, &SwapManager::refreshNow);
+    connect(ui->btn_copyDeposit, &QPushButton::clicked, this, [this] {
+        Utils::copyToClipboard(ui->line_deposit->text());
     });
-    connect(m_btnSend, &QPushButton::clicked, this, [this] {
+    connect(ui->btn_send, &QPushButton::clicked, this, [this] {
         if (const Trade *t = m_manager->trade(m_providerId, m_tradeId)) {
             emit sendDepositRequested(*t);
         }
@@ -68,66 +44,74 @@ SwapTradeDialog::SwapTradeDialog(SwapManager *manager, const QString &providerId
     connect(m_manager, &SwapManager::tradesChanged, this, &SwapTradeDialog::updateView);
 
     updateView();
-    this->resize(640, this->sizeHint().height());
+    this->adjustSize();
 }
+
+SwapTradeDialog::~SwapTradeDialog() = default;
 
 void SwapTradeDialog::updateView() {
     const Trade *t = m_manager->trade(m_providerId, m_tradeId);
     if (!t) {
-        m_status->setText("Swap not found");
+        ui->label_status->setText("Swap not found");
         return;
     }
 
     const bool demo = t->providerId == demo::providerId;
-    m_status->setText(QString("%1%2").arg(demo ? "[Demo] " : "", tradeStatusDescription(t->status)));
+    ui->label_status->setText(QString("%1%2 → %3: %4")
+                              .arg(demo ? "[Demo] " : "", t->from.displayName(), t->to.displayName(),
+                                   tradeStatusDescription(t->status)));
 
-    const QString fromTicker = t->from.ticker.toUpper();
-    QString details;
-    details += QString("<b>Send exactly:</b> %1 %2<br>").arg(t->amountFrom, t->from.displayName());
-    details += QString("<b>To this deposit address:</b><br><tt>%1</tt><br>").arg(t->depositAddress.toHtmlEscaped());
+    if (needsSupport(t->status)) {
+        ui->frame_attention->setInfo(icons()->icon("warning.png"),
+                                     "This swap needs attention. Contact support with the identifiers below.");
+        ui->frame_attention->show();
+    } else if (demo) {
+        ui->frame_attention->setInfo(icons()->icon("info2.svg"), "Simulated swap: nothing needs to be sent.");
+        ui->frame_attention->show();
+    } else {
+        ui->frame_attention->hide();
+    }
+
+    ui->label_send->setText(QString("%1 %2").arg(t->amountFrom, t->from.ticker.toUpper()));
+    ui->line_deposit->setText(t->depositAddress);
+    ui->line_deposit->setCursorPosition(0);
+    ui->btn_copyDeposit->setEnabled(!demo);
+    setRowVisible(ui->label_memoTitle, ui->line_memo, !t->depositMemo.isEmpty());
+    ui->line_memo->setText(t->depositMemo);
     if (!t->depositMemo.isEmpty()) {
-        details += QString("<b>Memo / destination tag (required):</b> <tt>%1</tt><br>").arg(t->depositMemo.toHtmlEscaped());
+        ui->label_memoTitle->setText("Memo (required)");
     }
-    details += "<br>";
-    details += QString("<b>You receive (estimated):</b> %1 %2<br>").arg(t->amountTo, t->to.displayName());
-    details += QString("<b>At:</b> <tt>%1</tt><br>").arg(t->payoutAddress.toHtmlEscaped());
-    if (!t->refundAddress.isEmpty()) {
-        details += QString("<b>Refund address:</b> <tt>%1</tt><br>").arg(t->refundAddress.toHtmlEscaped());
-    }
-    details += QString("<b>Rate:</b> %1<br>").arg(t->rateType == RateType::Fixed ? "fixed" : "floating");
-    details += QString("<b>Exchange:</b> %1 (KYC rating %2)<br>").arg(t->exchange.toHtmlEscaped(), kycRatingToString(t->kycRating));
-    if (!t->depositTxId.isEmpty()) {
-        details += QString("<b>Your deposit transaction:</b> <tt>%1</tt><br>").arg(t->depositTxId);
-    }
-    m_details->setText(details);
+
+    ui->label_get->setText(QString("≈ %1 %2").arg(t->amountTo, t->to.ticker.toUpper()));
+    ui->line_payout->setText(t->payoutAddress);
+    ui->line_payout->setCursorPosition(0);
+    setRowVisible(ui->label_refundTitle, ui->line_refund, !t->refundAddress.isEmpty());
+    ui->line_refund->setText(t->refundAddress);
+    ui->line_refund->setCursorPosition(0);
+    ui->label_exchange->setText(QString("%1 · KYC %2 · %3 rate")
+                                .arg(t->exchange, kycRatingToString(t->kycRating),
+                                     t->rateType == RateType::Fixed ? "fixed" : "floating"));
+    setRowVisible(ui->label_txTitle, ui->line_tx, !t->depositTxId.isEmpty());
+    ui->line_tx->setText(t->depositTxId);
 
     const QrCode qr(t->depositAddress, QrCode::Version::AUTO, QrCode::ErrorCorrectionLevel::MEDIUM);
-    if (qr.isValid() && !demo) {
-        m_qr->setPixmap(qr.toPixmap(1).scaled(m_qr->size(), Qt::KeepAspectRatio));
-    } else {
-        m_qr->setText(demo ? "No QR code\nfor a demo swap" : QString());
-        m_qr->setAlignment(Qt::AlignCenter);
+    ui->label_qr->setVisible(!demo && qr.isValid());
+    if (!demo && qr.isValid()) {
+        ui->label_qr->setPixmap(qr.toPixmap(1).scaled(ui->label_qr->size(), Qt::KeepAspectRatio));
     }
 
-    // Identifiers are always shown: they are what support asks for, and the
-    // aggregator forgets the trade after 14 days.
-    QString support = QString("<b>Swap identifiers</b> — keep them in case you need support<br>"
-                              "Trade ID: <tt>%1</tt><br>").arg(t->tradeId.toHtmlEscaped());
-    if (!t->exchangeTradeId.isEmpty()) {
-        support += QString("Exchange trade ID: <tt>%1</tt><br>").arg(t->exchangeTradeId.toHtmlEscaped());
-    }
-    if (!t->exchangePassword.isEmpty()) {
-        support += QString("Exchange password: <tt>%1</tt><br>").arg(t->exchangePassword.toHtmlEscaped());
-    }
-    if (needsSupport(t->status)) {
-        support += QString("<br><b>This swap needs attention.</b> Contact support with the identifiers above");
-        support += t->supportUrl.isEmpty() ? QString(".") : QString(": <tt>%1</tt>").arg(t->supportUrl.toHtmlEscaped());
-    }
-    m_support->setText(support);
+    // Identifiers are always shown: support asks for them, and the aggregator
+    // forgets the trade after 14 days.
+    ui->line_tradeId->setText(t->tradeId);
+    setRowVisible(ui->label_exchangeIdTitle, ui->line_exchangeId, !t->exchangeTradeId.isEmpty());
+    ui->line_exchangeId->setText(t->exchangeTradeId);
+    setRowVisible(ui->label_passwordTitle, ui->line_password, !t->exchangePassword.isEmpty());
+    ui->line_password->setText(t->exchangePassword);
+    setRowVisible(ui->label_supportTitle, ui->line_support, !t->supportUrl.isEmpty());
+    ui->line_support->setText(t->supportUrl);
 
-    const bool fromThisWallet = fromTicker == QLatin1String("XMR");
+    const bool fromThisWallet = t->from.ticker == QLatin1String("xmr");
     const bool awaitingDeposit = t->status == TradeStatus::New || t->status == TradeStatus::Waiting;
-    m_btnSend->setVisible(fromThisWallet && !demo);
-    m_btnSend->setEnabled(awaitingDeposit && t->depositTxId.isEmpty());
-    m_btnCopyAddress->setEnabled(!demo);
+    ui->btn_send->setVisible(fromThisWallet && !demo);
+    ui->btn_send->setEnabled(awaitingDeposit && t->depositTxId.isEmpty());
 }

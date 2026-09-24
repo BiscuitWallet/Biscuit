@@ -8,8 +8,9 @@
 
 #include "swap/SwapManager.h"
 
-class QLabel;
-class QPushButton;
+namespace Ui {
+    class SwapTradeDialog;
+}
 
 // Details of one swap, updated live while the dialog is open.
 class SwapTradeDialog : public QDialog
@@ -19,6 +20,7 @@ class SwapTradeDialog : public QDialog
 public:
     SwapTradeDialog(biscuit::swap::SwapManager *manager, const QString &providerId, const QString &tradeId,
                     QWidget *parent = nullptr);
+    ~SwapTradeDialog() override;
 
 signals:
     void sendDepositRequested(const biscuit::swap::Trade &trade);
@@ -26,16 +28,10 @@ signals:
 private:
     void updateView();
 
+    QScopedPointer<Ui::SwapTradeDialog> ui;
     biscuit::swap::SwapManager *m_manager;
     QString m_providerId;
     QString m_tradeId;
-
-    QLabel *m_status;
-    QLabel *m_details;
-    QLabel *m_qr;
-    QLabel *m_support;
-    QPushButton *m_btnSend;
-    QPushButton *m_btnCopyAddress;
 };
 
 #endif // BISCUIT_SWAPTRADEDIALOG_H

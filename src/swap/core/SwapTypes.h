@@ -22,6 +22,7 @@ struct Asset {
     bool operator==(const Asset &other) const {
         return ticker == other.ticker && network == other.network;
     }
+    bool operator!=(const Asset &other) const { return !(*this == other); }
     bool isValid() const { return !ticker.isEmpty() && !network.isEmpty(); }
     QString displayName() const;
 };

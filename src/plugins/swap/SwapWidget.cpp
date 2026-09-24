@@ -2,18 +2,10 @@
 // SPDX-FileCopyrightText: The Biscuit developers
 
 #include "SwapWidget.h"
+#include "ui_SwapWidget.h"
 
-#include <QComboBox>
-#include <QFormLayout>
-#include <QGroupBox>
-#include <QHBoxLayout>
 #include <QHeaderView>
-#include <QLabel>
-#include <QLineEdit>
 #include <QMessageBox>
-#include <QPushButton>
-#include <QTreeWidget>
-#include <QVBoxLayout>
 
 #include "Amount.h"
 #include "DemoSwap.h"
@@ -22,147 +14,92 @@
 #include "libwalletqt/Subaddress.h"
 #include "libwalletqt/Wallet.h"
 #include "libwalletqt/WalletManager.h"
+#include "utils/Icons.h"
 #include "utils/Utils.h"
 
 using namespace biscuit::swap;
 
 namespace {
-    enum OfferColumn { OfferExchange = 0, OfferReceive, OfferKyc, OfferEta, OfferProvider };
-    enum TradeColumn { TradeDate = 0, TradePair, TradeSend, TradeReceive, TradeStatusCol, TradeExchange };
+    enum OfferColumn { OfferExchange = 0, OfferGet, OfferKyc, OfferEta, OfferVia };
+    enum TradeColumn { TradeDate = 0, TradePair, TradeSent, TradeReceived, TradeStatusCol, TradeExchange };
 
     constexpr int QuoteIndexRole = Qt::UserRole;
     constexpr int ProviderRole = Qt::UserRole;
     constexpr int TradeIdRole = Qt::UserRole + 1;
 
-    constexpr int moneroDecimals = 12;
+    // Stacked pages of the "Receive at" / "Refund to" rows.
+    constexpr int PageExternal = 0;
+    constexpr int PageWallet = 1;
 
-    const char transparencyNote[] =
-            "Biscuit may earn a commission from swap partners. It never affects the ranking: "
-            "offers are sorted only by the amount you receive, then by speed. You pay the same "
-            "price as on the partner's website.";
+    constexpr int moneroDecimals = 12;
 }
 
 SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     : QWidget(parent)
+    , ui(new Ui::SwapWidget)
     , m_wallet(wallet)
     , m_manager(new SwapManager(wallet, this))
 {
-    auto *layout = new QVBoxLayout(this);
+    ui->setupUi(this);
 
-    if (m_manager->demoMode()) {
-        auto *demo = new QLabel("<b>Demo mode</b>: this build has no swap partner key. Offers are simulated, "
-                                "no real exchange is contacted and no funds can be sent.", this);
-        demo->setWordWrap(true);
-        demo->setFrameShape(QFrame::StyledPanel);
-        demo->setStyleSheet("QLabel { background-color: #fff3cd; color: #664d03; padding: 4px; }");
-        layout->addWidget(demo);
+    const bool demo = m_manager->demoMode();
+    ui->frame_demo->setVisible(demo);
+    if (demo) {
+        ui->frame_demo->setInfo(icons()->icon("info2.svg"),
+                                "Demo mode: this build has no swap partner key. Offers are simulated, "
+                                "no exchange is contacted and nothing can be sent.");
     }
 
     // Swap partners work on mainnet only: a stagenet or testnet address would
     // lose the funds. The offline demo stays available for development.
-    const bool mainnet = constants::networkType == NetworkType::MAINNET;
-    if (!mainnet && !m_manager->demoMode()) {
-        auto *warning = new QLabel("Swaps are only available on mainnet.", this);
-        layout->addWidget(warning);
-        layout->addStretch();
-        return;
+    if (constants::networkType != NetworkType::MAINNET && !demo) {
+        ui->tab_new->setEnabled(false);
+        ui->label_status->setText("Swaps are only available on mainnet.");
     }
 
-    // [New swap]
-    auto *newBox = new QGroupBox("New swap", this);
-    auto *form = new QFormLayout(newBox);
-
-    m_direction = new QComboBox(newBox);
-    m_direction->addItem("Send XMR from this wallet, receive another coin", SendXmr);
-    m_direction->addItem("Send another coin, receive XMR in this wallet", ReceiveXmr);
-    form->addRow("Direction:", m_direction);
-
-    m_coin = new QComboBox(newBox);
-    m_coin->setMinimumContentsLength(18);
-    form->addRow("Other coin:", m_coin);
-
-    auto *amountRow = new QHBoxLayout;
-    m_amount = new QLineEdit(newBox);
-    m_amount->setPlaceholderText("0.0");
-    m_amountUnit = new QLabel(newBox);
-    amountRow->addWidget(m_amount);
-    amountRow->addWidget(m_amountUnit);
-    form->addRow("You send:", amountRow);
-
-    m_payoutLabel = new QLabel(newBox);
-    m_payout = new QLineEdit(newBox);
-    form->addRow(m_payoutLabel, m_payout);
-
-    m_refundLabel = new QLabel(newBox);
-    m_refund = new QLineEdit(newBox);
-    form->addRow(m_refundLabel, m_refund);
-
-    m_rateType = new QComboBox(newBox);
-    m_rateType->addItem("Floating (amount received may vary slightly)", static_cast<int>(RateType::Floating));
-    m_rateType->addItem("Fixed (amount received is guaranteed)", static_cast<int>(RateType::Fixed));
-    form->addRow("Rate:", m_rateType);
-
-    m_minKyc = new QComboBox(newBox);
     for (KycRating r : {KycRating::A, KycRating::B, KycRating::C, KycRating::D}) {
-        m_minKyc->addItem(QString("%1 or better — %2").arg(kycRatingToString(r), kycRatingDescription(r)), static_cast<int>(r));
+        ui->combo_kyc->addItem(r == KycRating::A ? QString("A only") : QString("%1 or better").arg(kycRatingToString(r)),
+                               static_cast<int>(r));
+        ui->combo_kyc->setItemData(ui->combo_kyc->count() - 1, kycRatingDescription(r), Qt::ToolTipRole);
     }
-    m_minKyc->setCurrentIndex(static_cast<int>(m_manager->minKycRating()));
-    form->addRow("KYC rating:", m_minKyc);
+    ui->combo_kyc->setCurrentIndex(static_cast<int>(m_manager->minKycRating()));
+    ui->combo_kyc->setToolTip("Minimum KYC rating of the exchanges, from A (no KYC) to D (funds may be held).");
+    ui->combo_rate->setItemData(0, "The amount you get may vary slightly with the market.", Qt::ToolTipRole);
+    ui->combo_rate->setItemData(1, "The amount you get is guaranteed, usually at a slightly lower rate.", Qt::ToolTipRole);
 
-    m_btnOffers = new QPushButton("Get offers", newBox);
-    auto *offersRow = new QHBoxLayout;
-    offersRow->addStretch();
-    offersRow->addWidget(m_btnOffers);
-    form->addRow(offersRow);
-    layout->addWidget(newBox);
+    ui->label_transparency->setStyleSheet("color: gray;");
+    ui->label_historyHint->setStyleSheet("color: gray;");
+    ui->label_receiveWallet->setStyleSheet("color: gray;");
+    ui->label_refundWallet->setStyleSheet("color: gray;");
 
-    // [Offers]
-    auto *offersBox = new QGroupBox("Offers", this);
-    auto *offersLayout = new QVBoxLayout(offersBox);
-    m_offers = new QTreeWidget(offersBox);
-    m_offers->setRootIsDecorated(false);
-    m_offers->setHeaderLabels({"Exchange", "You receive", "KYC", "ETA", "Via"});
-    m_offers->header()->setSectionResizeMode(OfferExchange, QHeaderView::Stretch);
-    offersLayout->addWidget(m_offers);
+    ui->tree_offers->header()->setSectionResizeMode(OfferExchange, QHeaderView::Stretch);
+    ui->tree_offers->header()->setStretchLastSection(false);
+    ui->tree_trades->header()->setSectionResizeMode(TradeStatusCol, QHeaderView::Stretch);
+    ui->tree_trades->header()->setStretchLastSection(false);
 
-    auto *note = new QLabel(transparencyNote, offersBox);
-    note->setWordWrap(true);
-    offersLayout->addWidget(note);
-
-    auto *createRow = new QHBoxLayout;
-    m_status = new QLabel(offersBox);
-    m_btnCreate = new QPushButton("Create swap", offersBox);
-    m_btnCreate->setEnabled(false);
-    createRow->addWidget(m_status, 1);
-    createRow->addWidget(m_btnCreate);
-    offersLayout->addLayout(createRow);
-    layout->addWidget(offersBox, 1);
-
-    // [History]
-    auto *tradesBox = new QGroupBox("My swaps", this);
-    auto *tradesLayout = new QVBoxLayout(tradesBox);
-    m_trades = new QTreeWidget(tradesBox);
-    m_trades->setRootIsDecorated(false);
-    m_trades->setHeaderLabels({"Date", "Pair", "Send", "Receive", "Status", "Exchange"});
-    m_trades->header()->setSectionResizeMode(TradeStatusCol, QHeaderView::Stretch);
-    tradesLayout->addWidget(m_trades);
-    auto *hint = new QLabel("Double-click a swap to see its deposit address, status and support details. "
-                            "This list is stored encrypted in your wallet file.", tradesBox);
-    hint->setWordWrap(true);
-    tradesLayout->addWidget(hint);
-    layout->addWidget(tradesBox, 1);
-
-    connect(m_direction, &QComboBox::currentIndexChanged, this, &SwapWidget::onDirectionChanged);
-    connect(m_coin, &QComboBox::currentIndexChanged, this, &SwapWidget::onDirectionChanged);
-    connect(m_btnOffers, &QPushButton::clicked, this, &SwapWidget::onGetOffers);
-    connect(m_btnCreate, &QPushButton::clicked, this, &SwapWidget::onCreateSwap);
-    connect(m_offers, &QTreeWidget::itemSelectionChanged, this, [this] {
-        m_btnCreate->setEnabled(!m_offers->selectedItems().isEmpty());
+    connect(ui->combo_from, &QComboBox::currentIndexChanged, this, &SwapWidget::onFromChanged);
+    connect(ui->combo_to, &QComboBox::currentIndexChanged, this, &SwapWidget::onToChanged);
+    connect(ui->btn_reverse, &QPushButton::clicked, this, &SwapWidget::onReverse);
+    connect(ui->line_amount, &QLineEdit::textEdited, this, &SwapWidget::clearOffers);
+    connect(ui->combo_rate, &QComboBox::currentIndexChanged, this, &SwapWidget::clearOffers);
+    connect(ui->combo_kyc, &QComboBox::currentIndexChanged, this, [this] {
+        m_manager->setMinKycRating(static_cast<KycRating>(ui->combo_kyc->currentData().toInt()));
+        clearOffers();
     });
-    connect(m_minKyc, &QComboBox::currentIndexChanged, this, [this] {
-        m_manager->setMinKycRating(static_cast<KycRating>(m_minKyc->currentData().toInt()));
+    connect(ui->btn_clear, &QPushButton::clicked, this, &SwapWidget::onClear);
+    connect(ui->btn_offers, &QPushButton::clicked, this, &SwapWidget::onGetOffers);
+    connect(ui->line_amount, &QLineEdit::returnPressed, this, &SwapWidget::onGetOffers);
+    connect(ui->btn_create, &QPushButton::clicked, this, &SwapWidget::onCreateSwap);
+    connect(ui->tree_offers, &QTreeWidget::itemSelectionChanged, this, [this] {
+        ui->btn_create->setEnabled(!ui->tree_offers->selectedItems().isEmpty());
     });
-    connect(m_trades, &QTreeWidget::itemDoubleClicked, this, &SwapWidget::onTradeActivated);
+
+    connect(ui->tree_trades, &QTreeWidget::itemDoubleClicked, this, &SwapWidget::onShowTradeDetails);
+    connect(ui->tree_trades, &QTreeWidget::itemSelectionChanged, this, [this] {
+        ui->btn_details->setEnabled(!ui->tree_trades->selectedItems().isEmpty());
+    });
+    connect(ui->btn_details, &QPushButton::clicked, this, &SwapWidget::onShowTradeDetails);
+    connect(ui->btn_refresh, &QPushButton::clicked, m_manager, &SwapManager::refreshNow);
     connect(m_manager, &SwapManager::tradesChanged, this, &SwapWidget::refreshTrades);
 
     // Record the txid when the user confirms a deposit sent from this wallet.
@@ -178,131 +115,192 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     });
 
     loadAssets();
-    onDirectionChanged();
+    updateForm();
     refreshTrades();
 }
 
-SwapWidget::Direction SwapWidget::direction() const {
-    return static_cast<Direction>(m_direction->currentData().toInt());
-}
+SwapWidget::~SwapWidget() = default;
+
+// ------------------------------------------------------------------- assets
 
 Asset SwapWidget::xmr() const {
     return {"xmr", "Mainnet"};
 }
 
-Asset SwapWidget::selectedCoin() const {
-    const QStringList parts = m_coin->currentData().toStringList();
-    if (parts.size() != 2) {
-        return {};
+Asset SwapWidget::assetOf(const QComboBox *combo) {
+    const QStringList parts = combo->currentData().toStringList();
+    return parts.size() == 2 ? Asset{parts.at(0), parts.at(1)} : Asset{};
+}
+
+void SwapWidget::selectAsset(QComboBox *combo, const Asset &asset) {
+    const int index = combo->findData(QStringList{asset.ticker, asset.network});
+    if (index >= 0) {
+        combo->setCurrentIndex(index);
     }
-    return {parts.at(0), parts.at(1)};
+}
+
+bool SwapWidget::sendsXmr() const {
+    return assetOf(ui->combo_from) == xmr();
 }
 
 void SwapWidget::loadAssets() {
     const auto providers = m_manager->providers();
     if (providers.isEmpty()) {
-        m_status->setText("All swap providers are disabled in the settings.");
+        ui->label_status->setText("All swap providers are disabled in the settings.");
         return;
     }
-    // Phase 1: one provider. With several, the lists will be merged.
+    // One provider for now. With several, their lists will be merged.
     providers.first()->supportedAssets([this](const QList<AssetInfo> &assets, const QString &error) {
         if (!error.isEmpty()) {
-            m_status->setText("Unable to load coins: " + error);
+            ui->label_status->setText("Unable to load coins: " + error);
             return;
         }
-        m_coin->clear();
-        for (const AssetInfo &info : assets) {
-            if (info.asset == xmr()) {
-                continue;
+        m_updating = true;
+        for (QComboBox *combo : {ui->combo_from, ui->combo_to}) {
+            combo->clear();
+            for (const AssetInfo &info : assets) {
+                combo->addItem(info.asset.displayName(), QStringList{info.asset.ticker, info.asset.network});
+                combo->setItemData(combo->count() - 1, info.name, Qt::ToolTipRole);
             }
-            const QString label = info.name.isEmpty() ? info.asset.displayName()
-                                                      : QString("%1 — %2").arg(info.asset.displayName(), info.name);
-            m_coin->addItem(label, QStringList{info.asset.ticker, info.asset.network});
         }
+        selectAsset(ui->combo_from, xmr());
+        ui->combo_to->setCurrentIndex(ui->combo_to->findData(QStringList{"btc", "Mainnet"}) >= 0
+                                      ? ui->combo_to->findData(QStringList{"btc", "Mainnet"}) : 1);
+        m_updating = false;
+        updateForm();
     });
 }
 
-void SwapWidget::onDirectionChanged() {
-    const Asset coin = selectedCoin();
-    const QString coinName = coin.isValid() ? coin.displayName() : "coin";
+// --------------------------------------------------------------------- form
 
-    m_offers->clear();
-    m_quotes.clear();
-    m_btnCreate->setEnabled(false);
-
-    if (direction() == SendXmr) {
-        m_amountUnit->setText("XMR");
-        m_payoutLabel->setText(QString("Receive %1 at:").arg(coinName));
-        m_payout->setReadOnly(false);
-        m_payout->clear();
-        m_payout->setPlaceholderText(QString("Your %1 address").arg(coinName));
-        m_refundLabel->setText("Refund XMR to:");
-        m_refund->setReadOnly(true);
-        m_refund->clear();
-        m_refund->setPlaceholderText("A new address of this wallet");
-    } else {
-        m_amountUnit->setText(coinName);
-        m_payoutLabel->setText("Receive XMR at:");
-        m_payout->setReadOnly(true);
-        m_payout->clear();
-        m_payout->setPlaceholderText("A new address of this wallet");
-        m_refundLabel->setText(QString("Refund %1 to:").arg(coinName));
-        m_refund->setReadOnly(false);
-        m_refund->clear();
-        m_refund->setPlaceholderText(QString("Your %1 address, used if the swap fails").arg(coinName));
+void SwapWidget::onFromChanged() {
+    if (m_updating) {
+        return;
     }
+    m_updating = true;
+    const Asset from = assetOf(ui->combo_from);
+    const Asset to = assetOf(ui->combo_to);
+    if (from != xmr() && to != xmr()) {
+        selectAsset(ui->combo_to, xmr());
+    } else if (from == xmr() && to == xmr()) {
+        ui->combo_to->setCurrentIndex(ui->combo_to->currentIndex() == 0 ? 1 : 0);
+    }
+    m_updating = false;
+    updateForm();
+}
+
+void SwapWidget::onToChanged() {
+    if (m_updating) {
+        return;
+    }
+    m_updating = true;
+    const Asset from = assetOf(ui->combo_from);
+    const Asset to = assetOf(ui->combo_to);
+    if (from != xmr() && to != xmr()) {
+        selectAsset(ui->combo_from, xmr());
+    } else if (from == xmr() && to == xmr()) {
+        ui->combo_from->setCurrentIndex(ui->combo_from->currentIndex() == 0 ? 1 : 0);
+    }
+    m_updating = false;
+    updateForm();
+}
+
+void SwapWidget::onReverse() {
+    const Asset from = assetOf(ui->combo_from);
+    const Asset to = assetOf(ui->combo_to);
+    m_updating = true;
+    selectAsset(ui->combo_from, to);
+    selectAsset(ui->combo_to, from);
+    m_updating = false;
+    // Addresses belong to the other side now.
+    ui->line_receive->clear();
+    ui->line_refund->clear();
+    updateForm();
+}
+
+void SwapWidget::onClear() {
+    ui->line_amount->clear();
+    ui->line_receive->clear();
+    ui->line_refund->clear();
+    clearOffers();
+}
+
+void SwapWidget::updateForm() {
+    const Asset from = assetOf(ui->combo_from);
+    const Asset to = assetOf(ui->combo_to);
+    const bool sendXmr = sendsXmr();
+
+    ui->stack_receive->setCurrentIndex(sendXmr ? PageExternal : PageWallet);
+    ui->stack_refund->setCurrentIndex(sendXmr ? PageWallet : PageExternal);
+    if (to.isValid()) {
+        ui->line_receive->setPlaceholderText(QString("Your %1 address").arg(to.displayName()));
+    }
+    if (from.isValid()) {
+        ui->line_refund->setPlaceholderText(QString("Your %1 address, used only if the swap fails (optional)").arg(from.displayName()));
+    }
+    clearOffers();
+}
+
+void SwapWidget::clearOffers() {
+    m_quotes.clear();
+    ui->tree_offers->clear();
+    ui->label_estimate->clear();
+    ui->btn_create->setEnabled(false);
 }
 
 void SwapWidget::setBusy(bool busy, const QString &status) {
-    m_btnOffers->setEnabled(!busy);
-    m_btnCreate->setEnabled(!busy && !m_offers->selectedItems().isEmpty());
-    m_status->setText(status);
+    ui->btn_offers->setEnabled(!busy);
+    ui->btn_create->setEnabled(!busy && !ui->tree_offers->selectedItems().isEmpty());
+    ui->label_status->setText(status);
 }
 
+// ------------------------------------------------------------------- offers
+
 void SwapWidget::onGetOffers() {
-    const Asset coin = selectedCoin();
-    if (!coin.isValid()) {
-        Utils::showError(this, "No coin selected", "Choose the coin to swap with.");
+    const Asset from = assetOf(ui->combo_from);
+    const Asset to = assetOf(ui->combo_to);
+    if (!from.isValid() || !to.isValid()) {
         return;
     }
-    const QString amountText = m_amount->text().trimmed();
+    const QString amountText = ui->line_amount->text().trimmed();
     if (!amount::isValid(amountText) || amount::isZero(amountText)) {
-        Utils::showError(this, "Invalid amount", "Enter a positive amount, using a dot as decimal separator.");
+        Utils::showError(this, "Invalid amount", "Enter a positive amount, with a dot as decimal separator.");
         return;
     }
-    if (direction() == SendXmr && !amount::toAtomic(amountText, moneroDecimals)) {
+    if (sendsXmr() && !amount::toAtomic(amountText, moneroDecimals)) {
         Utils::showError(this, "Invalid amount", "Monero amounts have at most 12 decimals.");
         return;
     }
 
     QuoteRequest request;
-    request.from = direction() == SendXmr ? xmr() : coin;
-    request.to = direction() == SendXmr ? coin : xmr();
+    request.from = from;
+    request.to = to;
     request.amountFrom = amount::normalize(amountText);
-    request.rateType = static_cast<RateType>(m_rateType->currentData().toInt());
-    request.minKycRating = static_cast<KycRating>(m_minKyc->currentData().toInt());
+    request.rateType = ui->combo_rate->currentIndex() == 1 ? RateType::Fixed : RateType::Floating;
+    request.minKycRating = static_cast<KycRating>(ui->combo_kyc->currentData().toInt());
 
-    m_offers->clear();
-    m_quotes.clear();
+    clearOffers();
     setBusy(true, "Asking swap partners for offers…");
 
-    m_manager->requestQuotes(request, [this, request](const QList<Quote> &ranked, const QStringList &errors) {
+    m_manager->requestQuotes(request, [this](const QList<Quote> &ranked, const QStringList &errors) {
         m_quotes = ranked;
-        m_offers->clear();
+        ui->tree_offers->clear();
         for (int i = 0; i < ranked.size(); ++i) {
             const Quote &q = ranked.at(i);
-            auto *item = new QTreeWidgetItem(m_offers);
+            auto *item = new QTreeWidgetItem(ui->tree_offers);
             item->setText(OfferExchange, q.exchange);
-            item->setText(OfferReceive, QString("%1 %2").arg(q.amountTo, q.to.ticker.toUpper()));
+            item->setText(OfferGet, QString("%1 %2").arg(q.amountTo, q.to.ticker.toUpper()));
+            item->setTextAlignment(OfferGet, Qt::AlignRight | Qt::AlignVCenter);
             item->setText(OfferKyc, kycRatingToString(q.kycRating));
             item->setToolTip(OfferKyc, kycRatingDescription(q.kycRating));
-            item->setText(OfferEta, q.etaMinutes ? QString("~%1 min").arg(*q.etaMinutes) : "?");
+            item->setTextAlignment(OfferKyc, Qt::AlignCenter);
+            item->setText(OfferEta, q.etaMinutes ? QString("~%1 min").arg(*q.etaMinutes) : "–");
             const SwapProvider *p = m_manager->provider(q.providerId);
-            item->setText(OfferProvider, p ? p->displayName() : q.providerId);
+            item->setText(OfferVia, p ? p->displayName() : q.providerId);
             item->setData(OfferExchange, QuoteIndexRole, i);
         }
-        for (int c = 0; c < m_offers->columnCount(); ++c) {
-            m_offers->resizeColumnToContents(c);
+        for (int c = OfferGet; c < ui->tree_offers->columnCount(); ++c) {
+            ui->tree_offers->resizeColumnToContents(c);
         }
 
         if (ranked.isEmpty()) {
@@ -310,8 +308,9 @@ void SwapWidget::onGetOffers() {
             return;
         }
         // Best offer preselected; the user can pick another one.
-        m_offers->setCurrentItem(m_offers->topLevelItem(0));
-        setBusy(false, QString("%1 offer(s). Best offer selected.").arg(ranked.size()));
+        ui->tree_offers->setCurrentItem(ui->tree_offers->topLevelItem(0));
+        ui->label_estimate->setText(QString("≈ %1 %2").arg(ranked.first().amountTo, ranked.first().to.ticker.toUpper()));
+        setBusy(false, ranked.size() == 1 ? "1 offer." : QString("%1 offers, best one selected.").arg(ranked.size()));
     });
 }
 
@@ -325,39 +324,39 @@ QString SwapWidget::newWalletAddress(const QString &label) {
 }
 
 void SwapWidget::onCreateSwap() {
-    const auto items = m_offers->selectedItems();
+    const auto items = ui->tree_offers->selectedItems();
     if (items.isEmpty()) {
         return;
     }
     const int index = items.first()->data(OfferExchange, QuoteIndexRole).toInt();
-    if (index < 0 || index >= m_quotes.size()) {
-        return;
+    if (index >= 0 && index < m_quotes.size()) {
+        createTrade(m_quotes.at(index));
     }
-    createTrade(m_quotes.at(index));
 }
 
 void SwapWidget::createTrade(const Quote &quote) {
-    const bool sendXmr = direction() == SendXmr;
-    const QString external = (sendXmr ? m_payout : m_refund)->text().trimmed();
+    const bool sendXmr = quote.from == xmr();
+    const QString external = (sendXmr ? ui->line_receive : ui->line_refund)->text().trimmed();
 
     if (sendXmr && external.isEmpty()) {
-        Utils::showError(this, "Missing address", QString("Enter the %1 address where you want to receive the coins.")
+        Utils::showError(this, "Missing address", QString("Enter the %1 address where you want to get the coins.")
                                                           .arg(quote.to.displayName()));
+        ui->line_receive->setFocus();
         return;
     }
 
     auto proceed = [this, quote, sendXmr, external] {
-        const QString summary = QString(
-                "You send: %1 %2\n"
-                "You receive (estimated): %3 %4\n"
-                "Exchange: %5 (KYC rating %6)\n\n"
-                "%7")
-                .arg(quote.amountFrom, quote.from.ticker.toUpper(), quote.amountTo, quote.to.ticker.toUpper(),
-                     quote.exchange, kycRatingToString(quote.kycRating),
-                     sendXmr ? QString("Coins will be sent to:\n%1").arg(external)
-                             : QString("XMR will be received on a new address of this wallet."));
-
-        if (QMessageBox::question(this, "Create swap?", summary) != QMessageBox::Yes) {
+        QMessageBox box(this);
+        box.setWindowTitle("Create swap");
+        box.setIcon(QMessageBox::Question);
+        box.setText(QString("Swap %1 %2 for about %3 %4?")
+                    .arg(quote.amountFrom, quote.from.ticker.toUpper(), quote.amountTo, quote.to.ticker.toUpper()));
+        box.setInformativeText(QString("Exchange: %1 (KYC %2)\n%3")
+                               .arg(quote.exchange, kycRatingToString(quote.kycRating),
+                                    sendXmr ? QString("You get the coins at: %1").arg(external)
+                                            : QString("You get the XMR on a new address of this wallet.")));
+        box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        if (box.exec() != QMessageBox::Yes) {
             return;
         }
 
@@ -379,14 +378,13 @@ void SwapWidget::createTrade(const Quote &quote) {
                 Utils::showError(this, "Unable to create swap", error);
                 return;
             }
-            m_offers->clear();
-            m_quotes.clear();
+            onClear();
             showTrade(trade->providerId, trade->tradeId);
         });
     };
 
-    // Validate the external address with the partner first (the refund
-    // address is optional when receiving XMR).
+    // Check the external address with the partner (the refund address is
+    // optional when receiving XMR).
     if (external.isEmpty()) {
         proceed();
         return;
@@ -395,38 +393,50 @@ void SwapWidget::createTrade(const Quote &quote) {
     setBusy(true, "Checking address…");
     m_manager->validateAddress(externalAsset, external, [this, proceed, externalAsset](std::optional<bool> valid, const QString &error) {
         setBusy(false);
-        if (valid.has_value() && !*valid) {
-            Utils::showError(this, "Invalid address", QString("This is not a valid %1 address.").arg(externalAsset.displayName()));
-            return;
-        }
         if (!valid.has_value()) {
             Utils::showError(this, "Unable to check address", error);
+            return;
+        }
+        if (!*valid) {
+            Utils::showError(this, "Invalid address", QString("This is not a valid %1 address.").arg(externalAsset.displayName()));
             return;
         }
         proceed();
     });
 }
 
+// ------------------------------------------------------------------ history
+
 void SwapWidget::refreshTrades() {
-    m_trades->clear();
-    for (const Trade &t : m_manager->trades()) {
-        auto *item = new QTreeWidgetItem(m_trades);
+    ui->tree_trades->clear();
+    const QList<Trade> trades = m_manager->trades();
+    for (const Trade &t : trades) {
+        auto *item = new QTreeWidgetItem(ui->tree_trades);
         item->setText(TradeDate, t.createdAt.toLocalTime().toString("yyyy-MM-dd HH:mm"));
         item->setText(TradePair, QString("%1 → %2").arg(t.from.ticker.toUpper(), t.to.ticker.toUpper()));
-        item->setText(TradeSend, t.amountFrom);
-        item->setText(TradeReceive, t.amountTo);
+        item->setText(TradeSent, t.amountFrom);
+        item->setTextAlignment(TradeSent, Qt::AlignRight | Qt::AlignVCenter);
+        item->setText(TradeReceived, t.amountTo);
+        item->setTextAlignment(TradeReceived, Qt::AlignRight | Qt::AlignVCenter);
         item->setText(TradeStatusCol, tradeStatusDescription(t.status));
+        if (needsSupport(t.status)) {
+            item->setIcon(TradeStatusCol, icons()->icon("warning.png"));
+        }
         item->setText(TradeExchange, t.providerId == demo::providerId ? t.exchange + " (demo)" : t.exchange);
         item->setData(TradeDate, ProviderRole, t.providerId);
         item->setData(TradeDate, TradeIdRole, t.tradeId);
     }
-    for (int c = 0; c < m_trades->columnCount(); ++c) {
-        m_trades->resizeColumnToContents(c);
+    for (int c = 0; c < ui->tree_trades->columnCount(); ++c) {
+        if (c != TradeStatusCol) {
+            ui->tree_trades->resizeColumnToContents(c);
+        }
     }
+    ui->tabWidget->setTabText(ui->tabWidget->indexOf(ui->tab_history),
+                              trades.isEmpty() ? QString("History") : QString("History (%1)").arg(trades.size()));
 }
 
-void SwapWidget::onTradeActivated() {
-    const auto items = m_trades->selectedItems();
+void SwapWidget::onShowTradeDetails() {
+    const auto items = ui->tree_trades->selectedItems();
     if (items.isEmpty()) {
         return;
     }
@@ -437,9 +447,7 @@ void SwapWidget::onTradeActivated() {
 void SwapWidget::showTrade(const QString &providerId, const QString &tradeId) {
     auto *dialog = new SwapTradeDialog(m_manager, providerId, tradeId, this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
-    connect(dialog, &SwapTradeDialog::sendDepositRequested, this, [this](const Trade &trade) {
-        sendDeposit(trade);
-    });
+    connect(dialog, &SwapTradeDialog::sendDepositRequested, this, &SwapWidget::sendDeposit);
     dialog->show();
 }
 
