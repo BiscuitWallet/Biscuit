@@ -30,7 +30,7 @@
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>By default, Biscuit connects directly, without Tor. Tor is optional: choose &quot;Configure manually&quot; to route traffic over Tor. It hides your IP address from nodes and services, but is slower.</string>
+      <string>Tor hides your IP address from nodes and online services. It is more private, but slower. Biscuit includes Tor: you do not need to install or configure anything.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -57,7 +57,7 @@
    <item>
     <widget class="QRadioButton" name="radio_useDefaultSettings">
      <property name="text">
-      <string>Use default settings</string>
+      <string>Connect directly (faster)</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -65,9 +65,16 @@
     </widget>
    </item>
    <item>
+    <widget class="QRadioButton" name="radio_tor">
+     <property name="text">
+      <string>Connect through Tor (more private, Biscuit starts Tor for you)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QRadioButton" name="radio_configureManually">
      <property name="text">
-      <string>Change proxy settings</string>
+      <string>Custom settings (your own Tor, i2p or SOCKS5 proxy)</string>
      </property>
     </widget>
    </item>

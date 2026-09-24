@@ -33,6 +33,8 @@ signals:
 private:
     void onProxySettingsChanged();
     void updatePort();
+    void updateHostVisibility();
+    void detectLocalTor();
 
     QScopedPointer<Ui::NetworkProxyWidget> ui;
     TorInfoDialog *m_torInfoDialog;

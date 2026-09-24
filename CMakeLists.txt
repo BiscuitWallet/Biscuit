@@ -170,6 +170,26 @@ else()
     message(STATUS "Skipping Tor inclusion because -DTOR_DIR=Off")
 endif()
 
+# Biscuit (macOS): ship Tor inside the app so enabling Tor is one click.
+# Uses Homebrew's Tor by default (brew install tor), or -DBISCUIT_TOR_BIN=/path/to/tor.
+# Release builds should use a statically built Tor instead.
+if(APPLE AND NOT TOR_DIR)
+    option(BISCUIT_BUNDLE_TOR "Bundle a Tor binary inside Biscuit.app" ON)
+    if(BISCUIT_BUNDLE_TOR AND NOT BISCUIT_TOR_BIN)
+        execute_process(COMMAND brew --prefix tor OUTPUT_VARIABLE _brew_tor OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        if(_brew_tor AND EXISTS "${_brew_tor}/bin/tor")
+            set(BISCUIT_TOR_BIN "${_brew_tor}/bin/tor")
+        endif()
+    endif()
+    if(BISCUIT_BUNDLE_TOR AND BISCUIT_TOR_BIN)
+        execute_process(COMMAND "${BISCUIT_TOR_BIN}" --version OUTPUT_VARIABLE _tor_version_out ERROR_QUIET)
+        string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+" TOR_VERSION "${_tor_version_out}")
+        message(STATUS "Bundling Tor ${TOR_VERSION} from ${BISCUIT_TOR_BIN}")
+    else()
+        message(STATUS "Not bundling Tor (install it with: brew install tor)")
+    endif()
+endif()
+
 message(STATUS "Using Boost include dir at ${Boost_INCLUDE_DIRS}")
 message(STATUS "Using Boost libraries at ${Boost_LIBRARIES}")
 

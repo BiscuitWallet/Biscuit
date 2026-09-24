@@ -28,8 +28,10 @@ Remarques :
 - `zxing-cpp` est disponible dans Homebrew : pas besoin de le compiler (scanner QR actif).
 - Les avertissements `ld: warning: building for macOS-26.5 ... built for newer version`
   sont sans conséquence pour un build de développement.
-- Tor : Feather n'embarque pas Tor en build de développement. Pour tester l'option Tor,
-  lancer `brew services start tor`, ou compiler avec `-DTOR_DIR=/chemin/vers/tor`.
+- Tor : sur macOS, le Tor de Homebrew (`brew install tor`) est copié automatiquement dans
+  `Biscuit.app/Contents/bin` avec ses bibliothèques (script `contrib/macdeploy/bundle-tor.sh`).
+  Dans l'app, « Tor » fonctionne alors en un clic, sans rien configurer. Pour une version
+  publique, utiliser un Tor compilé en statique (`-DBISCUIT_TOR_BIN=/chemin/vers/tor`).
 
 ## Tests unitaires
 

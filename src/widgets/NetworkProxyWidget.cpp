@@ -9,6 +9,7 @@
 #include <QWidget>
 
 #include "utils/config.h"
+#include "utils/Utils.h"
 
 NetworkProxyWidget::NetworkProxyWidget(QWidget *parent)
         : QWidget(parent)
@@ -24,6 +25,7 @@ NetworkProxyWidget::NetworkProxyWidget(QWidget *parent)
         ui->groupBox_proxySettings->setTitle(QString("%1 settings").arg(ui->comboBox_proxy->currentText()));
         ui->frame_tor->setVisible(index == Config::Proxy::Tor);
         this->updatePort();
+        this->updateHostVisibility();
     });
 
     int proxy = conf()->get(Config::proxy).toInt();
@@ -51,6 +53,10 @@ NetworkProxyWidget::NetworkProxyWidget(QWidget *parent)
     ui->checkBox_torManaged->setChecked(!conf()->get(Config::useLocalTor).toBool());
     connect(ui->checkBox_torManaged, &QCheckBox::toggled, [this](bool toggled){
         this->updatePort();
+        if (!toggled) {
+            this->detectLocalTor();
+        }
+        this->updateHostVisibility();
         this->onProxySettingsChanged();
         if (!m_disableTorLogs) {
             ui->frame_torShowLogs->setVisible(toggled);
@@ -76,6 +82,31 @@ NetworkProxyWidget::NetworkProxyWidget(QWidget *parent)
     });
 
     ui->frame_notice->hide();
+    this->updateHostVisibility();
+}
+
+void NetworkProxyWidget::updateHostVisibility() {
+    // Biscuit: with automatic Tor the SOCKS5 host and port are managed by the
+    // app, showing them only confuses users.
+    const bool managedTor = ui->comboBox_proxy->currentIndex() == Config::Proxy::Tor
+                            && ui->checkBox_torManaged->isEnabled() && ui->checkBox_torManaged->isChecked();
+    for (QWidget *w : {static_cast<QWidget *>(ui->label_36), static_cast<QWidget *>(ui->line_host),
+                       static_cast<QWidget *>(ui->label_37), static_cast<QWidget *>(ui->line_port)}) {
+        w->setVisible(!managedTor);
+    }
+}
+
+void NetworkProxyWidget::detectLocalTor() {
+    // "Use my own Tor": pick the port of a Tor already running on this computer,
+    // the Tor service (9050) or Tor Browser (9150).
+    const QString host = ui->line_host->text().isEmpty() ? QString("127.0.0.1") : ui->line_host->text();
+    for (quint16 port : {9050, 9150}) {
+        if (Utils::portOpen(host, port)) {
+            ui->line_host->setText(host);
+            ui->line_port->setText(QString::number(port));
+            return;
+        }
+    }
 }
 
 void NetworkProxyWidget::onProxySettingsChanged() {

@@ -146,7 +146,7 @@
               <item>
                <widget class="QCheckBox" name="checkBox_torManaged">
                 <property name="text">
-                 <string>Let Biscuit start and manage a Tor daemon</string>
+                 <string>Automatic: Biscuit starts and manages Tor (recommended)</string>
                 </property>
                </widget>
               </item>

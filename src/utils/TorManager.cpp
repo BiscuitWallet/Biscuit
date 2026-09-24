@@ -23,12 +23,16 @@ TorManager::TorManager(QObject *parent)
     // When installed, use directory relative to application path.
     this->torDir = QDir(Utils::applicationPath()).filePath("tor");
 #endif
-    if (QString(FEATHER_TARGET_TRIPLET) == "arm64-apple-darwin" || QString(FEATHER_TARGET_TRIPLET) == "x86_64-apple-darwin") {
+    // Biscuit: on macOS Tor always lives in the bundle (Contents/bin), not only in
+    // cross-compiled release builds.
+#if defined(Q_OS_MACOS)
+    {
         QString featherBinaryPath = QCoreApplication::applicationDirPath();
         QDir appBinaryDir(featherBinaryPath);
         appBinaryDir.cd("..");
         this->torDir = appBinaryDir.filePath("bin");
     }
+#endif
 
     this->torDataPath = Config::defaultConfigDir().filePath("tor/data");
 
@@ -197,9 +201,10 @@ bool TorManager::unpackBins() {
     return true;
 #endif
 
-    if (QString(FEATHER_TARGET_TRIPLET) == "arm64-apple-darwin" || QString(FEATHER_TARGET_TRIPLET) == "x86_64-apple-darwin") {
-        return true;
-    }
+#if defined(Q_OS_MACOS)
+    // Shipped inside the bundle, nothing to unpack.
+    return true;
+#endif
 
     SemanticVersion embeddedVersion = SemanticVersion::fromString(QString(TOR_VERSION));
     SemanticVersion filesystemVersion = this->getVersion(torPath);

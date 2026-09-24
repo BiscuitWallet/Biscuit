@@ -402,4 +402,11 @@ if(APPLE)
     target_sources(feather PRIVATE ${BISCUIT_ICNS})
 endif()
 
+if(APPLE AND BISCUIT_BUNDLE_TOR AND BISCUIT_TOR_BIN)
+    target_compile_definitions(feather PRIVATE HAS_TOR_BIN=1)
+    add_custom_command(TARGET feather POST_BUILD
+            COMMAND "${CMAKE_SOURCE_DIR}/contrib/macdeploy/bundle-tor.sh" "${BISCUIT_TOR_BIN}" "$<TARGET_BUNDLE_DIR:feather>"
+            VERBATIM)
+endif()
+
 qt_finalize_executable(feather)

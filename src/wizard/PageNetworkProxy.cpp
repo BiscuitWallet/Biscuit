@@ -7,6 +7,7 @@
 #include <QTimer>
 
 #include "WalletWizard.h"
+#include "utils/config.h"
 
 PageNetworkProxy::PageNetworkProxy(QWidget *parent)
     : QWizardPage(parent)
@@ -35,7 +36,15 @@ int PageNetworkProxy::nextId() const {
 }
 
 bool PageNetworkProxy::validatePage() {
-    if (ui->proxyWidget->isProxySettingsChanged()) {
+    if (ui->radio_tor->isChecked()) {
+        // Biscuit: one-click Tor, managed by the app when it ships a Tor binary.
+        conf()->set(Config::proxy, Config::Proxy::Tor);
+#if defined(HAS_TOR_BIN) || defined(TOR_INSTALLED)
+        conf()->set(Config::useLocalTor, false);
+#endif
+    } else if (ui->radio_useDefaultSettings->isChecked()) {
+        conf()->set(Config::proxy, Config::Proxy::None);
+    } else if (ui->proxyWidget->isProxySettingsChanged()) {
         ui->proxyWidget->setProxySettings();
     }
 
