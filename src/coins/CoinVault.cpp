@@ -167,6 +167,51 @@ void CoinVault::lock() {
     emit locked();
 }
 
+bool CoinVault::checkPassword(const QString &password) const {
+    if (!exists()) {
+        return true;
+    }
+    QFile file(path());
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    auto content = walletfile::decrypt(file.readAll(), password);
+    if (content) walletfile::wipe(*content);
+    return content.has_value();
+}
+
+bool CoinVault::changePassword(const QString &oldPassword, const QString &newPassword, QString *error) {
+    if (!exists()) {
+        return true;
+    }
+    m_saveTimer.stop();
+    save();   // latest caches first
+
+    QFile file(path());
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = file.errorString();
+        return false;
+    }
+    auto opened = walletfile::Session::open(file.readAll(), oldPassword);
+    file.close();
+    if (!opened) {
+        if (error) *error = "Wrong password";
+        return false;
+    }
+    auto session = walletfile::Session::create(newPassword);
+    if (!session) {
+        walletfile::wipe(opened->second);
+        if (error) *error = "Unable to encrypt the wallet file";
+        return false;
+    }
+    const bool saved = session->save(path(), opened->second, error);
+    walletfile::wipe(opened->second);
+    if (saved && m_session) {
+        m_session = std::move(*session);   // keep saving with the new key
+    }
+    return saved;
+}
+
 std::optional<QPair<QString, QString>> CoinVault::revealMnemonic(const QString &password, QString *error) const {
     QFile file(path());
     if (!file.open(QIODevice::ReadOnly)) {

@@ -7,6 +7,7 @@
 #include "Amount.h"
 #include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
+#include "coins/CoinSetupDialog.h"
 #include "coins/CoinVault.h"
 
 #include <QFileDialog>
@@ -322,6 +323,23 @@ void MainWindow::initMenu() {
     connect(ui->actionAccount,      &QAction::triggered, this, &MainWindow::showAccountSwitcherDialog);
     connect(ui->actionPassword,     &QAction::triggered, this, &MainWindow::showPasswordDialog);
     connect(ui->actionSeed,         &QAction::triggered, this, &MainWindow::showSeedDialog);
+    // Biscuit: the Bitcoin/Litecoin seed, next to the Monero one.
+    {
+        ui->actionSeed->setText("Monero seed");
+        auto *coinSeed = new QAction("Bitcoin and Litecoin seed…", this);
+        ui->menuWallet->insertAction(ui->actionSeed, coinSeed);
+        ui->menuWallet->removeAction(ui->actionSeed);
+        ui->menuWallet->insertAction(coinSeed, ui->actionSeed);
+        connect(coinSeed, &QAction::triggered, this, [this] {
+            auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+            if (vault->exists()) {
+                biscuit::coins::showCoinSeed(vault, this);
+            } else {
+                Utils::showInfo(this, "Bitcoin and Litecoin", "Bitcoin and Litecoin are not set up in this wallet yet.",
+                                {"Go to the Receive tab and choose Bitcoin or Litecoin to set them up."});
+            }
+        });
+    }
     connect(ui->actionKeys,         &QAction::triggered, this, &MainWindow::showKeysDialog);
     connect(ui->actionViewOnly,     &QAction::triggered, this, &MainWindow::showViewOnlyDialog);
 

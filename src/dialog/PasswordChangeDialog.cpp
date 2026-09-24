@@ -4,6 +4,8 @@
 #include "PasswordChangeDialog.h"
 #include "ui_PasswordChangeDialog.h"
 
+#include "coins/CoinVault.h"
+
 #include "Utils.h"
 
 PasswordChangeDialog::PasswordChangeDialog(QWidget *parent, Wallet *wallet)
@@ -56,7 +58,20 @@ void PasswordChangeDialog::setPassword() {
         return;
     }
 
+    // Biscuit: Bitcoin/Litecoin use the same password; make sure their file can
+    // follow before changing anything.
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    if (!vault->checkPassword(currentPassword)) {
+        Utils::showError(this, "Unable to change password", "The Bitcoin/Litecoin file of this wallet cannot be opened with this password.");
+        return;
+    }
+
     if (m_wallet->setPassword(currentPassword, newPassword)) {
+        QString error;
+        if (!vault->changePassword(currentPassword, newPassword, &error)) {
+            Utils::showError(this, "Bitcoin/Litecoin password not changed",
+                             QString("The Monero password was changed, but the Bitcoin/Litecoin file still uses the old password: %1").arg(error));
+        }
         QMessageBox::information(this, "Information", "Password changed successfully");
         this->accept();
     }

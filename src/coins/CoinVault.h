@@ -40,6 +40,12 @@ public:
     bool unlock(const QString &password, QString *error);
     void lock();
 
+    // True if `password` opens the file (or there is no file).
+    bool checkPassword(const QString &password) const;
+    // Re-encrypts the file with a new password (new salt and key). Call after
+    // the Monero wallet password was changed.
+    bool changePassword(const QString &oldPassword, const QString &newPassword, QString *error);
+
     // Seed and optional passphrase, read from the file with the password.
     std::optional<QPair<QString, QString>> revealMnemonic(const QString &password, QString *error) const;
 
