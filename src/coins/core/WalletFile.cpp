@@ -7,6 +7,9 @@
 #include <QSaveFile>
 #include <QtEndian>
 
+#include <cstring>
+#include <utility>
+
 #include <sodium.h>
 
 namespace biscuit::coins::walletfile {
@@ -65,44 +68,45 @@ void wipe(QByteArray &data) {
     data.clear();
 }
 
-QByteArray encrypt(const QByteArray &plaintext, const QString &password, const KdfParams &kdf) {
-    if (!sodiumReady()) {
-        return {};
+namespace {
+    QByteArray makeHeader(const KdfParams &kdf, const QByteArray &salt, const QByteArray &nonce) {
+        QByteArray header;
+        header.append(magic, magicLen);
+        header.append(char(formatVersion));
+        header.append(char(kdfArgon2id));
+        appendU64(header, kdf.opsLimit);
+        appendU64(header, kdf.memLimit);
+        header.append(salt);
+        header.append(nonce);
+        return header;
     }
 
-    QByteArray salt(saltLen, Qt::Uninitialized);
-    QByteArray nonce(nonceLen, Qt::Uninitialized);
-    randombytes_buf(u(salt), salt.size());
-    randombytes_buf(u(nonce), nonce.size());
-
-    QByteArray header;
-    header.append(magic, magicLen);
-    header.append(char(formatVersion));
-    header.append(char(kdfArgon2id));
-    appendU64(header, kdf.opsLimit);
-    appendU64(header, kdf.memLimit);
-    header.append(salt);
-    header.append(nonce);
-
-    auto key = deriveKey(password, salt, kdf);
-    if (!key) {
-        return {};
+    unsigned char *secureKeyFrom(QByteArray &key) {
+        auto *secure = static_cast<unsigned char *>(sodium_malloc(keyLen));
+        if (secure) {
+            std::memcpy(secure, key.constData(), keyLen);
+        }
+        wipe(key);
+        return secure;
     }
-
-    QByteArray cipher(plaintext.size() + tagLen, Qt::Uninitialized);
-    unsigned long long cipherLen = 0;
-    const int ret = crypto_aead_xchacha20poly1305_ietf_encrypt(
-            u(cipher), &cipherLen, u(plaintext), plaintext.size(),
-            u(header), header.size(), nullptr, u(nonce), u(*key));
-    wipe(*key);
-    if (ret != 0) {
-        return {};
-    }
-    cipher.resize(static_cast<qsizetype>(cipherLen));
-    return header + cipher;
 }
 
-std::optional<QByteArray> decrypt(const QByteArray &file, const QString &password) {
+std::optional<Session> Session::create(const QString &password, const KdfParams &kdf) {
+    if (!sodiumReady()) {
+        return std::nullopt;
+    }
+    Session session;
+    session.m_kdf = kdf;
+    session.m_salt = QByteArray(saltLen, Qt::Uninitialized);
+    randombytes_buf(u(session.m_salt), session.m_salt.size());
+    auto key = deriveKey(password, session.m_salt, kdf);
+    if (!key || !(session.m_key = secureKeyFrom(*key))) {
+        return std::nullopt;
+    }
+    return session;
+}
+
+std::optional<std::pair<Session, QByteArray>> Session::open(const QByteArray &file, const QString &password) {
     if (!sodiumReady() || file.size() < headerLen + tagLen || !file.startsWith(QByteArray(magic, magicLen))) {
         return std::nullopt;
     }
@@ -134,33 +138,104 @@ std::optional<QByteArray> decrypt(const QByteArray &file, const QString &passwor
     const int ret = crypto_aead_xchacha20poly1305_ietf_decrypt(
             u(plain), &plainLen, nullptr, u(cipher), cipher.size(),
             u(header), header.size(), u(nonce), u(*key));
-    wipe(*key);
     if (ret != 0) {
+        wipe(*key);
         wipe(plain);
         return std::nullopt;
     }
     plain.resize(static_cast<qsizetype>(plainLen));
-    return plain;
+
+    Session session;
+    session.m_kdf = kdf;
+    session.m_salt = salt;
+    if (!(session.m_key = secureKeyFrom(*key))) {
+        wipe(plain);
+        return std::nullopt;
+    }
+    return std::make_pair(std::move(session), plain);
+}
+
+Session::Session(Session &&other) noexcept
+    : m_key(std::exchange(other.m_key, nullptr))
+    , m_salt(std::move(other.m_salt))
+    , m_kdf(other.m_kdf)
+{
+}
+
+Session &Session::operator=(Session &&other) noexcept {
+    if (this != &other) {
+        if (m_key) sodium_free(m_key);
+        m_key = std::exchange(other.m_key, nullptr);
+        m_salt = std::move(other.m_salt);
+        m_kdf = other.m_kdf;
+    }
+    return *this;
+}
+
+Session::~Session() {
+    if (m_key) {
+        sodium_free(m_key);   // wipes before freeing
+    }
+}
+
+QByteArray Session::seal(const QByteArray &plaintext) const {
+    if (!m_key) {
+        return {};
+    }
+    QByteArray nonce(nonceLen, Qt::Uninitialized);
+    randombytes_buf(u(nonce), nonce.size());
+    const QByteArray header = makeHeader(m_kdf, m_salt, nonce);
+
+    QByteArray cipher(plaintext.size() + tagLen, Qt::Uninitialized);
+    unsigned long long cipherLen = 0;
+    if (crypto_aead_xchacha20poly1305_ietf_encrypt(u(cipher), &cipherLen, u(plaintext), plaintext.size(),
+                                                   u(header), header.size(), nullptr, u(nonce), m_key) != 0) {
+        return {};
+    }
+    cipher.resize(static_cast<qsizetype>(cipherLen));
+    return header + cipher;
+}
+
+namespace {
+    bool writeFile(const QString &path, const QByteArray &data, QString *error) {
+        if (data.isEmpty()) {
+            if (error) *error = "Encryption failed";
+            return false;
+        }
+        QSaveFile file(path);
+        if (!file.open(QIODevice::WriteOnly)) {
+            if (error) *error = file.errorString();
+            return false;
+        }
+        file.setPermissions(QFile::ReadOwner | QFile::WriteOwner);
+        if (file.write(data) != data.size() || !file.commit()) {
+            if (error) *error = file.errorString();
+            return false;
+        }
+        QFile::setPermissions(path, QFile::ReadOwner | QFile::WriteOwner);
+        return true;
+    }
+}
+
+bool Session::save(const QString &path, const QByteArray &plaintext, QString *error) const {
+    return writeFile(path, seal(plaintext), error);
+}
+
+QByteArray encrypt(const QByteArray &plaintext, const QString &password, const KdfParams &kdf) {
+    const auto session = Session::create(password, kdf);
+    return session ? session->seal(plaintext) : QByteArray();
+}
+
+std::optional<QByteArray> decrypt(const QByteArray &file, const QString &password) {
+    auto opened = Session::open(file, password);
+    if (!opened) {
+        return std::nullopt;
+    }
+    return std::move(opened->second);
 }
 
 bool save(const QString &path, const QByteArray &plaintext, const QString &password, const KdfParams &kdf, QString *error) {
-    const QByteArray data = encrypt(plaintext, password, kdf);
-    if (data.isEmpty()) {
-        if (error) *error = "Encryption failed";
-        return false;
-    }
-    QSaveFile file(path);
-    if (!file.open(QIODevice::WriteOnly)) {
-        if (error) *error = file.errorString();
-        return false;
-    }
-    file.setPermissions(QFile::ReadOwner | QFile::WriteOwner);
-    if (file.write(data) != data.size() || !file.commit()) {
-        if (error) *error = file.errorString();
-        return false;
-    }
-    QFile::setPermissions(path, QFile::ReadOwner | QFile::WriteOwner);
-    return true;
+    return writeFile(path, encrypt(plaintext, password, kdf), error);
 }
 
 std::optional<QByteArray> load(const QString &path, const QString &password, QString *error) {

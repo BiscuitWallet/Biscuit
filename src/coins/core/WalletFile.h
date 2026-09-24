@@ -45,6 +45,32 @@ namespace biscuit::coins::walletfile {
 
     // Overwrites a buffer holding secrets (compiler-proof).
     void wipe(QByteArray &data);
+
+    // An unlocked wallet file: the key is derived once (Argon2id is slow on
+    // purpose) and kept in memory protected by libsodium (locked in RAM, guard
+    // pages, wiped on destruction). Each save uses a fresh random nonce.
+    class Session {
+    public:
+        // New file: random salt.
+        static std::optional<Session> create(const QString &password, const KdfParams &kdf = defaultKdf());
+        // Existing file: returns the session and the decrypted content.
+        static std::optional<std::pair<Session, QByteArray>> open(const QByteArray &file, const QString &password);
+
+        Session(Session &&other) noexcept;
+        Session &operator=(Session &&other) noexcept;
+        Session(const Session &) = delete;
+        Session &operator=(const Session &) = delete;
+        ~Session();
+
+        QByteArray seal(const QByteArray &plaintext) const;
+        bool save(const QString &path, const QByteArray &plaintext, QString *error = nullptr) const;
+
+    private:
+        Session() = default;
+        unsigned char *m_key = nullptr;   // sodium_malloc'd
+        QByteArray m_salt;
+        KdfParams m_kdf{};
+    };
 }
 
 #endif // BISCUIT_WALLETFILE_H

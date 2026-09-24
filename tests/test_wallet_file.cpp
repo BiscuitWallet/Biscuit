@@ -100,6 +100,33 @@ private slots:
         QVERIFY(!walletfile::load(dir.filePath("missing"), password).has_value());
     }
 
+    void sessionSealsWithoutPassword() {
+        auto session = walletfile::Session::create(password, walletfile::testKdf());
+        QVERIFY(session.has_value());
+        const QByteArray a = session->seal(secret);
+        const QByteArray b = session->seal(secret + "2");
+        // Same salt (same key), fresh nonce for every save.
+        QCOMPARE(a.mid(kdfOffset + 16, 16), b.mid(kdfOffset + 16, 16));
+        QVERIFY(a.mid(kdfOffset + 32, 24) != b.mid(kdfOffset + 32, 24));
+        QCOMPARE(walletfile::decrypt(a, password), std::optional<QByteArray>(secret));
+        QCOMPARE(walletfile::decrypt(b, password), std::optional<QByteArray>(secret + "2"));
+    }
+
+    void reopenedSessionKeepsWorking() {
+        const QByteArray file = walletfile::encrypt(secret, password, walletfile::testKdf());
+        auto opened = walletfile::Session::open(file, password);
+        QVERIFY(opened.has_value());
+        QCOMPARE(opened->second, secret);
+        const QByteArray resealed = opened->first.seal("updated");
+        QCOMPARE(walletfile::decrypt(resealed, password), std::optional<QByteArray>("updated"));
+        QVERIFY(!walletfile::Session::open(file, "nope").has_value());
+
+        // A moved-from session holds no key anymore.
+        walletfile::Session moved = std::move(opened->first);
+        QVERIFY(opened->first.seal("x").isEmpty());
+        QVERIFY(!moved.seal("x").isEmpty());
+    }
+
     void wipeClearsBuffer() {
         QByteArray data = "secret words";
         walletfile::wipe(data);
