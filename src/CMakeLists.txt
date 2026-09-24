@@ -77,6 +77,8 @@ file(GLOB SOURCE_FILES
         "plugins/*.h"
         "swap/*.h"
         "swap/*.cpp"
+        "datafeed/*.h"
+        "datafeed/*.cpp"
         )
 
 get_cmake_property(_vars VARIABLES)
@@ -286,6 +288,7 @@ endif()
 
 target_link_libraries(feather PRIVATE
         biscuit_swap_core
+        biscuit_datafeed_core
         wallet_api
         epee
         easylogging

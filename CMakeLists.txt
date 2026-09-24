@@ -28,7 +28,8 @@ option(USE_DEVICE_TREZOR "Trezor support compilation" ON)
 option(WITH_SCANNER "Enable webcam QR scanner" ON)
 option(STACK_TRACE "Dump stack trace on crash (Linux only)" OFF)
 
-# Biscuit : les services en ligne de Feather (ws.featherwallet.org) sont coupés par défaut
+# Biscuit: the Feather websocket service (ws.featherwallet.org) is never contacted by
+# default; prices and Home feeds come from public sources instead (src/datafeed).
 option(WITH_FEATHER_SERVICES "Allow connecting to the Feather websocket service" OFF)
 option(BUILD_TESTS "Build Biscuit unit tests" OFF)
 
@@ -36,11 +37,11 @@ option(BUILD_TESTS "Build Biscuit unit tests" OFF)
 option(TOR_INSTALLED "Is Tor installed on the filesystem?" OFF)
 
 # Plugins
-option(WITH_PLUGIN_HOME "Include Home tab plugin (Feather servers)" OFF)
-option(WITH_PLUGIN_TICKERS "Include Tickers Home plugin (Feather servers)" OFF)
-option(WITH_PLUGIN_CROWDFUNDING "Include Crowdfunding Home plugin (Feather servers)" OFF)
-option(WITH_PLUGIN_REVUO "Include Revuo Home plugin (Feather servers)" OFF)
-option(WITH_PLUGIN_CALC "Include Calc tab plugin (Feather servers)" OFF)
+option(WITH_PLUGIN_HOME "Include Home tab plugin" ON)
+option(WITH_PLUGIN_TICKERS "Include Tickers Home plugin" ON)
+option(WITH_PLUGIN_CROWDFUNDING "Include Crowdfunding Home plugin" ON)
+option(WITH_PLUGIN_REVUO "Include Revuo Home plugin (needs the Feather service, no public API)" OFF)
+option(WITH_PLUGIN_CALC "Include Calc tab plugin" ON)
 option(WITH_PLUGIN_SWAP "Include Swap tab plugin (Biscuit)" ON)
 
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake")
@@ -273,6 +274,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MINGW_FLAG} ${CXX_SECURITY_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${STATIC_FLAGS}")
 
 add_subdirectory(src/swap/core)
+add_subdirectory(src/datafeed/core)
 add_subdirectory(src)
 
 if(BUILD_TESTS)

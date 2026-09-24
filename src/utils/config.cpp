@@ -75,11 +75,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::lockOnMinimize, {QS("lockOnMinimize"), false}},
         {Config::showTrayIcon, {QS("showTrayIcon"), true}},
         {Config::minimizeToTray, {QS("minimizeToTray"), false}},
-#ifdef WITH_FEATHER_SERVICES
         {Config::disableWebsocket, {QS("disableWebsocket"), false}},
-#else
-        {Config::disableWebsocket, {QS("disableWebsocket"), true}},
-#endif
         {Config::offlineMode, {QS("offlineMode"), false}},
 
         // Transactions

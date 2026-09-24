@@ -242,7 +242,7 @@
            </widget>
            <widget class="QWidget" name="tab_websocket">
             <attribute name="title">
-             <string>Websocket</string>
+             <string>Public data</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_16">
              <item>
@@ -254,7 +254,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Feather can connect to a service hosted by the developers to obtain pricing information, a curated list of remote nodes, Home feeds, the latest version of Feather Wallet and more.&lt;/p&gt;&lt;p&gt;This service is only used to fetch information. The wallet does not send information about its state or your transactions to the server. It is not used for any telemetry or crash reports.&lt;/p&gt;&lt;p&gt;If you disable this connection some functionality will be unavailable.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Biscuit can fetch prices (CoinGecko), fiat exchange rates (European Central Bank) and Monero crowdfunding proposals (getmonero.org) directly from these public sources. There is no Biscuit server.&lt;/p&gt;&lt;p&gt;Every Biscuit sends exactly the same requests: nothing about your wallet, balance, transactions or settings is sent. These services can see your IP address unless Tor is enabled.&lt;/p&gt;&lt;p&gt;If you disable this, fiat conversion, Tickers, Calc and the Home tab are unavailable.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -280,7 +280,7 @@
              <item>
               <widget class="QCheckBox" name="checkBox_enableWebsocket">
                <property name="text">
-                <string>Enable websocket connection</string>
+                <string>Fetch prices and news from public sources</string>
                </property>
               </widget>
              </item>

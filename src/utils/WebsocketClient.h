@@ -11,6 +11,8 @@
 #include "constants.h"
 #include "utils/config.h"
 
+namespace biscuit::datafeed { class PublicDataFeed; }
+
 class WebsocketClient : public QObject {
     Q_OBJECT
 
@@ -60,6 +62,9 @@ private:
     int m_timeout = 20;
     int m_websocketUrlIndex = 0;
     bool m_stopped = false;
+
+    // Biscuit: public data sources used instead of the Feather service.
+    biscuit::datafeed::PublicDataFeed *m_publicFeed = nullptr;
 };
 
 #endif //FEATHER_WEBSOCKETCLIENT_H

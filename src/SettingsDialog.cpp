@@ -180,9 +180,6 @@ void Settings::setupNetworkTab() {
 
     // Websocket
     // [Obtain third-party data]
-#ifndef WITH_FEATHER_SERVICES
-    ui->tabWidget_network->removeTab(ui->tabWidget_network->indexOf(ui->tab_websocket));
-#endif
     ui->checkBox_enableWebsocket->setChecked(!conf()->get(Config::disableWebsocket).toBool());
     connect(ui->checkBox_enableWebsocket, &QCheckBox::toggled, [this](bool checked){
         conf()->set(Config::disableWebsocket, !checked);

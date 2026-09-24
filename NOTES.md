@@ -70,14 +70,25 @@ l'icône de barre des tâches et les réglages réseau/proxy.
 - À terme, Biscuit devra maintenir sa propre liste de nœuds (mise à jour avec
   chaque version, pas de configuration distante).
 
-## Services Feather coupés dans Biscuit
+## Services Feather remplacés par des sources publiques
 
-`WebsocketClient` (ws.featherwallet.org) fournissait : prix fiat, liste de nœuds,
-flux de l'onglet Home, versions. Coupé par l'option `WITH_FEATHER_SERVICES=OFF`.
-Conséquence : **pas de conversion fiat** (`utils/prices`) pour l'instant. Il faudra
-une source de prix à nous (via `Networking`, donc via Tor si activé).
-Le système de mise à jour (`utils/updater`) n'est compilé que avec `CHECK_UPDATES=ON`
-(désactivé).
+Le websocket Feather (ws.featherwallet.org) n'est jamais contacté
+(`WITH_FEATHER_SERVICES=OFF`). À la place, `WebsocketClient` lance
+`datafeed/PublicDataFeed`, qui interroge directement :
+
+| Donnée | Source | Fréquence |
+|---|---|---|
+| Prix crypto (`crypto_rates`) | CoinGecko | ~10 min |
+| Taux fiat (`fiat_rates`) | Frankfurter (taux BCE) | ~1 h |
+| Crowdfunding (`ccs`) | ccs.getmonero.org | ~1 h |
+
+Les réponses sont converties au format des messages Feather : conversion fiat,
+Tickers, Calc et Home fonctionnent sans modification. Règles de confidentialité :
+requêtes identiques pour tous (listes fixes), aucune clé ni identifiant, passage par
+`Networking` (Tor si activé), délais aléatoires. Coupé si Tor « onion uniquement » ou
+i2p. Activable/désactivable dans l'assistant et les réglages (« Public data »).
+Non repris : Revuo (pas d'API publique), liste de nœuds dynamique (liste intégrée),
+hauteurs de blocs, mises à jour.
 
 ## Config et fichiers
 

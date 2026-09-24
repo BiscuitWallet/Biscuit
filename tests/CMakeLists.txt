@@ -18,3 +18,7 @@ foreach(_test test_amount test_quote_ranking test_trade_status test_trocador_api
     biscuit_add_test(${_test} ${_test}.cpp)
     target_link_libraries(${_test} PRIVATE biscuit_swap_core)
 endforeach()
+
+# Public data feed
+biscuit_add_test(test_public_data test_public_data.cpp)
+target_link_libraries(test_public_data PRIVATE biscuit_datafeed_core)

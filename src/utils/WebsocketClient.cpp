@@ -10,6 +10,7 @@
 
 #include "utils/config.h"
 #include "utils/Utils.h"
+#include "datafeed/PublicDataFeed.h"
 
 WebsocketClient::WebsocketClient(QObject *parent)
     : QObject(parent)
@@ -34,6 +35,9 @@ WebsocketClient::WebsocketClient(QObject *parent)
 
     connect(&m_connectionTimeout, &QTimer::timeout, this, &WebsocketClient::onConnectionTimeout);
 
+    m_publicFeed = new biscuit::datafeed::PublicDataFeed(this);
+    connect(m_publicFeed, &biscuit::datafeed::PublicDataFeed::message, this, &WebsocketClient::WSMessage);
+
     m_websocketUrlIndex = QRandomGenerator::global()->bounded(m_websocketUrls[this->networkType()].length());
     this->nextWebsocketUrl();
 }
@@ -45,11 +49,6 @@ void WebsocketClient::sendMsg(const QByteArray &data) {
 }
 
 void WebsocketClient::start() {
-#ifndef WITH_FEATHER_SERVICES
-    // Biscuit: never contact the Feather websocket service unless explicitly built with it
-    return;
-#endif
-
     if (m_stopped) {
         return;
     }
@@ -61,6 +60,12 @@ void WebsocketClient::start() {
     if (conf()->get(Config::disableWebsocket).toBool()) {
         return;
     }
+
+#ifndef WITH_FEATHER_SERVICES
+    // Biscuit: never contact the Feather service; fetch public data instead.
+    m_publicFeed->start();
+    return;
+#endif
 
     // connect & reconnect on errors/close
     auto state = webSocket->state();
@@ -78,6 +83,7 @@ void WebsocketClient::restart() {
 void WebsocketClient::stop() {
     qDebug() << Q_FUNC_INFO;
     m_stopped = true;
+    m_publicFeed->stop();
     webSocket->close();
     m_connectionTimeout.stop();
     m_pingTimer.stop();
