@@ -26,3 +26,5 @@ target_link_libraries(test_public_data PRIVATE biscuit_datafeed_core)
 # BTC/LTC wallets
 biscuit_add_test(test_coins_keys test_coins_keys.cpp)
 target_link_libraries(test_coins_keys PRIVATE biscuit_coins_core)
+biscuit_add_test(test_wallet_file test_wallet_file.cpp)
+target_link_libraries(test_wallet_file PRIVATE biscuit_coins_core)
