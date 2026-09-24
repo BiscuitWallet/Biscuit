@@ -402,7 +402,7 @@ void MainWindow::initMenu() {
     ui->actionCheckForUpdates->setVisible(false);
 #endif
 
-    connect(ui->actionOfficialWebsite,   &QAction::triggered, [this](){Utils::externalLinkWarning(this, "https://github.com/OWNER/biscuit");});
+    connect(ui->actionOfficialWebsite,   &QAction::triggered, [this](){Utils::externalLinkWarning(this, "https://github.com/BiscuitWallet/biscuit");});
     connect(ui->actionDocumentation,     &QAction::triggered, this, &MainWindow::onShowDocumentation);
     connect(ui->actionReport_bug,        &QAction::triggered, this, &MainWindow::onReportBug);
     connect(ui->actionShow_debug_info,   &QAction::triggered, this, &MainWindow::showDebugInfo);

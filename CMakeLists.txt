@@ -10,11 +10,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(PACKAGE_NAME "biscuit")
-set(PACKAGE_BUGREPORT "https://github.com/OWNER/biscuit/issues")
-set(PACKAGE_URL "https://github.com/OWNER/biscuit")
+set(PACKAGE_BUGREPORT "https://github.com/BiscuitWallet/biscuit/issues")
+set(PACKAGE_URL "https://github.com/BiscuitWallet/biscuit")
 set(COPYRIGHT_YEAR "2026")
 set(COPYRIGHT_HOLDERS "The Monero Project")
-set(BISCUIT_BUNDLE_ID "io.github.OWNER.biscuit" CACHE STRING "macOS bundle identifier")
+set(BISCUIT_BUNDLE_ID "io.github.biscuitwallet.biscuit" CACHE STRING "macOS bundle identifier")
 
 cmake_policy(SET CMP0074 NEW)
 
