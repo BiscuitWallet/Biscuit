@@ -8,7 +8,9 @@ set(CMAKE_SOURCE_DIR_BISCUIT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 add_executable(electrumprobe main.cpp
         ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/ElectrumClient.cpp
         ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/ElectrumClient.h
-        ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/core/Electrum.cpp)
+        ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/CoinWallet.cpp
+        ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/CoinWallet.h
+        )
 target_include_directories(electrumprobe PRIVATE
         ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins
         ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/core

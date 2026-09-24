@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: The Biscuit developers
+
+#ifndef BISCUIT_COINWALLET_H
+#define BISCUIT_COINWALLET_H
+
+#include <QJsonObject>
+#include <QMap>
+#include <QObject>
+#include <QPointer>
+
+#include "Electrum.h"
+#include "ElectrumClient.h"
+#include "HdAccount.h"
+#include "Transactions.h"
+
+namespace biscuit::coins {
+
+// A light BTC or LTC wallet: keys from the BIP39 seed, data from Electrum
+// servers. Keeps a cache (transactions, used addresses, pinned certificates)
+// that the owner stores in the encrypted wallet file.
+class CoinWallet : public QObject {
+    Q_OBJECT
+
+public:
+    enum class Status {
+        Disconnected,
+        Connecting,
+        Synchronizing,
+        Synchronized
+    };
+    Q_ENUM(Status)
+
+    struct Balance {
+        quint64 confirmed = 0;
+        quint64 unconfirmed = 0;   // incoming or change not yet confirmed
+        quint64 total() const { return confirmed + unconfirmed; }
+    };
+
+    CoinWallet(HdAccount account, const QJsonObject &cache, QObject *parent = nullptr);
+
+    const CoinParams &params() const { return m_account.params(); }
+    Status status() const { return m_status; }
+    QString serverName() const;
+    int blockHeight() const { return m_height; }
+
+    void setProxy(const QNetworkProxy &proxy);
+    // Empty host = pick a random built-in server.
+    void setCustomServer(const ElectrumServer &server);
+    void start();
+    void stop();
+
+    Balance balance() const;
+    QList<electrum::HistoryEntry> history() const { return m_history; }
+
+    // Next address never used to receive (a new one each time a payment arrives).
+    QString receiveAddress() const;
+
+    double feeRate(int targetBlocks) const;   // sat/vB
+
+    std::optional<TxPlan> planSend(const QString &address, quint64 amount, double feeRate, bool sendAll,
+                                   QString *error) const;
+    // Signs and broadcasts a plan the user has confirmed.
+    void broadcast(const TxPlan &plan, std::function<void(const QString &txid, const QString &error)> callback);
+
+    // Everything worth keeping for a fast restart (no secret inside).
+    QJsonObject cache() const;
+
+signals:
+    void statusChanged(Status status);
+    void updated();          // balance, history or height changed
+    void cacheChanged();     // cache() should be saved
+
+private:
+    void connectToServer();
+    void onReady();
+    void onFailed(const QString &reason);
+    void onNotification(const QString &method, const QJsonArray &params);
+    void scanNext();
+    void fetchMissingTransactions(std::function<void()> then);
+    void refreshFees();
+    void recompute();
+    void setStatus(Status status);
+    QString scriptHash(const electrum::AddressRef &ref) const;
+
+    HdAccount m_account;
+    ElectrumClient *m_client;
+    ElectrumClient::PinStore m_pins;
+    ElectrumServer m_customServer;
+    QNetworkProxy m_proxy{QNetworkProxy::NoProxy};
+    Status m_status = Status::Disconnected;
+    bool m_running = false;
+    int m_failures = 0;
+
+    electrum::GapScanner m_scanner;
+    int m_pendingScans = 0;
+    QMap<QByteArray, electrum::AddressRef> m_scripts;      // scriptPubKey -> address
+    QMap<QString, electrum::AddressRef> m_scriptHashes;    // electrum scripthash -> address
+    QMap<QString, QString> m_rawTxs;                        // txid -> hex (cache)
+    QMap<QString, int> m_heights;                           // txid -> height
+    QMap<QString, electrum::ParsedTx> m_parsed;
+    QMap<int, double> m_feeRates;                           // target blocks -> sat/vB
+    QList<electrum::HistoryEntry> m_history;
+    QList<electrum::WalletUtxo> m_utxos;
+    int m_height = 0;
+};
+
+}
+
+#endif // BISCUIT_COINWALLET_H

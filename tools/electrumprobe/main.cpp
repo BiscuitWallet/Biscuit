@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "Bip39.h"
+#include "CoinWallet.h"
 #include "ElectrumClient.h"
 
 using namespace biscuit::coins;
@@ -29,8 +31,38 @@ namespace {
     }
 }
 
+int syncMode(QCoreApplication &app, const QString &coin, const QString &mnemonic) {
+    // Read-only sync of a wallet, to test CoinWallet against real servers.
+    const auto &params = coin == "ltc" ? litecoin() : bitcoin();
+    auto account = HdAccount::fromSeed(*bip39::mnemonicToSeed(mnemonic), params);
+    auto *wallet = new CoinWallet(std::move(*account), {}, &app);
+    QObject::connect(wallet, &CoinWallet::statusChanged, [wallet, &app](CoinWallet::Status st) {
+        std::printf("status: %d server: %s\n", int(st), qPrintable(wallet->serverName()));
+        if (st == CoinWallet::Status::Synchronized) {
+            const auto b = wallet->balance();
+            std::printf("height %d, %lld transactions, balance %llu sats confirmed + %llu unconfirmed\n",
+                        wallet->blockHeight(), (long long)wallet->history().size(), b.confirmed, b.unconfirmed);
+            std::printf("next receive address: %s\n", qPrintable(wallet->receiveAddress()));
+            int shown = 0;
+            for (const auto &e : wallet->history()) {
+                if (shown++ == 3) break;
+                std::printf("  %s height %d delta %lld\n", qPrintable(e.txid), e.height, (long long)e.delta);
+            }
+            std::printf("fee rates: %.1f / %.1f sat/vB\n", wallet->feeRate(2), wallet->feeRate(24));
+            std::fflush(stdout);
+            app.quit();
+        }
+    });
+    wallet->start();
+    QTimer::singleShot(120000, &app, &QCoreApplication::quit);
+    return app.exec();
+}
+
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
+    if (app.arguments().value(1) == "sync") {
+        return syncMode(app, app.arguments().value(2), app.arguments().value(3));
+    }
     const QStringList servers = app.arguments().mid(1);
     int remaining = servers.size();
     ElectrumClient::PinStore pins;
