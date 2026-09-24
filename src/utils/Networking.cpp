@@ -33,7 +33,7 @@ QNetworkReply* Networking::get(QObject *parent, const QString &url) {
     return reply;
 }
 
-QNetworkReply* Networking::getJson(QObject *parent, const QString &url) {
+QNetworkReply* Networking::getJson(QObject *parent, const QString &url, const QList<QPair<QByteArray, QByteArray>> &headers) {
     if (conf()->get(Config::offlineMode).toBool()) {
         return nullptr;
     }
@@ -44,6 +44,9 @@ QNetworkReply* Networking::getJson(QObject *parent, const QString &url) {
     request.setUrl(QUrl(url));
     request.setRawHeader("User-Agent", m_userAgent.toUtf8());
     request.setRawHeader("Content-Type", "application/json");
+    for (const auto &[name, value] : headers) {
+        request.setRawHeader(name, value);
+    }
 
     QNetworkReply *reply = this->m_networkAccessManager->get(request);
     reply->setParent(parent);

@@ -47,7 +47,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::useOnionNodes,{QS("useOnionNodes"), false}},
 
         // Tabs
-        {Config::enabledTabs, {QS("enabledTabs"), QStringList{"Home", "History", "Send", "Receive", "Calc"}}},
+        {Config::enabledTabs, {QS("enabledTabs"), QStringList{"Home", "History", "Send", "Receive", "Calc", "Swap"}}},
         {Config::showSearchbar,{QS("showSearchbar"), true}},
 
         // History
@@ -127,11 +127,15 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::useLocalTor, {QS("useLocalTor"), false}},
         {Config::initSyncThreshold, {QS("initSyncThreshold"), 360}},
 
-        {Config::enabledPlugins, {QS("enabledPlugins"), QStringList{"tickers", "crowdfunding", "revuo", "calc"}}},
+        {Config::enabledPlugins, {QS("enabledPlugins"), QStringList{"tickers", "crowdfunding", "revuo", "calc", "swap"}}},
         {Config::restartRequired, {QS("restartRequired"), false}},
 
         {Config::tickers, {QS("tickers"), QStringList{"XMR", "BTC", "XMR/BTC"}}},
         {Config::tickersShowFiatBalance, {QS("tickersShowFiatBalance"), true}},
+
+        // Biscuit: swaps
+        {Config::swapDisabledProviders, {QS("swapDisabledProviders"), QStringList{}}},
+        {Config::swapMinKycRating, {QS("swapMinKycRating"), "C"}},
 };
 
 

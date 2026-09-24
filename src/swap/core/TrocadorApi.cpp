@@ -102,6 +102,14 @@ QUrlQuery tradeQuery(const QString &tradeId) {
     return q;
 }
 
+QUrlQuery validateAddressQuery(const Asset &asset, const QString &address) {
+    QUrlQuery q;
+    q.addQueryItem("ticker", asset.ticker);
+    q.addQueryItem("network", asset.network);
+    q.addQueryItem("address", address);
+    return q;
+}
+
 std::optional<QList<AssetInfo>> parseCoins(const QByteArray &body, QString *error) {
     QJsonParseError parseError;
     const QJsonDocument doc = QJsonDocument::fromJson(body, &parseError);
@@ -195,6 +203,19 @@ std::optional<Trade> parseTrade(const QByteArray &body, QString *error) {
         return std::nullopt;
     }
     return t;
+}
+
+std::optional<bool> parseValidateAddress(const QByteArray &body, QString *error) {
+    const auto obj = parseObject(body, error);
+    if (!obj) {
+        return std::nullopt;
+    }
+    const QJsonValue result = obj->value("result");
+    if (!result.isBool()) {
+        setError(error, QStringLiteral("Unexpected response"));
+        return std::nullopt;
+    }
+    return result.toBool();
 }
 
 QString parseErrorMessage(const QByteArray &body) {

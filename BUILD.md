@@ -39,6 +39,17 @@ cmake --build . -j "$(sysctl -n hw.ncpu)"
 ctest --test-dir tests --output-on-failure
 ```
 
+## Clé API Trocador (builds officiels)
+
+La clé ne doit jamais être commitée. Créer `secrets.cmake` à la racine (ignoré par git) :
+
+```cmake
+set(BISCUIT_TROCADOR_API_KEY "votre-cle")
+```
+
+Sans ce fichier, l'onglet Swap fonctionne en **mode démo** : offres simulées, aucun
+échange réel, aucun envoi possible. CMake affiche le mode utilisé à la configuration.
+
 ## Linux
 
 À documenter (voir `HACKING.md` en attendant).

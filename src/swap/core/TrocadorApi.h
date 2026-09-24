@@ -30,6 +30,7 @@ namespace biscuit::swap::trocador {
     QUrlQuery rateQuery(const QuoteRequest &request);
     QUrlQuery newTradeQuery(const TradeRequest &request, const QString &rateId);
     QUrlQuery tradeQuery(const QString &tradeId);
+    QUrlQuery validateAddressQuery(const Asset &asset, const QString &address);
 
     struct RateResult {
         QString rateId;           // Trocador "trade_id" of the rate, used by new_trade
@@ -42,6 +43,9 @@ namespace biscuit::swap::trocador {
 
     // Parses new_trade (object) and trade (list with one object) responses.
     std::optional<Trade> parseTrade(const QByteArray &body, QString *error);
+
+    // validateaddress answers {"result": true|false} (to verify).
+    std::optional<bool> parseValidateAddress(const QByteArray &body, QString *error);
 
     // Extracts {"error": ..., "message": ...} or returns an empty string.
     QString parseErrorMessage(const QByteArray &body);

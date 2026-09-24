@@ -163,6 +163,16 @@ private slots:
         QVERIFY(error.startsWith("Invalid JSON"));
     }
 
+    void validateAddress() {
+        const QUrlQuery q = trocador::validateAddressQuery({"btc", "Mainnet"}, "bc1qxyz");
+        QCOMPARE(q.queryItemValue("ticker"), QString("btc"));
+        QCOMPARE(q.queryItemValue("network"), QString("Mainnet"));
+        QCOMPARE(q.queryItemValue("address"), QString("bc1qxyz"));
+        QCOMPARE(trocador::parseValidateAddress(R"({"result": true})", nullptr), std::optional<bool>(true));
+        QCOMPARE(trocador::parseValidateAddress(R"({"result": false})", nullptr), std::optional<bool>(false));
+        QVERIFY(!trocador::parseValidateAddress(R"({"other": 1})", nullptr).has_value());
+    }
+
     void parsesCoins() {
         const QByteArray body = R"([
             {"name": "Monero", "ticker": "xmr", "network": "Mainnet", "memo": false, "minimum": 0.01, "maximum": 100},

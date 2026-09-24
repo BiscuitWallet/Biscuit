@@ -139,6 +139,10 @@ public:
         // Tickers
         tickers,
         tickersShowFiatBalance,
+
+        // Biscuit: swaps
+        swapDisabledProviders,
+        swapMinKycRating,
     };
 
     enum PrivacyLevel {

@@ -41,6 +41,7 @@ option(WITH_PLUGIN_TICKERS "Include Tickers Home plugin (Feather servers)" OFF)
 option(WITH_PLUGIN_CROWDFUNDING "Include Crowdfunding Home plugin (Feather servers)" OFF)
 option(WITH_PLUGIN_REVUO "Include Revuo Home plugin (Feather servers)" OFF)
 option(WITH_PLUGIN_CALC "Include Calc tab plugin (Feather servers)" OFF)
+option(WITH_PLUGIN_SWAP "Include Swap tab plugin (Biscuit)" ON)
 
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake")
 include(CheckCCompilerFlag)

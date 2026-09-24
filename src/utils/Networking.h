@@ -17,7 +17,7 @@ public:
     explicit Networking(QObject *parent = nullptr);
 
     QNetworkReply* get(QObject *parent, const QString &url);
-    QNetworkReply* getJson(QObject *parent, const QString &url);
+    QNetworkReply* getJson(QObject *parent, const QString &url, const QList<QPair<QByteArray, QByteArray>> &headers = {});
     QNetworkReply* postJson(QObject *parent, const QString &url, const QJsonObject &data);
     void setUserAgent(const QString &userAgent);
 

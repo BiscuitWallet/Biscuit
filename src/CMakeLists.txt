@@ -75,6 +75,8 @@ file(GLOB SOURCE_FILES
         "monero_seed/*.hpp"
         "plugins/*.cpp"
         "plugins/*.h"
+        "swap/*.h"
+        "swap/*.cpp"
         )
 
 get_cmake_property(_vars VARIABLES)
@@ -192,6 +194,20 @@ target_compile_definitions(feather PRIVATE TOR_VERSION="${TOR_VERSION}")
 
 if(WITH_FEATHER_SERVICES)
     target_compile_definitions(feather PRIVATE WITH_FEATHER_SERVICES=1)
+endif()
+
+# Biscuit partner keys: never in the repository. Official builds provide them in
+# secrets.cmake (ignored by git), e.g. set(BISCUIT_TROCADOR_API_KEY "..."). Without
+# a key, swaps run in offline demo mode.
+# TODO before the first public release: obfuscate the key in the binary.
+if(EXISTS "${CMAKE_SOURCE_DIR}/secrets.cmake")
+    include("${CMAKE_SOURCE_DIR}/secrets.cmake")
+endif()
+if(BISCUIT_TROCADOR_API_KEY)
+    message(STATUS "Trocador API key: provided (swaps use Trocador)")
+    target_compile_definitions(feather PRIVATE BISCUIT_TROCADOR_API_KEY="${BISCUIT_TROCADOR_API_KEY}")
+else()
+    message(STATUS "Trocador API key: none (swaps run in demo mode)")
 endif()
 
 if(WITH_SCANNER)
