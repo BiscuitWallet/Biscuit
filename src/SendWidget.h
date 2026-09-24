@@ -6,6 +6,10 @@
 
 #include <QWidget>
 
+class QComboBox;
+class QLabel;
+namespace biscuit::coins { class CoinSendController; struct CoinParams; }
+
 class Wallet;
 
 namespace Ui {
@@ -53,6 +57,17 @@ private slots:
 
 private:
     void setupComboBox();
+    // Biscuit: Bitcoin/Litecoin destinations are detected from the address.
+    void updateCoinMode();
+    void updateCoinFeeLabel();
+
+    biscuit::coins::CoinSendController *m_coinSend = nullptr;
+    const biscuit::coins::CoinParams *m_coin = nullptr;
+    QLabel *m_coinHint = nullptr;
+    QLabel *m_coinUnit = nullptr;
+    QLabel *m_coinFeeTitle = nullptr;
+    QComboBox *m_coinFee = nullptr;
+    QLabel *m_coinFeeRate = nullptr;
     double amountDouble();
     bool keyImageSync(bool sendAll, quint64 amount);
 

@@ -4,6 +4,14 @@
 #include "SendWidget.h"
 #include "ui_SendWidget.h"
 
+#include <QComboBox>
+#include <QHBoxLayout>
+#include <QLabel>
+
+#include "coins/CoinSendController.h"
+#include "coins/CoinVault.h"
+#include "coins/CoinWallet.h"
+
 #include "ColorScheme.h"
 #include "constants.h"
 #include "utils/AppData.h"
@@ -67,6 +75,78 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
 
     this->setManualFeeSelectionEnabled(conf()->get(Config::manualFeeTierSelection).toBool());
     this->setSubtractFeeFromAmountEnabled(conf()->get(Config::subtractFeeFromAmount).toBool());
+
+    // Biscuit: one Send tab for every coin. A Bitcoin or Litecoin address is
+    // detected when pasted, and the amount, fee and send path adapt to it.
+    ui->label_PayTo->setHelpText("Recipient of the funds",
+                                 "You may enter a Monero, Bitcoin or Litecoin address, a payment URI, or an alias. "
+                                 "Biscuit detects the coin from the address.",
+                                 "send_transaction");
+    m_coinSend = new biscuit::coins::CoinSendController(m_wallet, this);
+    connect(m_coinSend, &biscuit::coins::CoinSendController::sent, this, &SendWidget::clearFields);
+
+    m_coinHint = new QLabel(this);
+    m_coinHint->setStyleSheet("color: gray;");
+    int row = 0;
+    QFormLayout::ItemRole role;
+    ui->formLayout->getWidgetPosition(ui->label_PayTo, &row, &role);
+    ui->formLayout->insertRow(row + 1, QString(), m_coinHint);
+
+    m_coinUnit = new QLabel(this);
+    ui->horizontalLayout_2->addWidget(m_coinUnit);
+
+    m_coinFeeTitle = new QLabel("Network fee", this);
+    m_coinFee = new QComboBox(this);
+    for (const auto &level : biscuit::coins::feeLevels()) {
+        m_coinFee->addItem(level.label, level.targetBlocks);
+    }
+    m_coinFee->setCurrentIndex(1);
+    m_coinFeeRate = new QLabel(this);
+    auto *feeRow = new QHBoxLayout;
+    feeRow->setSpacing(12);
+    feeRow->addWidget(m_coinFee);
+    feeRow->addWidget(m_coinFeeRate);
+    feeRow->addStretch();
+    ui->formLayout->getWidgetPosition(ui->label_Amount, &row, &role);
+    ui->formLayout->insertRow(row + 1, m_coinFeeTitle, feeRow);
+    connect(m_coinFee, &QComboBox::currentIndexChanged, this, &SendWidget::updateCoinFeeLabel);
+
+    this->updateCoinMode();
+}
+
+void SendWidget::updateCoinMode() {
+    const auto destination = biscuit::coins::detectCoinDestination(ui->lineAddress->text());
+    m_coin = destination ? destination->params : nullptr;
+    const bool coinMode = m_coin != nullptr;
+
+    ui->formLayout->setRowVisible(m_coinHint, coinMode);
+    ui->formLayout->setRowVisible(m_coinFeeTitle, coinMode);
+    m_coinUnit->setVisible(coinMode);
+    ui->comboCurrencySelection->setVisible(!coinMode);
+
+    // Monero-only options.
+    const bool manualFee = conf()->get(Config::manualFeeTierSelection).toBool();
+    ui->label_feeTarget->setVisible(!coinMode && manualFee);
+    ui->combo_feePriority->setVisible(!coinMode && manualFee);
+    ui->check_subtractFeeFromAmount->setVisible(!coinMode && conf()->get(Config::subtractFeeFromAmount).toBool());
+
+    if (coinMode) {
+        m_coinHint->setText(QString("%1 address · sent from the %1 wallet of Biscuit").arg(m_coin->name));
+        m_coinUnit->setText(m_coin->ticker);
+        if (!destination->amount.isEmpty() && ui->lineAmount->text().isEmpty()) {
+            ui->lineAmount->setText(destination->amount);
+        }
+        this->updateCoinFeeLabel();
+    }
+    this->updateConversionLabel();
+}
+
+void SendWidget::updateCoinFeeLabel() {
+    if (!m_coin) {
+        return;
+    }
+    const auto rate = m_coinSend->feeRate(*m_coin, m_coinFee->currentData().toInt());
+    m_coinFeeRate->setText(rate ? QString("%1 sat/vB").arg(*rate, 0, 'f', 1) : QString());
 }
 
 void SendWidget::currencyComboChanged(int index) {
@@ -94,6 +174,7 @@ void SendWidget::addressEdited() {
     }
 
     ui->btn_openAlias->setVisible(ui->lineAddress->isOpenAlias());
+    this->updateCoinMode();
 }
 
 void SendWidget::amountEdited(const QString &text) {
@@ -143,6 +224,13 @@ void SendWidget::scanClicked() {
 }
 
 void SendWidget::sendClicked() {
+    // Biscuit: Bitcoin and Litecoin go through their own wallet.
+    if (const auto destination = biscuit::coins::detectCoinDestination(ui->lineAddress->text())) {
+        m_coinSend->send(this, *destination->params, destination->address, ui->lineAmount->text(),
+                         m_coinFee->currentData().toInt());
+        return;
+    }
+
     if (!m_wallet->isConnected()) {
         Utils::showError(this, "Unable to create transaction", "Wallet is not connected to a node.",
                          {"Wait for the wallet to automatically connect to a node.", "Go to File -> Settings -> Network -> Node to manually connect to a node."},
@@ -284,6 +372,20 @@ void SendWidget::btnMaxClicked() {
 }
 
 void SendWidget::updateConversionLabel() {
+    if (m_coin) {
+        // Display only: fiat value of the Bitcoin/Litecoin amount.
+        const double coinAmount = ui->lineAmount->text().replace(',', '.').toDouble();
+        const QString fiat = conf()->get(Config::preferredFiatCurrency).toString();
+        if (coinAmount > 0 && appData()->prices.canConvert(m_coin->ticker, fiat)) {
+            ui->label_conversionAmount->setText(QString("~%1 %2").arg(
+                    QString::number(appData()->prices.convert(m_coin->ticker, fiat, coinAmount), 'f', 2), fiat));
+            ui->label_conversionAmount->show();
+        } else {
+            ui->label_conversionAmount->hide();
+        }
+        return;
+    }
+
     auto amount = this->amountDouble();
 
     ui->label_conversionAmount->setText("");

@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: The Biscuit developers
+
+#ifndef BISCUIT_COINSENDCONTROLLER_H
+#define BISCUIT_COINSENDCONTROLLER_H
+
+#include <optional>
+
+#include <QObject>
+#include <QPointer>
+#include <QString>
+
+#include "CoinParams.h"
+
+class QWidget;
+class Wallet;
+
+namespace biscuit::coins {
+
+class CoinVault;
+
+// A destination typed or pasted in the Send tab, if it is Bitcoin or Litecoin:
+// a plain address or a BIP21 URI ("bitcoin:<address>?amount=0.01").
+struct CoinDestination {
+    const CoinParams *params = nullptr;
+    QString address;
+    QString amount;   // from the URI, empty if none
+};
+std::optional<CoinDestination> detectCoinDestination(const QString &text);
+
+struct FeeLevel {
+    const char *label;
+    int targetBlocks;
+};
+QList<FeeLevel> feeLevels();
+
+// Sends Bitcoin/Litecoin from the unified Send tab: checks the setup,
+// plans the transaction, asks for explicit confirmation, broadcasts.
+class CoinSendController : public QObject {
+    Q_OBJECT
+
+public:
+    CoinSendController(Wallet *wallet, QObject *parent = nullptr);
+
+    // Current fee rate for a target, if the coin wallet is available.
+    std::optional<double> feeRate(const CoinParams &params, int targetBlocks) const;
+
+    // `amountText` is a decimal amount or "all".
+    void send(QWidget *parent, const CoinParams &params, const QString &address, const QString &amountText,
+              int targetBlocks);
+
+signals:
+    void sent(const QString &txid);
+
+private:
+    // Makes sure Bitcoin/Litecoin are set up and unlocked, asking the user if needed.
+    bool ensureReady(QWidget *parent);
+
+    QPointer<Wallet> m_wallet;
+    QPointer<CoinVault> m_vault;
+};
+
+}
+
+#endif // BISCUIT_COINSENDCONTROLLER_H
