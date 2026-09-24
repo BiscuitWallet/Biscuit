@@ -13,11 +13,16 @@
 #include <QUiLoader>
 #include <QWidget>
 
+#include "MacLayoutStyle.h"
+
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     if (argc < 3) {
         qWarning("usage: uipreview form.ui out.png [width] [style]");
         return 1;
+    }
+    if (qEnvironmentVariableIsSet("PREVIEW_MACFIX")) {
+        QApplication::setStyle(new MacLayoutStyle(QApplication::style()->name()));
     }
     if (argc > 4) {
         QApplication::setStyle(QStyleFactory::create(argv[4]));

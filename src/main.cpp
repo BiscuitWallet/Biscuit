@@ -6,6 +6,7 @@
 #include "Application.h"
 #include "constants.h"
 #include "utils/EventFilter.h"
+#include "utils/MacLayoutStyle.h"
 #include "WindowManager.h"
 #include "config.h"
 #include <wallet/api/wallet2_api.h>
@@ -84,6 +85,11 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
 #endif
 
     Application app(argc, argv);
+
+#if defined(Q_OS_MACOS)
+    // Biscuit: align form rows (labels, fields, buttons) with the native macOS style.
+    QApplication::setStyle(new MacLayoutStyle(QApplication::style()->name()));
+#endif
 
     QApplication::setApplicationName("Biscuit");
     QApplication::setApplicationVersion(FEATHER_VERSION);

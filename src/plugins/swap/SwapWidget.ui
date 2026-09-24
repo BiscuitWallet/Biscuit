@@ -163,14 +163,28 @@
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QStackedWidget" name="stack_receive">
-         <widget class="QLineEdit" name="line_receive"/>
-         <widget class="QLabel" name="label_receiveWallet">
-          <property name="text">
-           <string>A new address of this wallet</string>
-          </property>
-         </widget>
-        </widget>
+        <layout class="QHBoxLayout" name="layout_receive">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <item>
+          <widget class="QComboBox" name="combo_receiveMode">
+           <item>
+            <property name="text">
+             <string>New address in this wallet</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Another address</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="line_receive"/>
+         </item>
+        </layout>
        </item>
        <item row="3" column="0">
         <widget class="QLabel" name="label_refundTo">
@@ -180,14 +194,28 @@
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QStackedWidget" name="stack_refund">
-         <widget class="QLineEdit" name="line_refund"/>
-         <widget class="QLabel" name="label_refundWallet">
-          <property name="text">
-           <string>A new address of this wallet</string>
-          </property>
-         </widget>
-        </widget>
+        <layout class="QHBoxLayout" name="layout_refund">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <item>
+          <widget class="QComboBox" name="combo_refundMode">
+           <item>
+            <property name="text">
+             <string>New address in this wallet</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Another address</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="line_refund"/>
+         </item>
+        </layout>
        </item>
        <item row="4" column="0">
         <widget class="QLabel" name="label_rate">

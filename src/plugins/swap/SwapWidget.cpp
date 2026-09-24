@@ -27,9 +27,9 @@ namespace {
     constexpr int ProviderRole = Qt::UserRole;
     constexpr int TradeIdRole = Qt::UserRole + 1;
 
-    // Stacked pages of the "Receive at" / "Refund to" rows.
-    constexpr int PageExternal = 0;
-    constexpr int PageWallet = 1;
+    // "Receive at" / "Refund to" choices when the coin is XMR.
+    constexpr int ModeNewWalletAddress = 0;
+    constexpr int ModeOtherAddress = 1;
 
     constexpr int moneroDecimals = 12;
 }
@@ -69,8 +69,6 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
 
     ui->label_transparency->setStyleSheet("color: gray;");
     ui->label_historyHint->setStyleSheet("color: gray;");
-    ui->label_receiveWallet->setStyleSheet("color: gray;");
-    ui->label_refundWallet->setStyleSheet("color: gray;");
 
     ui->tree_offers->header()->setSectionResizeMode(OfferExchange, QHeaderView::Stretch);
     ui->tree_offers->header()->setStretchLastSection(false);
@@ -86,6 +84,8 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         m_manager->setMinKycRating(static_cast<KycRating>(ui->combo_kyc->currentData().toInt()));
         clearOffers();
     });
+    connect(ui->combo_receiveMode, &QComboBox::currentIndexChanged, this, &SwapWidget::updateForm);
+    connect(ui->combo_refundMode, &QComboBox::currentIndexChanged, this, &SwapWidget::updateForm);
     connect(ui->btn_clear, &QPushButton::clicked, this, &SwapWidget::onClear);
     connect(ui->btn_offers, &QPushButton::clicked, this, &SwapWidget::onGetOffers);
     connect(ui->line_amount, &QLineEdit::returnPressed, this, &SwapWidget::onGetOffers);
@@ -230,13 +230,21 @@ void SwapWidget::updateForm() {
     const Asset to = assetOf(ui->combo_to);
     const bool sendXmr = sendsXmr();
 
-    ui->stack_receive->setCurrentIndex(sendXmr ? PageExternal : PageWallet);
-    ui->stack_refund->setCurrentIndex(sendXmr ? PageWallet : PageExternal);
+    // The XMR side can use a new address of this wallet or any address; the
+    // other coin always needs an address typed by the user (no BTC/LTC wallet yet).
+    ui->combo_receiveMode->setVisible(!sendXmr);
+    ui->combo_refundMode->setVisible(sendXmr);
+    const bool receiveInWallet = !sendXmr && ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
+    const bool refundInWallet = sendXmr && ui->combo_refundMode->currentIndex() == ModeNewWalletAddress;
+    ui->line_receive->setVisible(!receiveInWallet);
+    ui->line_refund->setVisible(!refundInWallet);
+
     if (to.isValid()) {
-        ui->line_receive->setPlaceholderText(QString("Your %1 address").arg(to.displayName()));
+        ui->line_receive->setPlaceholderText(QString("%1 address").arg(to.displayName()));
     }
     if (from.isValid()) {
-        ui->line_refund->setPlaceholderText(QString("Your %1 address, used only if the swap fails (optional)").arg(from.displayName()));
+        ui->line_refund->setPlaceholderText(sendXmr ? QString("XMR address")
+                                                    : QString("%1 address, used only if the swap fails (optional)").arg(from.displayName()));
     }
     clearOffers();
 }
@@ -336,40 +344,60 @@ void SwapWidget::onCreateSwap() {
 
 void SwapWidget::createTrade(const Quote &quote) {
     const bool sendXmr = quote.from == xmr();
-    const QString external = (sendXmr ? ui->line_receive : ui->line_refund)->text().trimmed();
+    const bool receiveInWallet = !sendXmr && ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
+    const bool refundInWallet = sendXmr && ui->combo_refundMode->currentIndex() == ModeNewWalletAddress;
+    const QString receiveTyped = ui->line_receive->text().trimmed();
+    const QString refundTyped = ui->line_refund->text().trimmed();
 
-    if (sendXmr && external.isEmpty()) {
+    if (!receiveInWallet && receiveTyped.isEmpty()) {
         Utils::showError(this, "Missing address", QString("Enter the %1 address where you want to get the coins.")
                                                           .arg(quote.to.displayName()));
         ui->line_receive->setFocus();
         return;
     }
+    if (sendXmr && !refundInWallet && refundTyped.isEmpty()) {
+        Utils::showError(this, "Missing refund address", "Enter the XMR address used if the swap fails.");
+        ui->line_refund->setFocus();
+        return;
+    }
+    // XMR addresses typed by the user are checked locally.
+    for (const auto &[isXmr, address] : {std::pair{!sendXmr && !receiveInWallet, receiveTyped},
+                                        std::pair{sendXmr && !refundInWallet, refundTyped}}) {
+        if (isXmr && !WalletManager::addressValid(address, constants::networkType)) {
+            Utils::showError(this, "Invalid address", "This is not a valid Monero address.");
+            return;
+        }
+    }
 
-    auto proceed = [this, quote, sendXmr, external] {
+    auto proceed = [this, quote, receiveInWallet, refundInWallet, receiveTyped, refundTyped] {
         QMessageBox box(this);
         box.setWindowTitle("Create swap");
         box.setIcon(QMessageBox::Question);
         box.setText(QString("Swap %1 %2 for about %3 %4?")
                     .arg(quote.amountFrom, quote.from.ticker.toUpper(), quote.amountTo, quote.to.ticker.toUpper()));
-        box.setInformativeText(QString("Exchange: %1 (KYC %2)\n%3")
+        box.setInformativeText(QString("Exchange: %1 (KYC %2)\nYou get the coins at: %3")
                                .arg(quote.exchange, kycRatingToString(quote.kycRating),
-                                    sendXmr ? QString("You get the coins at: %1").arg(external)
-                                            : QString("You get the XMR on a new address of this wallet.")));
+                                    receiveInWallet ? QString("a new address of this wallet") : receiveTyped));
         box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         if (box.exec() != QMessageBox::Yes) {
             return;
         }
 
-        const QString walletAddress = newWalletAddress("Swap");
-        if (walletAddress.isEmpty()) {
-            Utils::showError(this, "Unable to create a wallet address", m_wallet->subaddress()->getError());
-            return;
+        QString payout = receiveTyped;
+        QString refund = refundTyped;
+        if (receiveInWallet || refundInWallet) {
+            const QString walletAddress = newWalletAddress("Swap");
+            if (walletAddress.isEmpty()) {
+                Utils::showError(this, "Unable to create a wallet address", m_wallet->subaddress()->getError());
+                return;
+            }
+            (receiveInWallet ? payout : refund) = walletAddress;
         }
 
         TradeRequest request;
         request.quote = quote;
-        request.payoutAddress = sendXmr ? external : walletAddress;
-        request.refundAddress = sendXmr ? walletAddress : external;
+        request.payoutAddress = payout;
+        request.refundAddress = refund;
 
         setBusy(true, "Creating swap…");
         m_manager->createTrade(request, [this](const std::optional<Trade> &trade, const QString &error) {
@@ -383,8 +411,9 @@ void SwapWidget::createTrade(const Quote &quote) {
         });
     };
 
-    // Check the external address with the partner (the refund address is
-    // optional when receiving XMR).
+    // Addresses of the other coin are checked by the swap partner (the refund
+    // address is optional when receiving XMR).
+    const QString external = sendXmr ? receiveTyped : refundTyped;
     if (external.isEmpty()) {
         proceed();
         return;
