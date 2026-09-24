@@ -112,6 +112,9 @@ private:
 
     bool m_openWalletTriedOnce = false;
     bool m_openingWallet = false;
+    // Biscuit: password of the wallet being opened, kept only until it is
+    // open, to unlock Bitcoin/Litecoin with the same password.
+    QString m_pendingPassword;
     bool m_initialNetworkConfigured = false;
 
     QThread *m_cleanupThread;

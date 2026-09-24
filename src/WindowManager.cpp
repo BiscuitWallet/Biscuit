@@ -24,6 +24,7 @@
 #include "utils/TorManager.h"
 #include "utils/WebsocketNotifier.h"
 #include "utils/AppData.h"
+#include "coins/CoinVault.h"
 
 WindowManager::WindowManager(QObject *parent)
     : QObject(parent)
@@ -269,6 +270,7 @@ void WindowManager::tryOpenWallet(const QString &path, const QString &password) 
     }
 
     m_openingWallet = true;
+    m_pendingPassword = password;
     m_walletManager->openWalletAsync(path, password, constants::networkType, constants::kdfRounds, Utils::ringDatabasePath());
 }
 
@@ -310,6 +312,7 @@ void WindowManager::onWalletOpened(Wallet *wallet) {
         }
 
         m_openingWallet = false;
+        m_pendingPassword.clear();
         return;
     }
 
@@ -323,6 +326,18 @@ void WindowManager::onWalletOpened(Wallet *wallet) {
     m_windows.append(window);
     this->buildTrayMenu();
     m_openingWallet = false;
+
+    // Biscuit: one password for everything. Bitcoin/Litecoin are unlocked with
+    // the password that just opened the Monero wallet, which is then forgotten.
+    auto *vault = biscuit::coins::CoinVault::forWallet(wallet);
+    if (vault->exists() && !vault->isUnlocked()) {
+        QString error;
+        if (!vault->unlock(m_pendingPassword, &error)) {
+            qWarning() << "Biscuit: Bitcoin/Litecoin not unlocked:" << error;
+        }
+    }
+    m_pendingPassword.fill(QChar(' '));
+    m_pendingPassword.clear();
 }
 
 void WindowManager::onWalletOpenPasswordRequired(bool invalidPassword, const QString &path) {
@@ -362,6 +377,7 @@ bool WindowManager::autoOpenWallet() {
 
 void WindowManager::tryCreateWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage,
                                     const QString &seedOffset, const QString &subaddressLookahead, bool newWallet) {
+    m_pendingPassword = password;
     if (Utils::fileExists(path)) {
         this->handleWalletError({nullptr, Utils::ERROR, "Failed to create wallet", QString("File already exists: %1").arg(path)});
         return;
@@ -399,6 +415,7 @@ void WindowManager::tryCreateWallet(Seed seed, const QString &path, const QStrin
 
 void WindowManager::tryCreateWalletFromDevice(const QString &path, const QString &password, const QString &deviceName, int restoreHeight, const QString &subaddressLookahead)
 {
+    m_pendingPassword = password;
     if (Utils::fileExists(path)) {
         this->handleWalletError({nullptr, Utils::ERROR, "Failed to create wallet from device", QString("File already exists: %1").arg(path)});
         return;
@@ -410,6 +427,7 @@ void WindowManager::tryCreateWalletFromDevice(const QString &path, const QString
 
 void WindowManager::tryCreateWalletFromKeys(const QString &path, const QString &password, const QString &address,
                                             const QString &viewkey, const QString &spendkey, quint64 restoreHeight, const QString &subaddressLookahead) {
+    m_pendingPassword = password;
     if (Utils::fileExists(path)) {
         this->handleWalletError({nullptr, Utils::ERROR, "Failed to create wallet", QString("File already exists: %1").arg(path)});
         return;

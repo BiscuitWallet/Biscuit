@@ -4,6 +4,9 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
+#include "Amount.h"
+#include "coins/CoinVault.h"
+
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
@@ -119,6 +122,14 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
 
     connect(&appData()->prices, &Prices::fiatPricesUpdated, this, &MainWindow::updateBalance);
     connect(&appData()->prices, &Prices::cryptoPricesUpdated, this, &MainWindow::updateBalance);
+    // Biscuit: Bitcoin/Litecoin balances in the status bar.
+    connect(biscuit::coins::CoinVault::forWallet(m_wallet), &biscuit::coins::CoinVault::unlocked, this, [this] {
+        auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+        for (auto *coin : {vault->bitcoin(), vault->litecoin()}) {
+            connect(coin, &biscuit::coins::CoinWallet::updated, this, &MainWindow::updateBalance);
+        }
+        this->updateBalance();
+    });
 
     connect(m_windowManager->eventFilter, &EventFilter::userActivity, this, &MainWindow::userActivity);
     connect(&m_checkUserActivity, &QTimer::timeout, this, &MainWindow::checkUserActivity);
@@ -622,9 +633,20 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
         }
     }
 
+    // Biscuit: every coin of the wallet on the same line, fiat value of the total.
+    QString fiatCurrency = conf()->get(Config::preferredFiatCurrency).toString();
+    double balanceFiatAmount = appData()->prices.convert("XMR", fiatCurrency, balance / constants::cdiv);
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    if (vault->isUnlocked() && !hide) {
+        for (auto *coin : {vault->bitcoin(), vault->litecoin()}) {
+            const auto b = coin->balance();
+            const QString ticker = coin->params().ticker;
+            balance_str += QString(" · %1 %2").arg(biscuit::swap::amount::fromAtomic(b.total(), coin->params().decimals), ticker);
+            balanceFiatAmount += appData()->prices.convert(ticker, fiatCurrency, double(b.total()) / 1e8);
+        }
+    }
+
     if (conf()->get(Config::balanceShowFiat).toBool() && !hide) {
-        QString fiatCurrency = conf()->get(Config::preferredFiatCurrency).toString();
-        double balanceFiatAmount = appData()->prices.convert("XMR", fiatCurrency, balance / constants::cdiv);
         balance_str += QString(" (%1)").arg(Utils::amountToCurrencyString(balanceFiatAmount, fiatCurrency));
     }
 
