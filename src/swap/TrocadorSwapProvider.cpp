@@ -4,7 +4,10 @@
 #include "TrocadorSwapProvider.h"
 
 #include <QDateTime>
+#include <QFile>
 #include <QNetworkReply>
+#include <QSslCertificate>
+#include <QSslConfiguration>
 #include <QTimer>
 #include <QUrl>
 
@@ -13,13 +16,50 @@
 #include "utils/NetworkManager.h"
 #include "utils/config.h"
 
+#ifdef BISCUIT_HAS_TROCADOR_KEY
+#include "BiscuitSecrets.h"
+#endif
+
 namespace biscuit::swap {
 
 namespace {
-    // Shared by every wallet window: the limit is per installation.
+    // Shared by every wallet window: the limit is per installation
+    // (6 requests per minute, as agreed with Trocador).
     policy::RateLimiter &limiter() {
-        static policy::RateLimiter l(10, 60 * 1000);
+        static policy::RateLimiter l(6, 60 * 1000);
         return l;
+    }
+
+    bool &keyRejectedFlag() {
+        static bool rejected = false;
+        return rejected;
+    }
+
+    // Certificate pinning: trocador.app is served by Let's Encrypt, so only the
+    // ISRG roots are trusted for it, not every CA installed on the computer
+    // (blocks interception through an added root, e.g. mitmproxy). If Trocador
+    // changes CA, swaps fail with a TLS error until an update adds it.
+    QSslConfiguration pinnedTls() {
+        static const QSslConfiguration config = [] {
+            QList<QSslCertificate> roots;
+            for (const char *path : {":/assets/certs/isrg-root-x1.pem", ":/assets/certs/isrg-root-x2.pem"}) {
+                QFile f(path);
+                if (f.open(QIODevice::ReadOnly)) {
+                    roots += QSslCertificate::fromData(f.readAll(), QSsl::Pem);
+                }
+            }
+            QSslConfiguration c = QSslConfiguration::defaultConfiguration();
+            c.setCaCertificates(roots);
+            c.setPeerVerifyMode(QSslSocket::VerifyPeer);
+            return c;
+        }();
+        return config;
+    }
+
+    bool isKeyError(int status, const QByteArray &body) {
+        if (status == 401 || status == 403) return true;
+        const QString error = trocador::parseErrorMessage(body).toLower();
+        return error.contains("api key");
     }
 
     // The coin list changes rarely: fetched at most once a day.
@@ -40,11 +80,19 @@ TrocadorSwapProvider::TrocadorSwapProvider(const QString &apiKey, QObject *paren
 }
 
 QString TrocadorSwapProvider::builtInApiKey() {
-#ifdef BISCUIT_TROCADOR_API_KEY
-    return QStringLiteral(BISCUIT_TROCADOR_API_KEY);
+#ifdef BISCUIT_HAS_TROCADOR_KEY
+    QByteArray key(trocador_key_len, Qt::Uninitialized);
+    for (unsigned long i = 0; i < trocador_key_len; ++i) {
+        key[i] = char(trocador_key_masked[i] ^ trocador_key_pad[i]);
+    }
+    return QString::fromLatin1(key);
 #else
     return {};
 #endif
+}
+
+bool TrocadorSwapProvider::keyRejected() {
+    return keyRejectedFlag();
 }
 
 bool TrocadorSwapProvider::proxyActive() {
@@ -90,6 +138,10 @@ void TrocadorSwapProvider::send(const QString &method, const QUrlQuery &query, R
         handler({}, "Swaps connect to Trocador without Tor. Allow it in the Swap tab first.");
         return;
     }
+    if (keyRejectedFlag()) {
+        handler({}, "Swaps are unavailable in this version of Biscuit. Please update Biscuit.");
+        return;
+    }
 
     QUrl url(QString(trocador::apiBaseUrl) + method);
     url.setQuery(query);
@@ -98,7 +150,8 @@ void TrocadorSwapProvider::send(const QString &method, const QUrlQuery &query, R
     request.setRawHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; rv:102.0) Gecko/20100101 Firefox/102.0");
     request.setRawHeader("Accept-Language", "en");
     request.setRawHeader("Content-Type", "application/json");
-    request.setRawHeader("API-Key", m_apiKey.toUtf8());
+    request.setRawHeader("API-Key", m_apiKey.toUtf8());   // never logged
+    request.setSslConfiguration(pinnedTls());
 
     QNetworkReply *reply = getNetworkClearnet()->get(request);
     reply->setParent(this);
@@ -118,6 +171,12 @@ void TrocadorSwapProvider::send(const QString &method, const QUrlQuery &query, R
             return;
         }
         const QByteArray body = reply->readAll();
+        if (isKeyError(status, body)) {
+            // Rejected key: switch swaps off cleanly, never hammer the API.
+            keyRejectedFlag() = true;
+            handler({}, "Swaps are unavailable in this version of Biscuit. Please update Biscuit.");
+            return;
+        }
         // Trocador answers errors with a JSON body and a 4xx status: let the
         // parsers read it, only report the network error if there is no body.
         const QString networkError = body.isEmpty() && reply->error() != QNetworkReply::NoError

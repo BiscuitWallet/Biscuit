@@ -203,13 +203,16 @@ endif()
 # Biscuit partner keys: never in the repository. Official builds provide them in
 # secrets.cmake (ignored by git), e.g. set(BISCUIT_TROCADOR_API_KEY "..."). Without
 # a key, swaps run in offline demo mode.
-# TODO before the first public release: obfuscate the key in the binary.
 if(EXISTS "${CMAKE_SOURCE_DIR}/secrets.cmake")
     include("${CMAKE_SOURCE_DIR}/secrets.cmake")
 endif()
 if(BISCUIT_TROCADOR_API_KEY)
+    # Masked into a generated header (build tree only), never a compiler flag.
+    include(BiscuitSecrets)
+    biscuit_write_secret_header(trocador_key "${BISCUIT_TROCADOR_API_KEY}" "${CMAKE_BINARY_DIR}/generated/BiscuitSecrets.h")
+    target_include_directories(feather PRIVATE "${CMAKE_BINARY_DIR}/generated")
+    target_compile_definitions(feather PRIVATE BISCUIT_HAS_TROCADOR_KEY=1)
     message(STATUS "Trocador API key: provided (swaps use Trocador)")
-    target_compile_definitions(feather PRIVATE BISCUIT_TROCADOR_API_KEY="${BISCUIT_TROCADOR_API_KEY}")
 else()
     message(STATUS "Trocador API key: none (swaps run in demo mode)")
 endif()

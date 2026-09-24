@@ -151,7 +151,10 @@ void SwapWidget::updateConsent() {
     const bool needed = !m_manager->demoMode() && TrocadorSwapProvider::proxyActive();
     const bool given = conf()->get(Config::swapDirectConsent).toBool();
     m_consent->setVisible(needed);
-    ui->btn_offers->setEnabled(!needed || given);
+    ui->btn_offers->setEnabled((!needed || given) && !TrocadorSwapProvider::keyRejected());
+    if (TrocadorSwapProvider::keyRejected()) {
+        ui->label_status->setText("Swaps are unavailable in this version of Biscuit. Please update Biscuit.");
+    }
     if (!needed) {
         return;
     }

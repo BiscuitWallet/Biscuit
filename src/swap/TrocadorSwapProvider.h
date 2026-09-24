@@ -28,6 +28,10 @@ public:
     static bool proxyActive();
     static bool directConnectionAllowed();
 
+    // Set when Trocador rejects the built-in key: swaps stay off (no retries)
+    // until an update ships a new key.
+    static bool keyRejected();
+
     QString id() const override;
     QString displayName() const override;
     QString kycPolicy() const override;
