@@ -13,7 +13,7 @@ Résumé de l'étude du code de Feather, pour savoir où brancher les modules Bi
 | `src/wizard/` | Assistant de démarrage (création, restauration, ouverture, réseau). |
 | `src/dialog/` | Boîtes de dialogue (seed, clés, confirmation d'envoi, à propos…). |
 | `src/utils/` | Réseau, Tor, config, nœuds, prix, utilitaires. |
-| `src/plugins/` | Onglets optionnels (Home, Tickers, Calc…). Désactivés dans Biscuit car ils dépendent des serveurs Feather. |
+| `src/plugins/` | Onglets optionnels (Home, Tickers, Calc, Swap…). Alimentés par les sources publiques de `src/datafeed/`. |
 | `src/ui/` | Feuilles de style (`qdarkstyle`, `BreezeStyleSheets`) pour les thèmes. |
 | `src/assets/` | Icônes, liste de nœuds intégrée (`nodes.json`), textes (`about.txt`), docs embarquées. |
 
