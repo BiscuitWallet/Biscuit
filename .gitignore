@@ -32,3 +32,7 @@ secrets.cmake
 # Fichiers générés par le build macOS
 /installed/
 contrib/macdeploy/Info.plist
+
+# Wallets Biscuit : ne jamais committer (sur macOS ~/Biscuit et ~/biscuit sont le même dossier)
+/wallets/
+*.keys
