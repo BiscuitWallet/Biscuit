@@ -293,8 +293,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MINGW_FLAG} -std=c11 ${C_SECURITY_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MINGW_FLAG} ${CXX_SECURITY_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${STATIC_FLAGS}")
 
+include(Libwally)
 add_subdirectory(src/swap/core)
 add_subdirectory(src/datafeed/core)
+add_subdirectory(src/coins/core)
 add_subdirectory(src)
 
 if(BUILD_TESTS)

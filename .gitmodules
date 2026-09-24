@@ -10,3 +10,6 @@
 [submodule "external/feather-sigs"]
 	path = external/feather-sigs
 	url = https://github.com/feather-wallet/feather-sigs.git
+[submodule "external/libwally-core"]
+	path = external/libwally-core
+	url = https://github.com/ElementsProject/libwally-core.git

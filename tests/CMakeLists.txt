@@ -22,3 +22,7 @@ endforeach()
 # Public data feed
 biscuit_add_test(test_public_data test_public_data.cpp)
 target_link_libraries(test_public_data PRIVATE biscuit_datafeed_core)
+
+# BTC/LTC wallets
+biscuit_add_test(test_coins_keys test_coins_keys.cpp)
+target_link_libraries(test_coins_keys PRIVATE biscuit_coins_core)
