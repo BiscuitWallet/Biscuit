@@ -8,6 +8,8 @@ add_library(biscuit_swap_core STATIC
         QuoteRanking.cpp
         SwapTypes.cpp
         TrocadorApi.cpp
+        SwapHistory.cpp
+        DemoSwap.cpp
 )
 target_include_directories(biscuit_swap_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(biscuit_swap_core PUBLIC Qt6::Core)
