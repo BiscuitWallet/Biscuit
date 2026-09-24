@@ -7,6 +7,7 @@
 
 #include "DemoSwapProvider.h"
 #include "QuoteRanking.h"
+#include "RequestPolicy.h"
 #include "TrocadorSwapProvider.h"
 #include "libwalletqt/Wallet.h"
 #include "utils/config.h"
@@ -14,7 +15,9 @@
 namespace biscuit::swap {
 
 namespace {
-    constexpr int pollIntervalMs = 30 * 1000;
+    // Timer tick only: each trade is checked on the partner-agreed schedule
+    // (swap/core/RequestPolicy), not on every tick.
+    constexpr int pollTickMs = 30 * 1000;
 }
 
 SwapManager::SwapManager(Wallet *wallet, QObject *parent)
@@ -30,8 +33,8 @@ SwapManager::SwapManager(Wallet *wallet, QObject *parent)
 
     m_history = SwapHistory::fromJson(m_wallet->getCacheAttribute(SwapHistory::walletAttribute).toUtf8());
 
-    connect(&m_pollTimer, &QTimer::timeout, this, &SwapManager::poll);
-    m_pollTimer.start(pollIntervalMs);
+    connect(&m_pollTimer, &QTimer::timeout, this, [this] { poll(); });
+    m_pollTimer.start(pollTickMs);
 
     // Saving a synchronizing wallet is unsafe: retry once it is synchronized.
     connect(m_wallet, &Wallet::connectionStatusChanged, this, [this](int status) {
@@ -40,7 +43,7 @@ SwapManager::SwapManager(Wallet *wallet, QObject *parent)
         }
     });
 
-    QTimer::singleShot(0, this, &SwapManager::poll);
+    QTimer::singleShot(0, this, [this] { poll(); });
 }
 
 QList<SwapProvider *> SwapManager::providers() const {
@@ -170,15 +173,27 @@ void SwapManager::setDepositTx(const QString &providerId, const QString &tradeId
 }
 
 void SwapManager::refreshNow() {
-    poll();
+    poll(true);
 }
 
-void SwapManager::poll() {
-    for (const Trade &t : m_history.tradesToPoll(QDateTime::currentDateTimeUtc())) {
+void SwapManager::poll(bool force) {
+    const QDateTime now = QDateTime::currentDateTimeUtc();
+    for (const Trade &t : m_history.tradesToPoll(now)) {
         SwapProvider *p = provider(t.providerId);
         if (!p) {
             continue;
         }
+        // Real partners: slow schedule agreed with them. The offline demo
+        // contacts nobody and follows every tick.
+        const QString key = t.providerId + ':' + t.tradeId;
+        if (!force && !p->isDemo()) {
+            const auto last = m_lastCheck.constFind(key);
+            const bool never = last == m_lastCheck.constEnd();
+            if (!policy::isStatusCheckDue(t.createdAt.secsTo(now), never ? 0 : last->secsTo(now), never)) {
+                continue;
+            }
+        }
+        m_lastCheck.insert(key, now);
         p->getTradeStatus(t, [this](const std::optional<Trade> &update, const QString &) {
             // Errors are transient (network, Tor): the next poll retries.
             if (update) {

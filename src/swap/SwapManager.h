@@ -6,6 +6,8 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QDateTime>
+#include <QHash>
 #include <QTimer>
 
 #include "SwapHistory.h"
@@ -51,7 +53,7 @@ signals:
     void tradesChanged();
 
 private:
-    void poll();
+    void poll(bool force = false);
     void mergeStatus(const Trade &update);
     void save();
     void flushIfPossible();
@@ -60,6 +62,7 @@ private:
     QList<SwapProvider *> m_allProviders;
     SwapHistory m_history;
     QTimer m_pollTimer;
+    QHash<QString, QDateTime> m_lastCheck;   // provider:trade -> last status request
     bool m_dirty = false;
     int m_quoteGeneration = 0;
 };

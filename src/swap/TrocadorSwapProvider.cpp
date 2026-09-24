@@ -3,13 +3,34 @@
 
 #include "TrocadorSwapProvider.h"
 
+#include <QDateTime>
 #include <QNetworkReply>
+#include <QTimer>
 #include <QUrl>
 
+#include "RequestPolicy.h"
 #include "TrocadorApi.h"
 #include "utils/Networking.h"
 
 namespace biscuit::swap {
+
+namespace {
+    // Shared by every wallet window: the limit is per installation.
+    policy::RateLimiter &limiter() {
+        static policy::RateLimiter l(10, 60 * 1000);
+        return l;
+    }
+
+    // The coin list changes rarely: fetched at most once a day.
+    struct CoinCache {
+        QList<AssetInfo> assets;
+        QDateTime fetchedAt;
+    };
+    CoinCache &coinCache() {
+        static CoinCache c;
+        return c;
+    }
+}
 
 TrocadorSwapProvider::TrocadorSwapProvider(const QString &apiKey, QObject *parent)
     : SwapProvider(parent)
@@ -42,6 +63,16 @@ QString TrocadorSwapProvider::supportUrl() const {
 }
 
 void TrocadorSwapProvider::get(const QString &method, const QUrlQuery &query, ReplyHandler handler) {
+    // Over the limit, requests are delayed, never sent in bursts.
+    const qint64 delay = limiter().reserve(QDateTime::currentMSecsSinceEpoch());
+    if (delay > 0) {
+        QTimer::singleShot(delay, this, [this, method, query, handler] { send(method, query, handler); });
+        return;
+    }
+    send(method, query, handler);
+}
+
+void TrocadorSwapProvider::send(const QString &method, const QUrlQuery &query, ReplyHandler handler) {
     QUrl url(QString(trocador::apiBaseUrl) + method);
     url.setQuery(query);
 
@@ -64,11 +95,12 @@ void TrocadorSwapProvider::get(const QString &method, const QUrlQuery &query, Re
 }
 
 void TrocadorSwapProvider::supportedAssets(AssetsCallback callback) {
-    if (!m_assetsCache.isEmpty()) {
-        callback(m_assetsCache, {});
+    const CoinCache &cache = coinCache();
+    if (!cache.assets.isEmpty() && cache.fetchedAt.secsTo(QDateTime::currentDateTimeUtc()) < 24 * 3600) {
+        callback(cache.assets, {});
         return;
     }
-    get("coins", {}, [this, callback](const QByteArray &body, const QString &networkError) {
+    get("coins", {}, [callback](const QByteArray &body, const QString &networkError) {
         if (!networkError.isEmpty()) {
             callback({}, networkError);
             return;
@@ -76,7 +108,7 @@ void TrocadorSwapProvider::supportedAssets(AssetsCallback callback) {
         QString error;
         const auto coins = trocador::parseCoins(body, &error);
         if (coins) {
-            m_assetsCache = *coins;
+            coinCache() = {*coins, QDateTime::currentDateTimeUtc()};
         }
         callback(coins.value_or(QList<AssetInfo>{}), error);
     });

@@ -37,9 +37,9 @@ public:
 private:
     using ReplyHandler = std::function<void(const QByteArray &body, const QString &networkError)>;
     void get(const QString &method, const QUrlQuery &query, ReplyHandler handler);
+    void send(const QString &method, const QUrlQuery &query, ReplyHandler handler);
 
     QString m_apiKey;
-    QList<AssetInfo> m_assetsCache;
 };
 
 }
