@@ -23,6 +23,11 @@ public:
     // Key compiled into this build, empty if none.
     static QString builtInApiKey();
 
+    // Trocador is always reached directly (Tor exits are shared and get rate
+    // limited). When the app uses a proxy (Tor), this needs the user's consent.
+    static bool proxyActive();
+    static bool directConnectionAllowed();
+
     QString id() const override;
     QString displayName() const override;
     QString kycPolicy() const override;
@@ -36,8 +41,8 @@ public:
 
 private:
     using ReplyHandler = std::function<void(const QByteArray &body, const QString &networkError)>;
-    void get(const QString &method, const QUrlQuery &query, ReplyHandler handler);
-    void send(const QString &method, const QUrlQuery &query, ReplyHandler handler);
+    void get(const QString &method, const QUrlQuery &query, ReplyHandler handler, int attempt = 0);
+    void send(const QString &method, const QUrlQuery &query, ReplyHandler handler, int attempt = 0);
 
     QString m_apiKey;
 };

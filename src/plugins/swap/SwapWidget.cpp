@@ -4,12 +4,17 @@
 #include "SwapWidget.h"
 #include "ui_SwapWidget.h"
 
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QHeaderView>
+#include <QLabel>
 #include <QMessageBox>
 
 #include "Amount.h"
 #include "DemoSwap.h"
 #include "SwapTradeDialog.h"
+#include "swap/TrocadorSwapProvider.h"
+#include "utils/config.h"
 #include "constants.h"
 #include "libwalletqt/Subaddress.h"
 #include "libwalletqt/Wallet.h"
@@ -18,6 +23,7 @@
 #include "utils/Utils.h"
 
 using namespace biscuit::swap;
+using biscuit::swap::TrocadorSwapProvider;
 
 namespace {
     enum OfferColumn { OfferExchange = 0, OfferGet, OfferKyc, OfferEta, OfferVia };
@@ -49,6 +55,22 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
                                 "Demo mode: this build has no swap partner key. Offers are simulated, "
                                 "no exchange is contacted and nothing can be sent.");
     }
+
+    // Consent to reach Trocador without Tor (shown only when a proxy is on).
+    m_consent = new QFrame(this);
+    m_consent->setFrameShape(QFrame::StyledPanel);
+    auto *consentLayout = new QHBoxLayout(m_consent);
+    m_consentText = new QLabel(m_consent);
+    m_consentText->setWordWrap(true);
+    m_consentButton = new QPushButton(m_consent);
+    consentLayout->addWidget(m_consentText, 1);
+    consentLayout->addWidget(m_consentButton, 0, Qt::AlignVCenter);
+    ui->verticalLayout->insertWidget(1, m_consent);
+    connect(m_consentButton, &QPushButton::clicked, this, [this] {
+        conf()->set(Config::swapDirectConsent, !conf()->get(Config::swapDirectConsent).toBool());
+        updateConsent();
+        loadAssets();
+    });
 
     // Swap partners work on mainnet only: a stagenet or testnet address would
     // lose the funds. The offline demo stays available for development.
@@ -114,9 +136,37 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         m_pendingDepositTrade.clear();
     });
 
+    updateConsent();
     loadAssets();
     updateForm();
     refreshTrades();
+}
+
+void SwapWidget::showEvent(QShowEvent *event) {
+    QWidget::showEvent(event);
+    updateConsent();   // the proxy settings may have changed
+}
+
+void SwapWidget::updateConsent() {
+    const bool needed = !m_manager->demoMode() && TrocadorSwapProvider::proxyActive();
+    const bool given = conf()->get(Config::swapDirectConsent).toBool();
+    m_consent->setVisible(needed);
+    ui->btn_offers->setEnabled(!needed || given);
+    if (!needed) {
+        return;
+    }
+    if (given) {
+        m_consentText->setText("Swaps connect to Trocador without Tor: Trocador can see your IP address and may share it "
+                               "with the exchange running the swap. Your wallets, nodes and prices still use Tor.");
+        m_consentButton->setText("Stop");
+        m_consentButton->setToolTip("Swaps will be unavailable while Tor is on, including status updates of ongoing swaps.");
+    } else {
+        m_consentText->setText("<b>Tor is on.</b> Swaps cannot go through Tor: they connect to Trocador directly, so "
+                               "Trocador can see your IP address and may share it with the exchange running the swap. "
+                               "Only swap requests leave Tor; your wallets, nodes and prices stay on Tor.");
+        m_consentButton->setText("Allow swaps without Tor");
+        m_consentButton->setToolTip({});
+    }
 }
 
 SwapWidget::~SwapWidget() = default;

@@ -143,6 +143,7 @@ public:
         // Biscuit: swaps
         swapDisabledProviders,
         swapMinKycRating,
+        swapDirectConsent,   // swaps may bypass the proxy (Tor), user consent
     };
 
     enum PrivacyLevel {

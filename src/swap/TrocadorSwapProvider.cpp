@@ -10,7 +10,8 @@
 
 #include "RequestPolicy.h"
 #include "TrocadorApi.h"
-#include "utils/Networking.h"
+#include "utils/NetworkManager.h"
+#include "utils/config.h"
 
 namespace biscuit::swap {
 
@@ -46,6 +47,14 @@ QString TrocadorSwapProvider::builtInApiKey() {
 #endif
 }
 
+bool TrocadorSwapProvider::proxyActive() {
+    return conf()->get(Config::proxy).toInt() != Config::Proxy::None;
+}
+
+bool TrocadorSwapProvider::directConnectionAllowed() {
+    return !proxyActive() || conf()->get(Config::swapDirectConsent).toBool();
+}
+
 QString TrocadorSwapProvider::id() const {
     return trocador::providerId;
 }
@@ -62,29 +71,52 @@ QString TrocadorSwapProvider::supportUrl() const {
     return "https://trocador.app/en/contact/";
 }
 
-void TrocadorSwapProvider::get(const QString &method, const QUrlQuery &query, ReplyHandler handler) {
+void TrocadorSwapProvider::get(const QString &method, const QUrlQuery &query, ReplyHandler handler, int attempt) {
     // Over the limit, requests are delayed, never sent in bursts.
     const qint64 delay = limiter().reserve(QDateTime::currentMSecsSinceEpoch());
     if (delay > 0) {
-        QTimer::singleShot(delay, this, [this, method, query, handler] { send(method, query, handler); });
+        QTimer::singleShot(delay, this, [this, method, query, handler, attempt] { send(method, query, handler, attempt); });
         return;
     }
-    send(method, query, handler);
+    send(method, query, handler, attempt);
 }
 
-void TrocadorSwapProvider::send(const QString &method, const QUrlQuery &query, ReplyHandler handler) {
-    QUrl url(QString(trocador::apiBaseUrl) + method);
-    url.setQuery(query);
-
-    Networking network{this};
-    QNetworkReply *reply = network.getJson(this, url.toString(), {{"API-Key", m_apiKey.toUtf8()}});
-    if (!reply) {
+void TrocadorSwapProvider::send(const QString &method, const QUrlQuery &query, ReplyHandler handler, int attempt) {
+    if (conf()->get(Config::offlineMode).toBool()) {
         handler({}, "Offline mode is enabled");
         return;
     }
+    if (!directConnectionAllowed()) {
+        handler({}, "Swaps connect to Trocador without Tor. Allow it in the Swap tab first.");
+        return;
+    }
 
-    connect(reply, &QNetworkReply::finished, this, [reply, handler] {
+    QUrl url(QString(trocador::apiBaseUrl) + method);
+    url.setQuery(query);
+    QNetworkRequest request(url);
+    // Same headers for every user: nothing about the system or its language.
+    request.setRawHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; rv:102.0) Gecko/20100101 Firefox/102.0");
+    request.setRawHeader("Accept-Language", "en");
+    request.setRawHeader("Content-Type", "application/json");
+    request.setRawHeader("API-Key", m_apiKey.toUtf8());
+
+    QNetworkReply *reply = getNetworkClearnet()->get(request);
+    reply->setParent(this);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, method, query, handler, attempt] {
         reply->deleteLater();
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (status == 429) {
+            // Rate limited: back off (1, 2, 4 minutes), never retry at once.
+            if (attempt < 3) {
+                QTimer::singleShot((60 << attempt) * 1000, this, [this, method, query, handler, attempt] {
+                    get(method, query, handler, attempt + 1);
+                });
+                return;
+            }
+            handler({}, "Trocador is busy (too many requests). Try again in a few minutes.");
+            return;
+        }
         const QByteArray body = reply->readAll();
         // Trocador answers errors with a JSON body and a 4xx status: let the
         // parsers read it, only report the network error if there is no body.

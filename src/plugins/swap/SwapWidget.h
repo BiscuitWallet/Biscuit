@@ -10,6 +10,9 @@
 #include "swap/SwapManager.h"
 
 class QComboBox;
+class QFrame;
+class QLabel;
+class QPushButton;
 class Wallet;
 
 namespace Ui {
@@ -25,6 +28,9 @@ class SwapWidget : public QWidget
 public:
     explicit SwapWidget(Wallet *wallet, QWidget *parent = nullptr);
     ~SwapWidget() override;
+
+protected:
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     void onFromChanged();
@@ -43,6 +49,8 @@ private:
     bool sendsXmr() const;
 
     void loadAssets();
+    // Tor on: swaps reach Trocador directly, only with the user's consent.
+    void updateConsent();
     void updateForm();
     void clearOffers();
     void setBusy(bool busy, const QString &status = {});
@@ -56,6 +64,9 @@ private:
     biscuit::swap::SwapManager *m_manager;
     QList<biscuit::swap::Quote> m_quotes;
     bool m_updating = false;
+    QFrame *m_consent = nullptr;
+    QLabel *m_consentText = nullptr;
+    QPushButton *m_consentButton = nullptr;
 
     // Trade whose deposit is being sent from this wallet.
     QString m_pendingDepositProvider;
