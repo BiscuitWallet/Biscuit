@@ -43,6 +43,7 @@ option(WITH_PLUGIN_CROWDFUNDING "Include Crowdfunding Home plugin" ON)
 option(WITH_PLUGIN_REVUO "Include Revuo Home plugin (needs the Feather service, no public API)" OFF)
 option(WITH_PLUGIN_CALC "Include Calc tab plugin" ON)
 option(WITH_PLUGIN_SWAP "Include Swap tab plugin (Biscuit)" ON)
+option(WITH_PLUGIN_COINS "Include Bitcoin and Litecoin tabs (Biscuit)" ON)
 
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake")
 include(CheckCCompilerFlag)

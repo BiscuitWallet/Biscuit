@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CoinTab</class>
+ <widget class="QWidget" name="CoinTab">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="layout_main">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QStackedWidget" name="stack">
+     <widget class="QWidget" name="page_setup">
+      <layout class="QVBoxLayout" name="layout_setup">
+       <item>
+        <widget class="QLabel" name="label_setupTitle">
+         <property name="text">
+          <string>Bitcoin and Litecoin</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_setupText">
+         <property name="text">
+          <string>Add Bitcoin and Litecoin to this wallet. Both use one seed phrase (BIP39, compatible with other wallets), separate from your Monero seed, and are encrypted with the password of this wallet.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="layout_setupButtons">
+         <item>
+          <widget class="QPushButton" name="btn_create">
+           <property name="text">
+            <string>Create new seed</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_restore">
+           <property name="text">
+            <string>Restore from seed</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_setup">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="spacer_setupBottom">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_unlock">
+      <layout class="QVBoxLayout" name="layout_unlock">
+       <item>
+        <widget class="QLabel" name="label_unlockText">
+         <property name="text">
+          <string>Enter the password of this wallet to open Bitcoin and Litecoin.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="form_unlock">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_password">
+           <property name="text">
+            <string>Password</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <layout class="QHBoxLayout" name="layout_password">
+           <item>
+            <widget class="QLineEdit" name="line_password">
+             <property name="maximumSize">
+              <size>
+               <width>320</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="echoMode">
+              <enum>QLineEdit::EchoMode::Password</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_unlock">
+             <property name="text">
+              <string>Unlock</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="spacer_unlock">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_unlockError">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="spacer_unlockBottom">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_wallet">
+      <layout class="QVBoxLayout" name="layout_wallet">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="layout_header">
+         <item>
+          <widget class="QLabel" name="label_balance">
+           <property name="text">
+            <string>Balance</string>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_header">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_status">
+           <property name="text">
+            <string>Disconnected</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTabWidget" name="tabs">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <widget class="QWidget" name="tab_history">
+          <attribute name="title">
+           <string>History</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="layout_history">
+           <item>
+            <widget class="QTreeWidget" name="tree_history">
+             <property name="rootIsDecorated">
+              <bool>false</bool>
+             </property>
+             <property name="uniformRowHeights">
+              <bool>true</bool>
+             </property>
+             <column>
+              <property name="text">
+               <string>Status</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Amount</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Fee</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Transaction</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_send">
+          <attribute name="title">
+           <string>Send</string>
+          </attribute>
+          <layout class="QFormLayout" name="form_send">
+           <property name="fieldGrowthPolicy">
+            <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
+           </property>
+           <property name="verticalSpacing">
+            <number>9</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_payTo">
+             <property name="text">
+              <string>Pay to</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="line_payTo"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_amount">
+             <property name="text">
+              <string>Amount</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <layout class="QHBoxLayout" name="layout_amount">
+             <property name="spacing">
+              <number>12</number>
+             </property>
+             <item>
+              <layout class="QHBoxLayout" name="layout_amountUnit">
+               <property name="spacing">
+                <number>6</number>
+               </property>
+               <item>
+                <widget class="QLineEdit" name="line_amount">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>100</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>200</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="placeholderText">
+                  <string>0.0</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_unit">
+                 <property name="text">
+                  <string>BTC</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_max">
+               <property name="text">
+                <string>Max</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="spacer_amount">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_feeTitle">
+             <property name="text">
+              <string>Fee</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <layout class="QHBoxLayout" name="layout_fee">
+             <property name="spacing">
+              <number>12</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="combo_fee"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_feeRate">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="spacer_fee">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <item row="3" column="1">
+            <layout class="QHBoxLayout" name="layout_sendButtons">
+             <item>
+              <spacer name="spacer_sendButtons">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_clear">
+               <property name="text">
+                <string>Clear</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_send">
+               <property name="text">
+                <string>Send</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_receive">
+          <attribute name="title">
+           <string>Receive</string>
+          </attribute>
+          <layout class="QHBoxLayout" name="layout_receive">
+           <property name="spacing">
+            <number>12</number>
+           </property>
+           <item>
+            <layout class="QFormLayout" name="form_receive">
+             <property name="fieldGrowthPolicy">
+              <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
+             </property>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_addressTitle">
+               <property name="text">
+                <string>Address</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QHBoxLayout" name="layout_address">
+               <item>
+                <widget class="QLineEdit" name="line_address">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btn_copyAddress">
+                 <property name="text">
+                  <string>Copy</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_receiveHint">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>A new address is shown after each payment received, for privacy. Previous addresses keep working.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_qr">
+             <property name="minimumSize">
+              <size>
+               <width>180</width>
+               <height>180</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>180</width>
+               <height>180</height>
+              </size>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="layout_footer">
+         <item>
+          <widget class="QPushButton" name="btn_showSeed">
+           <property name="text">
+            <string>Show seed…</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_footer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_lock">
+           <property name="text">
+            <string>Lock</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

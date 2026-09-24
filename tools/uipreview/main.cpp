@@ -8,6 +8,8 @@
 #include <QApplication>
 #include <QFile>
 #include <QLabel>
+#include <QStackedWidget>
+#include <QTabWidget>
 #include <QLineEdit>
 #include <QStyleFactory>
 #include <QUiLoader>
@@ -40,6 +42,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    if (qEnvironmentVariableIsSet("PREVIEW_PAGE")) {
+        for (auto *stack : widget->findChildren<QStackedWidget *>()) stack->setCurrentIndex(qEnvironmentVariableIntValue("PREVIEW_PAGE"));
+    }
+    if (qEnvironmentVariableIsSet("PREVIEW_TAB")) {
+        for (auto *tabs : widget->findChildren<QTabWidget *>()) tabs->setCurrentIndex(qEnvironmentVariableIntValue("PREVIEW_TAB"));
+    }
     if (qEnvironmentVariableIsSet("PREVIEW_FILL")) {
         // Worst case: a long Monero address in every empty field.
         const QString sample = "888tNkZrPN6JsEgekjMnABU4TBzc2Dt29EPAvkRxbANsAnjyPbb3iQ1YBRk1UXcdRsiKc9dhwMVgN5S9cQUiyoogDavup3H";

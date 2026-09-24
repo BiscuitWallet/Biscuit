@@ -1,0 +1,257 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: The Biscuit developers
+
+#include "CoinSetupDialog.h"
+
+#include <algorithm>
+
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QInputDialog>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QRandomGenerator>
+#include <QStackedWidget>
+#include <QVBoxLayout>
+
+#include "Bip39.h"
+#include "CoinVault.h"
+
+namespace biscuit::coins {
+
+namespace {
+    QString numberedWords(const QString &mnemonic) {
+        const QStringList words = mnemonic.split(' ');
+        QStringList rows;
+        const int perRow = 4;
+        for (int i = 0; i < words.size(); i += perRow) {
+            QStringList row;
+            for (int j = i; j < std::min<int>(i + perRow, words.size()); ++j) {
+                row << QString("%1. %2").arg(j + 1, 2).arg(words.at(j), -10);
+            }
+            rows << row.join("   ");
+        }
+        return rows.join('\n');
+    }
+
+    QPlainTextEdit *wordsView(const QString &mnemonic, QWidget *parent) {
+        auto *view = new QPlainTextEdit(numberedWords(mnemonic), parent);
+        view->setReadOnly(true);
+        QFont mono("Menlo");
+        mono.setStyleHint(QFont::Monospace);
+        view->setFont(mono);
+        view->setMaximumHeight(view->fontMetrics().lineSpacing() * 7);
+        return view;
+    }
+}
+
+CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent)
+    : QDialog(parent)
+    , m_vault(vault)
+    , m_mode(mode)
+{
+    setWindowTitle(mode == Mode::Create ? "New Bitcoin and Litecoin seed" : "Restore Bitcoin and Litecoin");
+    auto *layout = new QVBoxLayout(this);
+    m_pages = new QStackedWidget(this);
+    layout->addWidget(m_pages);
+
+    m_error = new QLabel(this);
+    m_error->setStyleSheet("color: #c0392b;");
+    m_error->setWordWrap(true);
+    layout->addWidget(m_error);
+
+    auto *buttons = new QDialogButtonBox(this);
+    buttons->addButton(QDialogButtonBox::Cancel);
+    m_btnNext = buttons->addButton("Next", QDialogButtonBox::AcceptRole);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(m_btnNext, &QPushButton::clicked, this, &CoinSetupDialog::next);
+
+    if (mode == Mode::Create) {
+        m_mnemonic = bip39::generateMnemonic(12);
+        // Three distinct words to type back.
+        while (m_checkIndexes.size() < 3) {
+            const int i = QRandomGenerator::global()->bounded(12);
+            if (!m_checkIndexes.contains(i)) m_checkIndexes << i;
+        }
+        std::sort(m_checkIndexes.begin(), m_checkIndexes.end());
+        m_pages->addWidget(pageShowWords());
+        m_pages->addWidget(pageVerifyWords());
+    } else {
+        m_pages->addWidget(pageRestore());
+    }
+    m_pages->addWidget(pagePassword());
+    resize(560, sizeHint().height());
+}
+
+CoinSetupDialog::~CoinSetupDialog() {
+    m_mnemonic.fill(QChar(' '));
+    m_mnemonic.clear();
+}
+
+QWidget *CoinSetupDialog::pageShowWords() {
+    auto *page = new QWidget(this);
+    auto *l = new QVBoxLayout(page);
+    auto *intro = new QLabel("Write these 12 words on paper, in order, and keep them offline. They are the only "
+                             "way to recover your Bitcoin and Litecoin if this computer is lost. Anyone who has "
+                             "them can take your coins.", page);
+    intro->setWordWrap(true);
+    l->addWidget(intro);
+    l->addWidget(wordsView(m_mnemonic, page));
+    auto *note = new QLabel("This seed is separate from your Monero seed: back up both.", page);
+    note->setWordWrap(true);
+    l->addWidget(note);
+    m_checkWritten = new QCheckBox("I have written down these 12 words", page);
+    l->addWidget(m_checkWritten);
+    return page;
+}
+
+QWidget *CoinSetupDialog::pageVerifyWords() {
+    auto *page = new QWidget(this);
+    auto *l = new QVBoxLayout(page);
+    auto *intro = new QLabel("To make sure your backup is correct, type these words from your paper.", page);
+    intro->setWordWrap(true);
+    l->addWidget(intro);
+    auto *form = new QFormLayout;
+    for (int index : m_checkIndexes) {
+        auto *line = new QLineEdit(page);
+        line->setMaximumWidth(200);
+        form->addRow(QString("Word %1").arg(index + 1), line);
+        m_checkLines << line;
+    }
+    l->addLayout(form);
+    l->addStretch();
+    return page;
+}
+
+QWidget *CoinSetupDialog::pageRestore() {
+    auto *page = new QWidget(this);
+    auto *l = new QVBoxLayout(page);
+    auto *intro = new QLabel("Enter your 12 or 24 words (BIP39). Seeds from Electrum-format, Monero or other "
+                             "non-BIP39 wallets are not supported.", page);
+    intro->setWordWrap(true);
+    l->addWidget(intro);
+    m_restoreWords = new QPlainTextEdit(page);
+    m_restoreWords->setPlaceholderText("word1 word2 word3 …");
+    m_restoreWords->setMaximumHeight(m_restoreWords->fontMetrics().lineSpacing() * 5);
+    l->addWidget(m_restoreWords);
+    auto *form = new QFormLayout;
+    m_passphrase = new QLineEdit(page);
+    m_passphrase->setPlaceholderText("Only if you used one (\"25th word\")");
+    form->addRow("Passphrase", m_passphrase);
+    l->addLayout(form);
+    l->addStretch();
+    return page;
+}
+
+QWidget *CoinSetupDialog::pagePassword() {
+    auto *page = new QWidget(this);
+    auto *l = new QVBoxLayout(page);
+    auto *intro = new QLabel("Enter the password of this wallet. Bitcoin and Litecoin are encrypted with it.", page);
+    intro->setWordWrap(true);
+    l->addWidget(intro);
+    auto *form = new QFormLayout;
+    m_password = new QLineEdit(page);
+    m_password->setEchoMode(QLineEdit::Password);
+    m_password->setMaximumWidth(320);
+    form->addRow("Password", m_password);
+    l->addLayout(form);
+    l->addStretch();
+    return page;
+}
+
+void CoinSetupDialog::next() {
+    m_error->clear();
+    QWidget *current = m_pages->currentWidget();
+    const bool lastPage = m_pages->currentIndex() == m_pages->count() - 1;
+
+    if (m_mode == Mode::Create && m_pages->currentIndex() == 0) {
+        if (!m_checkWritten->isChecked()) {
+            m_error->setText("Write down the 12 words first.");
+            return;
+        }
+    } else if (m_mode == Mode::Create && m_pages->currentIndex() == 1) {
+        const QStringList words = m_mnemonic.split(' ');
+        for (int i = 0; i < m_checkIndexes.size(); ++i) {
+            if (m_checkLines.at(i)->text().trimmed().toLower() != words.at(m_checkIndexes.at(i))) {
+                m_error->setText(QString("Word %1 does not match. Check your paper backup.").arg(m_checkIndexes.at(i) + 1));
+                return;
+            }
+        }
+    } else if (m_mode == Mode::Restore && current != m_pages->widget(m_pages->count() - 1)) {
+        const QString words = m_restoreWords->toPlainText();
+        if (!bip39::isValidMnemonic(words)) {
+            m_error->setText("These words are not a valid BIP39 seed (check spelling, order and the number of words).");
+            return;
+        }
+        m_mnemonic = bip39::normalizeMnemonic(words);
+    }
+
+    if (lastPage) {
+        finish();
+        return;
+    }
+    m_pages->setCurrentIndex(m_pages->currentIndex() + 1);
+    if (m_pages->currentIndex() == m_pages->count() - 1) {
+        m_btnNext->setText(m_mode == Mode::Create ? "Create" : "Restore");
+        m_password->setFocus();
+    }
+}
+
+void CoinSetupDialog::finish() {
+    m_btnNext->setEnabled(false);
+    m_error->setText("Encrypting…");
+    QCoreApplication::processEvents();
+
+    QString error;
+    const QString passphrase = m_passphrase ? m_passphrase->text() : QString();
+    const bool ok = m_vault->setUp(m_mnemonic, passphrase, m_password->text(), &error);
+    m_password->clear();
+    m_btnNext->setEnabled(true);
+    if (!ok) {
+        m_error->setText(error);
+        return;
+    }
+    accept();
+}
+
+void showCoinSeed(CoinVault *vault, QWidget *parent) {
+    bool ok = false;
+    const QString password = QInputDialog::getText(parent, "Show seed", "Password of this wallet:",
+                                                   QLineEdit::Password, {}, &ok);
+    if (!ok) {
+        return;
+    }
+    QString error;
+    auto seed = vault->revealMnemonic(password, &error);
+    if (!seed) {
+        QMessageBox::warning(parent, "Show seed", error);
+        return;
+    }
+
+    QDialog dialog(parent);
+    dialog.setWindowTitle("Bitcoin and Litecoin seed");
+    auto *l = new QVBoxLayout(&dialog);
+    auto *intro = new QLabel("Never share these words. Anyone who has them can take your Bitcoin and Litecoin.", &dialog);
+    intro->setWordWrap(true);
+    l->addWidget(intro);
+    l->addWidget(wordsView(seed->first, &dialog));
+    if (!seed->second.isEmpty()) {
+        l->addWidget(new QLabel("This seed also uses a passphrase.", &dialog));
+    }
+    auto *paths = new QLabel("BIP39 · native SegWit (BIP84) · Bitcoin m/84'/0'/0' · Litecoin m/84'/2'/0'", &dialog);
+    paths->setStyleSheet("color: gray;");
+    l->addWidget(paths);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    l->addWidget(buttons);
+    dialog.resize(560, dialog.sizeHint().height());
+    dialog.exec();
+    seed->first.fill(QChar(' '));
+}
+
+}
