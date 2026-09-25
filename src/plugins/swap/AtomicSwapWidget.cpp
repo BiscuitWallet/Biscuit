@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include <QHeaderView>
-#include <QMessageBox>
 #include <QTreeWidgetItem>
 
 #include "utils/config.h"
@@ -34,6 +33,15 @@ AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
     header->setSectionResizeMode(Maker, QHeaderView::Stretch);
     header->setStretchLastSection(false);
 
+    ui->label_torNote->setStyleSheet("color: gray;");
+    ui->check_tor->setChecked(conf()->get(Config::atomicSwapTor).toBool());
+    connect(ui->check_tor, &QCheckBox::toggled, this, [this](bool checked) {
+        if (!torEnabledInSettings()) {
+            conf()->set(Config::atomicSwapTor, checked);
+        }
+        updateTorOption();
+    });
+
     connect(ui->btn_discover, &QPushButton::clicked, this, &AtomicSwapWidget::onDiscover);
     connect(m_daemon, &AtomicSwapDaemon::torStatusChanged, this, &AtomicSwapWidget::onTorStatus);
     connect(m_daemon, &AtomicSwapDaemon::discoveryStarted, this, [this] {
@@ -57,17 +65,33 @@ void AtomicSwapWidget::showEvent(QShowEvent *event) {
     QWidget::showEvent(event);
     // Tor may have been switched on or off in the settings meanwhile.
     updateTorOption();
+
+    // Opening the tab means the user wants offers: start searching once per
+    // session, but only through Tor. Without Tor it waits for the click and
+    // the IP warning.
+    const bool tor = torEnabledInSettings() || ui->check_tor->isChecked();
+    if (!m_autoStarted && tor && !m_daemon->isRunning() && !AtomicSwapDaemon::helperPath().isEmpty()) {
+        m_autoStarted = true;
+        onDiscover();
+    }
 }
 
 void AtomicSwapWidget::updateTorOption() {
+    // Tor mode: always Tor. Otherwise the user's choice, off by default.
     const bool forced = torEnabledInSettings();
-    if (forced) {
-        ui->check_tor->setChecked(true);
-        ui->check_tor->setToolTip("Tor is enabled in Biscuit's settings: all connections use Tor.");
-    } else {
-        ui->check_tor->setToolTip("Without Tor, rendezvous servers and makers see your IP address.");
+    {
+        const QSignalBlocker blocker(ui->check_tor);
+        ui->check_tor->setChecked(forced || conf()->get(Config::atomicSwapTor).toBool());
     }
     ui->check_tor->setEnabled(!forced && !m_daemon->isRunning());
+
+    if (forced) {
+        ui->label_torNote->setText("Tor mode is on: makers are reached through Tor.");
+    } else if (ui->check_tor->isChecked()) {
+        ui->label_torNote->setText("Makers are reached through Tor. Finding them takes longer.");
+    } else {
+        ui->label_torNote->setText("Without Tor, the rendezvous servers and the makers you connect to see your IP address.");
+    }
 }
 
 void AtomicSwapWidget::onDiscover() {
@@ -78,15 +102,6 @@ void AtomicSwapWidget::onDiscover() {
     }
 
     const bool tor = torEnabledInSettings() || ui->check_tor->isChecked();
-    if (!tor) {
-        const auto answer = QMessageBox::warning(this, "Connect without Tor",
-            "Without Tor, the rendezvous servers and every maker you connect to will see your IP address.\n\n"
-            "Continue without Tor?",
-            QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
-        if (answer != QMessageBox::Yes) {
-            return;
-        }
-    }
 
     m_summary = {};
     m_unavailableOffers = 0;

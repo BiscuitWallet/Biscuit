@@ -23,10 +23,9 @@ public:
     // Key compiled into this build, empty if none.
     static QString builtInApiKey();
 
-    // Trocador is always reached directly (Tor exits are shared and get rate
-    // limited). When the app uses a proxy (Tor), this needs the user's consent.
+    // Trocador and its exchanges do not accept Tor connections. In Tor mode
+    // (any proxy enabled) exchange swaps are off, status checks included.
     static bool proxyActive();
-    static bool directConnectionAllowed();
 
     // Set when Trocador rejects the built-in key: swaps stay off (no retries)
     // until an update ships a new key.

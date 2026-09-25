@@ -31,9 +31,6 @@
        <property name="text">
         <string>Connect through Tor</string>
        </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
       </widget>
      </item>
      <item>
@@ -51,6 +48,16 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_torNote">
+     <property name="text">
+      <string/>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QFrame" name="frame_discovery">

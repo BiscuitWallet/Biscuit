@@ -9,6 +9,7 @@
 
 #include "swap/SwapManager.h"
 
+class InfoFrame;
 class QComboBox;
 class QFrame;
 class QLabel;
@@ -49,8 +50,8 @@ private:
     bool sendsXmr() const;
 
     void loadAssets();
-    // Tor on: swaps reach Trocador directly, only with the user's consent.
-    void updateConsent();
+    // Tor mode: exchange swaps are off, atomic swaps remain.
+    void updateTorMode();
     void updateForm();
     void clearOffers();
     void setBusy(bool busy, const QString &status = {});
@@ -64,9 +65,9 @@ private:
     biscuit::swap::SwapManager *m_manager;
     QList<biscuit::swap::Quote> m_quotes;
     bool m_updating = false;
-    QFrame *m_consent = nullptr;
-    QLabel *m_consentText = nullptr;
-    QPushButton *m_consentButton = nullptr;
+    InfoFrame *m_torNotice = nullptr;
+    QWidget *m_atomicTab = nullptr;
+    bool m_mainnet = true;
 
     // Trade whose deposit is being sent from this wallet.
     QString m_pendingDepositProvider;

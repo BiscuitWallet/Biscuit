@@ -43,6 +43,7 @@ private:
     biscuit::swap::atomic::DiscoverySummary m_summary;
     int m_unavailableOffers = 0;
     bool m_failed = false;
+    bool m_autoStarted = false;
 };
 
 #endif // BISCUIT_ATOMICSWAPWIDGET_H

@@ -99,10 +99,6 @@ bool TrocadorSwapProvider::proxyActive() {
     return conf()->get(Config::proxy).toInt() != Config::Proxy::None;
 }
 
-bool TrocadorSwapProvider::directConnectionAllowed() {
-    return !proxyActive() || conf()->get(Config::swapDirectConsent).toBool();
-}
-
 QString TrocadorSwapProvider::id() const {
     return trocador::providerId;
 }
@@ -134,8 +130,8 @@ void TrocadorSwapProvider::send(const QString &method, const QUrlQuery &query, R
         handler({}, "Offline mode is enabled");
         return;
     }
-    if (!directConnectionAllowed()) {
-        handler({}, "Swaps connect to Trocador without Tor. Allow it in the Swap tab first.");
+    if (proxyActive()) {
+        handler({}, "Exchange swaps are not available in Tor mode.");
         return;
     }
     if (keyRejectedFlag()) {

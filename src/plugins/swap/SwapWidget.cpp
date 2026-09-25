@@ -14,6 +14,7 @@
 #include "AtomicSwapWidget.h"
 #include "DemoSwap.h"
 #include "SwapTradeDialog.h"
+#include "components.h"
 #include "swap/TrocadorSwapProvider.h"
 #include "utils/config.h"
 #include "constants.h"
@@ -49,41 +50,32 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
 {
     ui->setupUi(this);
     // Atomic swaps (BTC -> XMR, public makers) sit next to the exchange swaps.
-    auto *atomic = new AtomicSwapWidget(this);
-    ui->tabWidget->insertTab(1, atomic, "Atomic swap (BTC → XMR)");
+    m_atomicTab = new AtomicSwapWidget(this);
+    ui->tabWidget->insertTab(1, m_atomicTab, "Atomic swap (BTC → XMR)");
 
     const bool demo = m_manager->demoMode();
     ui->frame_demo->setVisible(demo);
-    // The demo notice is about exchange swaps: atomic swap offers are real.
-    connect(ui->tabWidget, &QTabWidget::currentChanged, this, [this, demo, atomic] {
-        ui->frame_demo->setVisible(demo && ui->tabWidget->currentWidget() != atomic);
-    });
+    // The demo and Tor notices are about exchange swaps, not atomic swaps.
+    connect(ui->tabWidget, &QTabWidget::currentChanged, this, &SwapWidget::updateTorMode);
     if (demo) {
         ui->frame_demo->setInfo(icons()->icon("info2.svg"),
                                 "Demo mode: this build has no swap partner key. Offers are simulated, "
                                 "no exchange is contacted and nothing can be sent.");
     }
 
-    // Consent to reach Trocador without Tor (shown only when a proxy is on).
-    m_consent = new QFrame(this);
-    m_consent->setFrameShape(QFrame::StyledPanel);
-    auto *consentLayout = new QHBoxLayout(m_consent);
-    m_consentText = new QLabel(m_consent);
-    m_consentText->setWordWrap(true);
-    m_consentButton = new QPushButton(m_consent);
-    consentLayout->addWidget(m_consentText, 1);
-    consentLayout->addWidget(m_consentButton, 0, Qt::AlignVCenter);
-    ui->verticalLayout->insertWidget(1, m_consent);
-    connect(m_consentButton, &QPushButton::clicked, this, [this] {
-        conf()->set(Config::swapDirectConsent, !conf()->get(Config::swapDirectConsent).toBool());
-        updateConsent();
-        loadAssets();
-    });
+    // Shown in Tor mode, where exchange swaps are off.
+    m_torNotice = new InfoFrame(this);
+    m_torNotice->setFrameShape(QFrame::StyledPanel);
+    m_torNotice->setInfo(icons()->icon("info2.svg"),
+                         "Tor mode is on: exchange swaps are not available, because Trocador and its exchanges "
+                         "do not accept Tor connections. Atomic swaps work over Tor. Swaps already started "
+                         "still complete at the exchange; their status updates resume when Tor mode is off.");
+    ui->verticalLayout->insertWidget(1, m_torNotice);
 
     // Swap partners work on mainnet only: a stagenet or testnet address would
     // lose the funds. The offline demo stays available for development.
-    if (constants::networkType != NetworkType::MAINNET && !demo) {
-        ui->tab_new->setEnabled(false);
+    m_mainnet = constants::networkType == NetworkType::MAINNET || demo;
+    if (!m_mainnet) {
         ui->label_status->setText("Swaps are only available on mainnet.");
     }
 
@@ -144,7 +136,7 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         m_pendingDepositTrade.clear();
     });
 
-    updateConsent();
+    updateTorMode();
     loadAssets();
     updateForm();
     refreshTrades();
@@ -152,31 +144,22 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
 
 void SwapWidget::showEvent(QShowEvent *event) {
     QWidget::showEvent(event);
-    updateConsent();   // the proxy settings may have changed
+    updateTorMode();   // the proxy settings may have changed
 }
 
-void SwapWidget::updateConsent() {
-    const bool needed = !m_manager->demoMode() && TrocadorSwapProvider::proxyActive();
-    const bool given = conf()->get(Config::swapDirectConsent).toBool();
-    m_consent->setVisible(needed);
-    ui->btn_offers->setEnabled((!needed || given) && !TrocadorSwapProvider::keyRejected());
+void SwapWidget::updateTorMode() {
+    if (!m_torNotice) {
+        return;   // still in the constructor
+    }
+    const bool torMode = !m_manager->demoMode() && TrocadorSwapProvider::proxyActive();
+    const bool onAtomicTab = ui->tabWidget->currentWidget() == m_atomicTab;
+
+    ui->frame_demo->setVisible(m_manager->demoMode() && !onAtomicTab);
+    m_torNotice->setVisible(torMode && !onAtomicTab);
+    ui->tab_new->setEnabled(m_mainnet && !torMode);
+    ui->btn_offers->setEnabled(!TrocadorSwapProvider::keyRejected());
     if (TrocadorSwapProvider::keyRejected()) {
         ui->label_status->setText("Swaps are unavailable in this version of Biscuit. Please update Biscuit.");
-    }
-    if (!needed) {
-        return;
-    }
-    if (given) {
-        m_consentText->setText("Swaps connect to Trocador without Tor: Trocador can see your IP address and may share it "
-                               "with the exchange running the swap. Your wallets, nodes and prices still use Tor.");
-        m_consentButton->setText("Stop");
-        m_consentButton->setToolTip("Swaps will be unavailable while Tor is on, including status updates of ongoing swaps.");
-    } else {
-        m_consentText->setText("<b>Tor is on.</b> Swaps cannot go through Tor: they connect to Trocador directly, so "
-                               "Trocador can see your IP address and may share it with the exchange running the swap. "
-                               "Only swap requests leave Tor; your wallets, nodes and prices stay on Tor.");
-        m_consentButton->setText("Allow swaps without Tor");
-        m_consentButton->setToolTip({});
     }
 }
 
