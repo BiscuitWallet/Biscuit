@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AtomicSwapWidget</class>
+ <widget class="QWidget" name="AtomicSwapWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Atomic swap</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label_intro">
+     <property name="text">
+      <string>Buy XMR with BTC directly from independent makers, without an exchange. Neither side can take the other's funds: if a swap does not complete, your BTC comes back to you, minus the deposit some makers keep on refunds.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layout_controls">
+     <item>
+      <widget class="QCheckBox" name="check_tor">
+       <property name="text">
+        <string>Connect through Tor</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer_controls">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_discover">
+       <property name="text">
+        <string>Find makers</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QFrame" name="frame_discovery">
+     <property name="frameShape">
+      <enum>QFrame::Shape::StyledPanel</enum>
+     </property>
+     <layout class="QVBoxLayout" name="layout_discovery">
+      <item>
+       <layout class="QHBoxLayout" name="layout_headline">
+        <item>
+         <widget class="QLabel" name="label_headline">
+          <property name="text">
+           <string>Not searching</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="spacer_headline">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_peers">
+          <property name="text">
+           <string>Connected to 0 peers</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progress">
+        <property name="maximum">
+         <number>1</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="textVisible">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_details">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="tree_offers">
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+     <property name="uniformRowHeights">
+      <bool>true</bool>
+     </property>
+     <property name="sortingEnabled">
+      <bool>false</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>Maker</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Price (BTC per XMR)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Min (BTC)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Max (BTC)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Kept if refunded</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_note">
+     <property name="text">
+      <string>Preview: this lists live offers but cannot start a swap yet.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

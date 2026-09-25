@@ -11,6 +11,7 @@
 #include <QMessageBox>
 
 #include "Amount.h"
+#include "AtomicSwapWidget.h"
 #include "DemoSwap.h"
 #include "SwapTradeDialog.h"
 #include "swap/TrocadorSwapProvider.h"
@@ -47,9 +48,16 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     , m_manager(new SwapManager(wallet, this))
 {
     ui->setupUi(this);
+    // Atomic swaps (BTC -> XMR, public makers) sit next to the exchange swaps.
+    auto *atomic = new AtomicSwapWidget(this);
+    ui->tabWidget->insertTab(1, atomic, "Atomic swap (BTC → XMR)");
 
     const bool demo = m_manager->demoMode();
     ui->frame_demo->setVisible(demo);
+    // The demo notice is about exchange swaps: atomic swap offers are real.
+    connect(ui->tabWidget, &QTabWidget::currentChanged, this, [this, demo, atomic] {
+        ui->frame_demo->setVisible(demo && ui->tabWidget->currentWidget() != atomic);
+    });
     if (demo) {
         ui->frame_demo->setInfo(icons()->icon("info2.svg"),
                                 "Demo mode: this build has no swap partner key. Offers are simulated, "
