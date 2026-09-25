@@ -136,6 +136,11 @@
      </column>
      <column>
       <property name="text">
+       <string>vs market</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
        <string>Min (BTC)</string>
       </property>
      </column>

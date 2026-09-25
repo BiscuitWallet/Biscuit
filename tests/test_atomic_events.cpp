@@ -75,6 +75,27 @@ private slots:
         QCOMPARE(parseLine("").type, Event::Type::Invalid);
     }
 
+    void marketDeviation_() {
+        // Market 0.0068 BTC/XMR (seen on 2026-09-25).
+        QVERIFY(!marketDeviation(852854, 0).has_value());
+        QVERIFY(!marketDeviation(0, 0.0068).has_value());
+
+        const double overpriced = *marketDeviation(852854, 0.0068);
+        QVERIFY(overpriced > 25.4 && overpriced < 25.5);
+        QCOMPARE(formatDeviation(overpriced), QString("+25%"));
+        QVERIFY(deviationNeedsWarning(overpriced));
+
+        const double close = *marketDeviation(679380, 0.0068);
+        QCOMPARE(formatDeviation(close), QString("-0.1%"));
+        QVERIFY(!deviationNeedsWarning(close));
+
+        QCOMPARE(formatDeviation(4.96), QString("+5.0%"));
+        QVERIFY(deviationNeedsWarning(5.0));
+        QVERIFY(!deviationNeedsWarning(-9.9));
+        QVERIFY(deviationNeedsWarning(-10.0));
+        QCOMPARE(formatDeviation(0.04), QString("0%"));
+    }
+
     void unavailableWhenMinAboveMax() {
         MakerOffer o;
         o.priceSatPerXmr = 800000;

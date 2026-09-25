@@ -3,6 +3,8 @@
 
 #include "AtomicEvents.h"
 
+#include <cmath>
+
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -101,6 +103,24 @@ QString discoveryHeadline(const DiscoverySummary &summary) {
 
 bool discoveryActive(const DiscoverySummary &summary) {
     return summary.quotesInflight > 0 || summary.dialing > 0;
+}
+
+std::optional<double> marketDeviation(quint64 priceSatPerXmr, double marketBtcPerXmr) {
+    if (priceSatPerXmr == 0 || !(marketBtcPerXmr > 0)) {
+        return std::nullopt;
+    }
+    const double offerBtcPerXmr = static_cast<double>(priceSatPerXmr) / 1e8;
+    return (offerBtcPerXmr / marketBtcPerXmr - 1.0) * 100.0;
+}
+
+QString formatDeviation(double percent) {
+    const double rounded = std::round(percent * 10.0) / 10.0;
+    if (rounded == 0) return "0%";
+    return QString("%1%2%").arg(rounded > 0 ? "+" : "").arg(QString::number(rounded, 'f', std::abs(rounded) >= 10 ? 0 : 1));
+}
+
+bool deviationNeedsWarning(double percent) {
+    return percent >= 5.0 || percent <= -10.0;
 }
 
 QString formatBtc(quint64 sat) {

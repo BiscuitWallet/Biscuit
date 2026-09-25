@@ -4,6 +4,8 @@
 #ifndef BISCUIT_SWAP_ATOMICEVENTS_H
 #define BISCUIT_SWAP_ATOMICEVENTS_H
 
+#include <optional>
+
 #include <QByteArray>
 #include <QList>
 #include <QString>
@@ -72,6 +74,16 @@ namespace biscuit::swap::atomic {
     QString discoveryHeadline(const DiscoverySummary &summary);
     // Something is in progress: the bar animates.
     bool discoveryActive(const DiscoverySummary &summary);
+
+    // Price difference with the market, in percent: +25.6 means the offer
+    // costs 25.6% more BTC than the market price. No value without a usable
+    // reference price. Display only.
+    std::optional<double> marketDeviation(quint64 priceSatPerXmr, double marketBtcPerXmr);
+    // "+25.6%", "-1.2%", "0%".
+    QString formatDeviation(double percent);
+    // Far enough from the market to warn: overpriced, or suspiciously cheap
+    // (often a stale price on the maker's side).
+    bool deviationNeedsWarning(double percent);
 
     // "0.00852854" for 852854 sat.
     QString formatBtc(quint64 sat);

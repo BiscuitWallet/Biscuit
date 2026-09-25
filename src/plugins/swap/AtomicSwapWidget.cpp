@@ -9,12 +9,19 @@
 #include <QHeaderView>
 #include <QTreeWidgetItem>
 
+#include "utils/AppData.h"
 #include "utils/config.h"
 
 using namespace biscuit::swap;
 
 namespace {
-    enum Column { Maker = 0, Price, Min, Max, Deposit };
+    enum Column { Maker = 0, Price, Market, Min, Max, Deposit };
+
+    // Market price from Biscuit's public price feed, 0 if unknown.
+    double marketBtcPerXmr() {
+        auto &prices = appData()->prices;
+        return prices.canConvert("XMR", "BTC") ? prices.convert("XMR", "BTC", 1.0) : 0.0;
+    }
 
     bool torEnabledInSettings() {
         return conf()->get(Config::proxy).toInt() != Config::Proxy::None;
@@ -51,6 +58,7 @@ AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
     connect(m_daemon, &AtomicSwapDaemon::offersChanged, this, &AtomicSwapWidget::onOffers);
     connect(m_daemon, &AtomicSwapDaemon::failed, this, &AtomicSwapWidget::onFailed);
     connect(m_daemon, &AtomicSwapDaemon::finished, this, &AtomicSwapWidget::onFinished);
+    connect(&appData()->prices, &Prices::cryptoPricesUpdated, this, &AtomicSwapWidget::showOffers);
 
     if (AtomicSwapDaemon::helperPath().isEmpty()) {
         ui->btn_discover->setEnabled(false);
@@ -104,6 +112,7 @@ void AtomicSwapWidget::onDiscover() {
     const bool tor = torEnabledInSettings() || ui->check_tor->isChecked();
 
     m_summary = {};
+    m_offers.clear();
     m_unavailableOffers = 0;
     m_failed = false;
     ui->tree_offers->clear();
@@ -134,11 +143,17 @@ void AtomicSwapWidget::onSummary(const atomic::DiscoverySummary &summary) {
 }
 
 void AtomicSwapWidget::onOffers(const QList<atomic::MakerOffer> &offers) {
+    m_offers = offers;
+    showOffers();
+}
+
+void AtomicSwapWidget::showOffers() {
     QList<atomic::MakerOffer> available;
-    for (const auto &offer : offers) {
+    for (const auto &offer : m_offers) {
         if (offer.available()) available.append(offer);
     }
-    m_unavailableOffers = offers.size() - available.size();
+    m_unavailableOffers = m_offers.size() - available.size();
+    const double market = marketBtcPerXmr();
 
     // Neutral order: the lowest price gives the most XMR for the BTC sent.
     std::sort(available.begin(), available.end(), [](const auto &a, const auto &b) {
@@ -150,10 +165,19 @@ void AtomicSwapWidget::onOffers(const QList<atomic::MakerOffer> &offers) {
         auto *item = new QTreeWidgetItem(ui->tree_offers);
         item->setText(Maker, offer.host());
         item->setText(Price, atomic::formatBtc(offer.priceSatPerXmr));
+
+        if (const auto deviation = atomic::marketDeviation(offer.priceSatPerXmr, market)) {
+            item->setText(Market, atomic::formatDeviation(*deviation));
+            if (atomic::deviationNeedsWarning(*deviation)) {
+                item->setForeground(Market, QBrush(Qt::red));
+            }
+        } else {
+            item->setText(Market, "—");
+        }
         item->setText(Min, atomic::formatBtc(offer.minSat));
         item->setText(Max, atomic::formatBtc(offer.maxSat));
         item->setText(Deposit, atomic::formatDeposit(offer.refundDeposit));
-        for (int column : {Price, Min, Max, Deposit}) {
+        for (int column : {Price, Market, Min, Max, Deposit}) {
             item->setTextAlignment(column, Qt::AlignRight | Qt::AlignVCenter);
         }
 
@@ -163,6 +187,11 @@ void AtomicSwapWidget::onOffers(const QList<atomic::MakerOffer> &offers) {
             item->setToolTip(column, tooltip);
         }
         item->setToolTip(Deposit, "Share of your BTC the maker may keep if the swap is refunded (anti-spam deposit).");
+        item->setToolTip(Market, market > 0
+            ? QString("Compared with the market price of %1 BTC per XMR (Biscuit's public price data). "
+                      "Above +5%: expensive. Far below the market: the maker's price may be out of date.")
+                  .arg(QString::number(market, 'f', 8))
+            : QString("No market price: public price data is off or not loaded yet."));
     }
     updateDetails();
 }

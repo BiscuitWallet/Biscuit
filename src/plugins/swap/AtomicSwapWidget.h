@@ -30,6 +30,7 @@ private:
     void onTorStatus(const QString &status);
     void onSummary(const biscuit::swap::atomic::DiscoverySummary &summary);
     void onOffers(const QList<biscuit::swap::atomic::MakerOffer> &offers);
+    void showOffers();
     void onFailed(const QString &message);
     void onFinished();
 
@@ -41,6 +42,7 @@ private:
     QScopedPointer<Ui::AtomicSwapWidget> ui;
     biscuit::swap::AtomicSwapDaemon *m_daemon;
     biscuit::swap::atomic::DiscoverySummary m_summary;
+    QList<biscuit::swap::atomic::MakerOffer> m_offers;
     int m_unavailableOffers = 0;
     bool m_failed = false;
     bool m_autoStarted = false;
