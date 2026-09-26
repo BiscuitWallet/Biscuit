@@ -99,6 +99,17 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
         ui->formLayout->insertRow(1 + m_walletBars.size(), bar);
         m_walletBars << bar;
     }
+    // Monero: its balance on the right, like the Bitcoin/Litecoin wallets.
+    m_xmrBalanceRow = new QWidget(this);
+    auto *xmrLayout = new QHBoxLayout(m_xmrBalanceRow);
+    xmrLayout->setContentsMargins(0, 0, 0, 0);
+    xmrLayout->addStretch();
+    m_xmrBalance = new QLabel(m_xmrBalanceRow);
+    m_xmrBalance->setTextFormat(Qt::RichText);
+    xmrLayout->addWidget(m_xmrBalance);
+    ui->formLayout->insertRow(1 + m_walletBars.size(), m_xmrBalanceRow);
+    connect(m_wallet, &Wallet::balanceUpdated, this, &SendWidget::updateXmrBalance);
+    updateXmrBalance();
     connect(m_coinPicker, &biscuit::coins::CoinPicker::currentIndexChanged, this, &SendWidget::updateCoinMode);
     for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
                         &biscuit::coins::CoinVault::walletsChanged}) {
@@ -156,7 +167,8 @@ void SendWidget::updateCoinMode() {
         static_cast<biscuit::coins::CoinWalletBar *>(m_walletBars.at(i))->setActive(coinIndex == i + 1);
     }
     ui->lineAddress->setPlaceholderText(m_coin ? QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1" : "ltc1")
-                                               : QString());
+                                               : QString("Monero address (4… or 8…)"));
+    ui->formLayout->setRowVisible(m_xmrBalanceRow, !coinMode);
 
     ui->formLayout->setRowVisible(m_coinHint, coinMode);
     ui->formLayout->setRowVisible(m_coinFeeTitle, coinMode);
@@ -180,6 +192,17 @@ void SendWidget::updateCoinMode() {
         this->updateCoinFeeLabel();
     }
     this->updateConversionLabel();
+}
+
+void SendWidget::updateXmrBalance() {
+    const quint64 total = m_wallet->balance();
+    const quint64 unlocked = m_wallet->unlockedBalance();
+    QString text = QString("Balance: <b>%1 XMR</b>").arg(WalletManager::displayAmount(total, false));
+    if (total > unlocked) {
+        // Coins received recently are spendable after 10 confirmations (~20 min).
+        text += QString(" (%1 XMR spendable now)").arg(WalletManager::displayAmount(unlocked, false));
+    }
+    m_xmrBalance->setText(text);
 }
 
 void SendWidget::updateCoinFeeLabel() {

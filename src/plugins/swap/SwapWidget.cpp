@@ -777,14 +777,19 @@ void SwapWidget::createTrade(const Quote &quote) {
             return;
         }
 
-        // A Monero subaddress is only created once the swap is confirmed.
+        // A Monero subaddress is only created once the swap is confirmed. Its
+        // label names the swap, so it is easy to find in the address list.
+        const QString swapName = QString("Swap %1 → %2%3").arg(quote.from.ticker.toUpper(), quote.to.ticker.toUpper(),
+                                                               receiveXmr ? QString() : QString(" (refund)"));
+        std::optional<quint32> subaddressIndex;
         if ((receiveInWallet && receiveXmr) || (refundInWallet && sendXmr)) {
-            const QString walletAddress = newWalletAddress("Swap");
+            const QString walletAddress = newWalletAddress(swapName);
             if (walletAddress.isEmpty()) {
                 Utils::showError(this, "Unable to create a wallet address", m_wallet->subaddress()->getError());
                 return;
             }
             (receiveXmr ? payout : refund) = walletAddress;
+            subaddressIndex = m_wallet->numSubaddresses(m_wallet->currentSubaddressAccount()) - 1;
         }
 
         TradeRequest request;
@@ -793,11 +798,14 @@ void SwapWidget::createTrade(const Quote &quote) {
         request.refundAddress = refund;
 
         setBusy(true, "Creating swap…");
-        m_manager->createTrade(request, [this](const std::optional<Trade> &trade, const QString &error) {
+        m_manager->createTrade(request, [this, swapName, subaddressIndex](const std::optional<Trade> &trade, const QString &error) {
             setBusy(false);
             if (!trade) {
                 Utils::showError(this, "Unable to create swap", error);
                 return;
+            }
+            if (subaddressIndex) {
+                m_wallet->subaddress()->setLabel(*subaddressIndex, QString("%1 · %2 %3").arg(swapName, trade->exchange, trade->tradeId));
             }
             onClear();
             showTrade(trade->providerId, trade->tradeId);

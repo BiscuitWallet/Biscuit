@@ -65,6 +65,9 @@ private:
     const biscuit::coins::CoinParams *m_coin = nullptr;   // nullptr = Monero
     biscuit::coins::CoinPicker *m_coinPicker = nullptr;
     QList<QWidget *> m_walletBars;                        // Bitcoin, Litecoin
+    QWidget *m_xmrBalanceRow = nullptr;
+    QLabel *m_xmrBalance = nullptr;
+    void updateXmrBalance();
     QLabel *m_coinHint = nullptr;
     QLabel *m_coinUnit = nullptr;
     QLabel *m_coinFeeTitle = nullptr;

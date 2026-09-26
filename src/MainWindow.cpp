@@ -655,6 +655,7 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
 
     // Biscuit: every coin of the wallet on the same line, fiat value of the total.
     QString fiatCurrency = conf()->get(Config::preferredFiatCurrency).toString();
+    bool pricesKnown = appData()->prices.canConvert("XMR", fiatCurrency);
     double balanceFiatAmount = appData()->prices.convert("XMR", fiatCurrency, balance / constants::cdiv);
     auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
     if (vault->isUnlocked() && !hide) {
@@ -665,12 +666,16 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
                 total += entry.wallet->balance().total();
             }
             balance_str += QString(" · %1 %2").arg(biscuit::swap::amount::fromAtomic(total, params->decimals), params->ticker);
+            if (total > 0) {
+                pricesKnown = pricesKnown && appData()->prices.canConvert(params->ticker, fiatCurrency);
+            }
             balanceFiatAmount += appData()->prices.convert(params->ticker, fiatCurrency, double(total) / 1e8);
         }
     }
 
-    if (conf()->get(Config::balanceShowFiat).toBool() && !hide) {
-        balance_str += QString(" (%1)").arg(Utils::amountToCurrencyString(balanceFiatAmount, fiatCurrency));
+    // Total of all coins in the preferred currency (Settings), once prices are known.
+    if (conf()->get(Config::balanceShowFiat).toBool() && !hide && pricesKnown) {
+        balance_str += QString(" · Total %1").arg(Utils::amountToCurrencyString(balanceFiatAmount, fiatCurrency));
     }
 
     m_statusLabelBalance->setToolTip("Click for details");

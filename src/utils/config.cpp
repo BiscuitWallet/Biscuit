@@ -69,7 +69,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::dateFormat, {QS("dateFormat"), "yyyy-MM-dd"}},
         {Config::timeFormat, {QS("timeFormat"), "HH:mm"}},
         {Config::balanceDisplay, {QS("balanceDisplay"), Config::BalanceDisplay::spendablePlusUnconfirmed}},
-        {Config::balanceShowFiat, {QS("balanceShowFiat"), false}},
+        {Config::balanceShowFiat, {QS("balanceShowFiat"), true}},   // Biscuit: total of all coins, on by default
         {Config::inactivityLockEnabled, {QS("inactivityLockEnabled"), false}},
         {Config::inactivityLockTimeout, {QS("inactivityLockTimeout"), 10}},
         {Config::lockOnMinimize, {QS("lockOnMinimize"), false}},
