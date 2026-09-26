@@ -6,6 +6,9 @@
 
 #include <QWidget>
 
+class QLabel;
+class QTimer;
+
 #include "swap/AtomicSwapDaemon.h"
 
 namespace Ui {
@@ -37,6 +40,18 @@ private:
     // With Tor enabled in Biscuit, nothing may leave outside Tor.
     void updateTorOption();
     void setBusy(bool busy);
+
+    // Dialing indicator: a handset and "Dialing makers..." with dots that
+    // appear one by one, like a modem; the handset picks up once a maker
+    // answers, and a check mark shows when offers are in.
+    enum class Phone { Hidden, Dialing, PickedUp, Done };
+    void setHeadline(const QString &text, bool dialing);
+    void setPhone(Phone phone);
+    QLabel *m_phone = nullptr;
+    QTimer *m_dialTimer = nullptr;
+    QString m_headlineBase;
+    int m_dots = 0;
+    Phone m_phoneState = Phone::Hidden;
     void updateDetails();
 
     QScopedPointer<Ui::AtomicSwapWidget> ui;

@@ -5,8 +5,13 @@
 #include "ui_AtomicSwapWidget.h"
 
 #include <algorithm>
+#include <functional>
 
 #include <QHeaderView>
+#include <QLabel>
+#include <QPainter>
+#include <QPainterPath>
+#include <QTimer>
 #include <QTreeWidgetItem>
 
 #include "utils/AppData.h"
@@ -28,6 +33,37 @@ namespace {
     }
 }
 
+namespace {
+    // Small drawn icons (16 px, sharp on Retina), in the text colour or green.
+    QPixmap drawIcon(const std::function<void(QPainter &)> &draw) {
+        const qreal dpr = 2.0;
+        QPixmap pixmap(QSize(18, 18) * dpr);
+        pixmap.setDevicePixelRatio(dpr);
+        pixmap.fill(Qt::transparent);
+        QPainter p(&pixmap);
+        p.setRenderHint(QPainter::Antialiasing);
+        draw(p);
+        return pixmap;
+    }
+
+    // Old telephone handset: two round ends joined by a curved grip.
+    void drawHandset(QPainter &p, const QColor &color, qreal angle) {
+        p.translate(9, 9);
+        p.rotate(angle);
+        QPen grip(color, 2.6, Qt::SolidLine, Qt::RoundCap);
+        p.setPen(grip);
+        p.setBrush(Qt::NoBrush);
+        QPainterPath arc;
+        arc.moveTo(-5.5, 1.5);
+        arc.quadTo(0, -3.5, 5.5, 1.5);
+        p.drawPath(arc);
+        p.setPen(Qt::NoPen);
+        p.setBrush(color);
+        p.drawRoundedRect(QRectF(-8.2, 0.5, 5.0, 3.6), 1.6, 1.6);
+        p.drawRoundedRect(QRectF(3.2, 0.5, 5.0, 3.6), 1.6, 1.6);
+    }
+}
+
 AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::AtomicSwapWidget)
@@ -41,6 +77,17 @@ AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
     header->setStretchLastSection(false);
 
     ui->label_torNote->setStyleSheet("color: gray;");
+
+    m_phone = new QLabel(this);
+    m_phone->setFixedSize(18, 18);
+    m_phone->hide();
+    ui->layout_headline->insertWidget(0, m_phone);
+    m_dialTimer = new QTimer(this);
+    m_dialTimer->setInterval(400);
+    connect(m_dialTimer, &QTimer::timeout, this, [this] {
+        m_dots = (m_dots + 1) % 4;
+        ui->label_headline->setText(m_headlineBase + QString(m_dots, '.'));
+    });
     ui->check_tor->setChecked(conf()->get(Config::atomicSwapTor).toBool());
     connect(ui->check_tor, &QCheckBox::toggled, this, [this](bool checked) {
         if (!torEnabledInSettings()) {
@@ -52,7 +99,7 @@ AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
     connect(ui->btn_discover, &QPushButton::clicked, this, &AtomicSwapWidget::onDiscover);
     connect(m_daemon, &AtomicSwapDaemon::torStatusChanged, this, &AtomicSwapWidget::onTorStatus);
     connect(m_daemon, &AtomicSwapDaemon::discoveryStarted, this, [this] {
-        ui->label_headline->setText("Looking for makers...");
+        setHeadline("Looking for makers", true);
     });
     connect(m_daemon, &AtomicSwapDaemon::summaryChanged, this, &AtomicSwapWidget::onSummary);
     connect(m_daemon, &AtomicSwapDaemon::offersChanged, this, &AtomicSwapWidget::onOffers);
@@ -118,7 +165,8 @@ void AtomicSwapWidget::onDiscover() {
     ui->tree_offers->clear();
     ui->label_details->clear();
     ui->label_peers->setText("Connected to 0 peers");
-    ui->label_headline->setText(tor ? "Starting Tor..." : "Starting...");
+    setHeadline(tor ? "Starting Tor" : "Starting", true);
+    setPhone(Phone::Dialing);
     setBusy(true);
     ui->btn_discover->setText("Stop");
     ui->check_tor->setEnabled(false);
@@ -128,15 +176,25 @@ void AtomicSwapWidget::onDiscover() {
 
 void AtomicSwapWidget::onTorStatus(const QString &status) {
     if (status == "bootstrapping") {
-        ui->label_headline->setText("Connecting to Tor...");
+        setHeadline("Connecting to Tor", true);
     } else if (status == "ready") {
-        ui->label_headline->setText("Connected to Tor");
+        setHeadline("Connected to Tor, dialing makers", true);
     }
 }
 
 void AtomicSwapWidget::onSummary(const atomic::DiscoverySummary &summary) {
     m_summary = summary;
-    ui->label_headline->setText(atomic::discoveryHeadline(summary));
+    const bool active = atomic::discoveryActive(summary);
+    QString headline = atomic::discoveryHeadline(summary);
+    if (headline == QLatin1String("Dialing peers...")) {
+        headline = "Dialing makers...";
+    }
+    setHeadline(headline, active);
+    if (summary.connected > 0) {
+        setPhone(!active && summary.offers > 0 ? Phone::Done : Phone::PickedUp);
+    } else {
+        setPhone(Phone::Dialing);
+    }
     ui->label_peers->setText(QString("Connected to %1 peers").arg(summary.connected));
     setBusy(atomic::discoveryActive(summary));
     updateDetails();
@@ -198,7 +256,8 @@ void AtomicSwapWidget::showOffers() {
 
 void AtomicSwapWidget::onFailed(const QString &message) {
     m_failed = true;
-    ui->label_headline->setText(QString("Error: %1").arg(message));
+    setHeadline(QString("Error: %1").arg(message), false);
+    setPhone(Phone::Hidden);
 }
 
 void AtomicSwapWidget::onFinished() {
@@ -206,9 +265,63 @@ void AtomicSwapWidget::onFinished() {
     ui->btn_discover->setText("Find makers");
     ui->btn_discover->setEnabled(!AtomicSwapDaemon::helperPath().isEmpty());
     if (!m_failed) {
-        ui->label_headline->setText("Not searching");
+        setHeadline("Not searching", false);
     }
+    setPhone(m_summary.offers > 0 && !m_failed ? Phone::Done : Phone::Hidden);
     updateTorOption();
+}
+
+void AtomicSwapWidget::setHeadline(const QString &text, bool dialing) {
+    QString base = text;
+    while (base.endsWith('.')) {
+        base.chop(1);
+    }
+    m_headlineBase = base;
+    if (dialing) {
+        if (!m_dialTimer->isActive()) {
+            m_dots = 0;
+            m_dialTimer->start();
+        }
+        ui->label_headline->setText(m_headlineBase + QString(m_dots, '.'));
+    } else {
+        m_dialTimer->stop();
+        ui->label_headline->setText(text);
+    }
+}
+
+void AtomicSwapWidget::setPhone(Phone phone) {
+    if (phone == m_phoneState) {
+        return;
+    }
+    m_phoneState = phone;
+    const QColor text = palette().color(QPalette::WindowText);
+    const QColor green(46, 160, 67);
+    switch (phone) {
+    case Phone::Hidden:
+        m_phone->hide();
+        return;
+    case Phone::Dialing:
+        m_phone->setPixmap(drawIcon([text](QPainter &p) { drawHandset(p, text, 0); }));
+        m_phone->setToolTip("Dialing makers");
+        break;
+    case Phone::PickedUp:
+        // Lifted off the cradle: tilted, and green.
+        m_phone->setPixmap(drawIcon([green](QPainter &p) { drawHandset(p, green, -28); }));
+        m_phone->setToolTip("A maker answered");
+        break;
+    case Phone::Done:
+        m_phone->setPixmap(drawIcon([green](QPainter &p) {
+            p.setPen(QPen(green, 2.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            QPainterPath check;
+            check.moveTo(3.5, 9.5);
+            check.lineTo(7.5, 13.5);
+            check.lineTo(14.5, 5.0);
+            p.drawPath(check);
+        }));
+        m_phone->setToolTip("Offers received");
+        break;
+    }
+    m_phone->show();
 }
 
 void AtomicSwapWidget::setBusy(bool busy) {

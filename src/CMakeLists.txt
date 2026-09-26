@@ -228,6 +228,16 @@ else()
     message(STATUS "Trocador: no relay and no key (swaps run in demo mode)")
 endif()
 
+# Atomic swaps: the biscuit-swapd helper (built from the eigenwallet fork, see
+# BUILD.md) is copied next to the Biscuit executable when BISCUIT_SWAPD_BINARY
+# points to it. Without it, the atomic swap tab says the helper is missing.
+if(BISCUIT_SWAPD_BINARY)
+    add_custom_command(TARGET feather POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BISCUIT_SWAPD_BINARY}" "$<TARGET_FILE_DIR:feather>/biscuit-swapd"
+            COMMENT "Bundling biscuit-swapd")
+    message(STATUS "Atomic swaps: bundling ${BISCUIT_SWAPD_BINARY}")
+endif()
+
 if(WITH_SCANNER)
     target_include_directories(feather PUBLIC
             ${QtMultimedia_INCLUDE_DIRS}
