@@ -22,8 +22,11 @@ appelle le relais, le relais ajoute la clé et transmet la demande à Trocador.
   depuis les sorties Tor, d'après la liste officielle du Tor Project, rechargée
   toutes les 30 minutes. Tant que la liste n'a jamais pu être chargée, la création
   d'échange est refusée (503). Taux et suivi restent possibles.
-- **Limites** : 30 requêtes par minute et 5 créations d'échange par 10 minutes par IP,
-  compteurs en mémoire uniquement, oubliés à la fin de chaque fenêtre.
+- **VPN acceptés** : seules les sorties Tor sont refusées. Beaucoup d'utilisateurs
+  peuvent partager l'IP d'un même serveur VPN, d'où des limites larges : 120 requêtes
+  par minute et 20 créations d'échange par 10 minutes par IP (l'app elle-même ne
+  dépasse pas 6 requêtes par minute). Compteurs en mémoire uniquement, oubliés à la
+  fin de chaque fenêtre.
 - **Aucun autre journal** : les erreurs de connexion de Go (qui contiennent l'IP) sont
   jetées ; le programme n'écrit que ses propres erreurs, sans IP ni requête.
 - **HTTPS intégré** : certificat Let's Encrypt obtenu et renouvelé tout seul. Pas de

@@ -81,7 +81,9 @@ func serve(args []string) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	trades := &TradeLog{Dir: *logDir, Recipient: rcpt, Retention: time.Duration(*retentionDays) * 24 * time.Hour}
 	tor := &TorExits{URL: TorBulkExitList, Client: client}
-	limiter := &Limiter{PerMinute: 30, TradesPerWindow: 5, TradeWindow: 10 * time.Minute}
+	// Generous: many users can share one VPN server IP (the app itself sends at
+	// most 6 requests per minute). Only abuse of the relay is stopped.
+	limiter := &Limiter{PerMinute: 120, TradesPerWindow: 20, TradeWindow: 10 * time.Minute}
 	relay := &Relay{Upstream: *upstream, APIKey: apiKey, Client: client, Trades: trades, Tor: tor, Limiter: limiter, Now: time.Now}
 
 	go refreshTorExits(tor)
