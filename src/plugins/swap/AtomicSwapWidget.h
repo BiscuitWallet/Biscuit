@@ -7,6 +7,7 @@
 #include <QWidget>
 
 class QLabel;
+class RetroBusyBar;
 class QTimer;
 
 #include "swap/AtomicSwapDaemon.h"
@@ -48,6 +49,7 @@ private:
     void setHeadline(const QString &text, bool dialing);
     void setPhone(Phone phone);
     QLabel *m_phone = nullptr;
+    RetroBusyBar *m_busyBar = nullptr;
     QTimer *m_dialTimer = nullptr;
     QString m_headlineBase;
     int m_dots = 0;

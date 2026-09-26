@@ -7,6 +7,8 @@
 #include <QAbstractSpinBox>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QPainter>
+#include <QStyleOption>
 #include <QTabWidget>
 
 int MacLayoutStyle::styleHint(StyleHint hint, const QStyleOption *option, const QWidget *widget,
@@ -31,4 +33,27 @@ void MacLayoutStyle::polish(QWidget *widget) {
         || qobject_cast<QLineEdit *>(widget) || qobject_cast<QAbstractSpinBox *>(widget)) {
         widget->setAttribute(Qt::WA_LayoutUsesWidgetRect);
     }
+}
+
+void MacLayoutStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter,
+                                 const QWidget *widget) const {
+    QProxyStyle::drawControl(element, option, painter, widget);
+    if (element == CE_TabBarTabShape) {
+        // The selected tab: the window colour inside its outline, so it opens
+        // onto its page instead of standing out lighter.
+        const auto *tab = qstyleoption_cast<const QStyleOptionTab *>(option);
+        if (tab && (tab->state & State_Selected)) {
+            painter->fillRect(tab->rect.adjusted(1, 1, -1, 0), tab->palette.color(QPalette::Window));
+        }
+    }
+}
+
+void MacLayoutStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *option, QPainter *painter,
+                                   const QWidget *widget) const {
+    if (element == PE_Frame && widget && widget->inherits("PayToEdit")) {
+        // Same frame as the QLineEdit fields of the form.
+        QProxyStyle::drawPrimitive(PE_FrameLineEdit, option, painter, widget);
+        return;
+    }
+    QProxyStyle::drawPrimitive(element, option, painter, widget);
 }

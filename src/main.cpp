@@ -204,6 +204,10 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     // need to be clicked *twice* in order to fire ?!
     QFont fontDef = QApplication::font();
     fontDef.setPointSize(fontDef.pointSize() + 1);
+    // Biscuit: the macOS system font is a variable font; with Fusion, Qt drew
+    // some capitals and digits in a heavier weight. Helvetica Neue has fixed
+    // weights and renders evenly.
+    fontDef.setFamily("Helvetica Neue");
     QApplication::setFont(fontDef);
 #endif
 

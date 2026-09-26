@@ -74,7 +74,7 @@
    <item>
     <widget class="QLabel" name="label_directSwaps">
      <property name="text">
-      <string>All swaps are available: exchange swaps (Trocador) and atomic swaps. Nodes, price data and swap partners see your IP address.</string>
+      <string>All swaps are available: exchange swaps and atomic swaps. Nodes, price data and swap partners see your IP address.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

@@ -14,7 +14,10 @@
 //    a "Max" button or a currency selector sits on the same line as the field
 //    next to it;
 //  - tab bars named "mainTabBar" (main tabs) or "centeredTabBar" (Swap) are
-//    centered, like the coin selectors, instead of pinned to the left.
+//    centered, like the coin selectors, instead of pinned to the left;
+//  - the selected tab has exactly the window colour (Fusion lightened it);
+//  - the "Pay to" field (a multi-line PayToEdit) gets the same frame as the
+//    single-line fields next to it.
 // Used on every platform on top of Fusion.
 class MacLayoutStyle : public QProxyStyle
 {
@@ -25,6 +28,10 @@ public:
                   QStyleHintReturn *returnData = nullptr) const override;
     void polish(QWidget *widget) override;
     using QProxyStyle::polish;
+    void drawControl(ControlElement element, const QStyleOption *option, QPainter *painter,
+                     const QWidget *widget = nullptr) const override;
+    void drawPrimitive(PrimitiveElement element, const QStyleOption *option, QPainter *painter,
+                       const QWidget *widget = nullptr) const override;
 };
 
 #endif // BISCUIT_MACLAYOUTSTYLE_H

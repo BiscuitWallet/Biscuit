@@ -108,7 +108,7 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     m_torNotice = new InfoFrame(this);
     m_torNotice->setFrameShape(QFrame::StyledPanel);
     m_torNotice->setInfo(icons()->icon("info2.svg"),
-                         "Tor mode is on: exchange swaps are not available, because Trocador and its exchanges "
+                         "Tor mode is on: exchange swaps are not available, because exchanges "
                          "do not accept Tor connections. Atomic swaps work over Tor. Swaps already started "
                          "still complete at the exchange; their status updates resume when Tor mode is off.");
     ui->verticalLayout->insertWidget(1, m_torNotice);

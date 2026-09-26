@@ -15,6 +15,7 @@
 #include <QTreeWidgetItem>
 
 #include "utils/AppData.h"
+#include "widgets/RetroBusyBar.h"
 #include "utils/config.h"
 
 using namespace biscuit::swap;
@@ -46,21 +47,51 @@ namespace {
         return pixmap;
     }
 
-    // Old telephone handset: two round ends joined by a curved grip.
-    void drawHandset(QPainter &p, const QColor &color, qreal angle) {
-        p.translate(9, 9);
-        p.rotate(angle);
-        QPen grip(color, 2.6, Qt::SolidLine, Qt::RoundCap);
-        p.setPen(grip);
-        p.setBrush(Qt::NoBrush);
-        QPainterPath arc;
-        arc.moveTo(-5.5, 1.5);
-        arc.quadTo(0, -3.5, 5.5, 1.5);
-        p.drawPath(arc);
-        p.setPen(Qt::NoPen);
-        p.setBrush(color);
-        p.drawRoundedRect(QRectF(-8.2, 0.5, 5.0, 3.6), 1.6, 1.6);
-        p.drawRoundedRect(QRectF(3.2, 0.5, 5.0, 3.6), 1.6, 1.6);
+    // Original 16x16 pixel-art dial-up icon: a globe and a desk phone with
+    // a signal between them. Grey while dialing, in colour once connected.
+    QPixmap dialUpIcon(bool connected) {
+        static const char *rows[16] = {
+            "....kkkk........",
+            "..kkbbgbkk......",
+            ".kbbggbbbbk.....",
+            ".kbgggbbwbk.....",
+            "kbbbggbbbbbk....",
+            "kbbbbgbbggbk....",
+            "kbbbbbbgggbk...s",
+            ".kbbbbbbggk...s.",
+            ".kkbbbbbbkk..s..",
+            "...kkkkkk.......",
+            "......kkkkkkkkk.",
+            "......krrrrrrrk.",
+            ".....kkk.....kkk",
+            ".....kcccdddccck",
+            ".....kccddwddcck",
+            ".....kkkkkkkkkkk",
+        };
+        auto color = [connected](char c) -> QColor {
+            switch (c) {
+            case 'k': return QColor(30, 30, 30);
+            case 'b': return connected ? QColor(58, 120, 214) : QColor(154, 167, 181);
+            case 'g': return connected ? QColor(63, 174, 74) : QColor(181, 191, 168);
+            case 'w': return Qt::white;
+            case 'r': return QColor(70, 70, 70);
+            case 'c': return QColor(232, 220, 192);
+            case 'd': return QColor(154, 143, 120);
+            case 's': return connected ? QColor(63, 174, 74) : QColor(150, 150, 150);
+            default: return Qt::transparent;
+            }
+        };
+        QImage image(16, 16, QImage::Format_ARGB32);
+        image.fill(Qt::transparent);
+        for (int y = 0; y < 16; ++y) {
+            for (int x = 0; x < 16; ++x) {
+                image.setPixelColor(x, y, color(rows[y][x]));
+            }
+        }
+        // Crisp pixels on Retina screens.
+        QPixmap pixmap = QPixmap::fromImage(image.scaled(32, 32, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+        pixmap.setDevicePixelRatio(2.0);
+        return pixmap;
     }
 }
 
@@ -78,8 +109,13 @@ AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
 
     ui->label_torNote->setStyleSheet("color: gray;");
 
+    // Retro busy bar instead of the large modern one.
+    m_busyBar = new RetroBusyBar(this);
+    ui->layout_discovery->replaceWidget(ui->progress, m_busyBar);
+    ui->progress->hide();
+
     m_phone = new QLabel(this);
-    m_phone->setFixedSize(18, 18);
+    m_phone->setFixedSize(16, 16);
     m_phone->hide();
     ui->layout_headline->insertWidget(0, m_phone);
     m_dialTimer = new QTimer(this);
@@ -294,19 +330,17 @@ void AtomicSwapWidget::setPhone(Phone phone) {
         return;
     }
     m_phoneState = phone;
-    const QColor text = palette().color(QPalette::WindowText);
     const QColor green(46, 160, 67);
     switch (phone) {
     case Phone::Hidden:
         m_phone->hide();
         return;
     case Phone::Dialing:
-        m_phone->setPixmap(drawIcon([text](QPainter &p) { drawHandset(p, text, 0); }));
+        m_phone->setPixmap(dialUpIcon(false));
         m_phone->setToolTip("Dialing makers");
         break;
     case Phone::PickedUp:
-        // Lifted off the cradle: tilted, and green.
-        m_phone->setPixmap(drawIcon([green](QPainter &p) { drawHandset(p, green, -28); }));
+        m_phone->setPixmap(dialUpIcon(true));
         m_phone->setToolTip("A maker answered");
         break;
     case Phone::Done:
@@ -325,9 +359,7 @@ void AtomicSwapWidget::setPhone(Phone phone) {
 }
 
 void AtomicSwapWidget::setBusy(bool busy) {
-    // Range 0..0 makes the bar animate, like eigenwallet's discovery bar.
-    ui->progress->setMaximum(busy ? 0 : 1);
-    ui->progress->setValue(0);
+    m_busyBar->setBusy(busy);
 }
 
 void AtomicSwapWidget::updateDetails() {

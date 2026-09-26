@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: The Biscuit developers
+
+#include "RetroBusyBar.h"
+
+#include <QPainter>
+
+namespace {
+    constexpr int barHeight = 14;
+    constexpr int blockWidth = 7;
+    constexpr int blockGap = 2;
+    constexpr int blockCount = 5;
+    constexpr int step = 3;          // pixels per tick
+    constexpr int tickMs = 40;
+}
+
+RetroBusyBar::RetroBusyBar(QWidget *parent)
+    : QWidget(parent)
+{
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_timer.setInterval(tickMs);
+    connect(&m_timer, &QTimer::timeout, this, [this] {
+        const int group = blockCount * (blockWidth + blockGap);
+        m_offset = (m_offset + step) % (width() + group);
+        update();
+    });
+}
+
+QSize RetroBusyBar::sizeHint() const {
+    return {200, barHeight};
+}
+
+void RetroBusyBar::setBusy(bool busy) {
+    m_busy = busy;
+    m_offset = 0;
+    busy ? m_timer.start() : m_timer.stop();
+    update();
+}
+
+void RetroBusyBar::paintEvent(QPaintEvent *) {
+    QPainter p(this);
+    const QRect r = rect().adjusted(0, 0, -1, -1);
+    // Sunken frame: dark top / left, light bottom / right.
+    p.fillRect(rect(), palette().color(QPalette::Base));
+    p.setPen(palette().color(QPalette::Dark));
+    p.drawLine(r.topLeft(), r.topRight());
+    p.drawLine(r.topLeft(), r.bottomLeft());
+    p.setPen(palette().color(QPalette::Light));
+    p.drawLine(r.bottomLeft(), r.bottomRight());
+    p.drawLine(r.topRight(), r.bottomRight());
+    if (!m_busy) {
+        return;
+    }
+    // The blocks, clipped to the inside of the frame.
+    const QRect inside = rect().adjusted(2, 2, -2, -2);
+    p.setClipRect(inside);
+    const QColor block = palette().color(QPalette::Highlight);
+    const int group = blockCount * (blockWidth + blockGap);
+    for (int i = 0; i < blockCount; ++i) {
+        const int x = inside.left() + m_offset - group + i * (blockWidth + blockGap);
+        p.fillRect(QRect(x, inside.top(), blockWidth, inside.height()), block);
+    }
+}

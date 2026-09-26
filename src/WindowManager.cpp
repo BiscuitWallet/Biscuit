@@ -143,7 +143,7 @@ void WindowManager::startupWarning() {
         box.setWindowTitle("Biscuit uses Tor");
         box.setIcon(QMessageBox::Information);
         box.setText(QString("It seems that you use %1: Biscuit connects through its Tor.").arg(system));
-        box.setInformativeText("Exchange swaps (Trocador) are not available, because exchanges refuse Tor "
+        box.setInformativeText("Exchange swaps are not available, because exchanges refuse Tor "
                                "connections. Atomic swaps work, through Tor. Everything else works as usual.");
         box.exec();
         conf()->set(Config::systemTorNotice, false);
