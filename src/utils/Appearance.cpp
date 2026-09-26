@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QGuiApplication>
 #include <QStatusBar>
+#include <QTabBar>
 #include <QTabWidget>
 #include <functional>
 #include <QPainter>
@@ -28,21 +29,22 @@ namespace {
 }
 
 void styleTabs(QTabWidget *tabs, bool centered) {
+    Q_UNUSED(centered)   // centering comes from MacLayoutStyle ("mainTabBar")
     tabs->setDocumentMode(true);
-    keepStyled(tabs, [centered] {
+    // On the tab bar only: a style sheet on the tab widget would cascade to
+    // every page (combo boxes, text fields and backgrounds drawn differently).
+    keepStyled(tabs->tabBar(), [] {
         const bool dark = isDark();
         const QString bg = dark ? "#2b2b2b" : "#ececec", text = dark ? "#c8c8c8" : "#3a3a3a",
                       sel = dark ? "#404040" : "#ffffff", selText = dark ? "#ffffff" : "#000000",
                       border = dark ? "#1e1e1e" : "#d2d2d2", hover = dark ? "#353535" : "#f6f6f6";
-        return QString(R"(%1
-QTabWidget::pane { border: none; border-top: 1px solid %6; }
-QTabBar { background: %2; qproperty-drawBase: 0; }
-QTabBar::tab { background: %2; color: %3; border: none; border-right: 1px solid %6; padding: 4px 20px; font-size: %8pt; }
-QTabBar::tab:first { border-left: 1px solid %6; }
-QTabBar::tab:selected { background: %4; color: %5; }
-QTabBar::tab:hover:!selected { background: %7; }
-)").arg(centered ? "QTabWidget::tab-bar { alignment: center; }" : "", bg, text, sel, selText, border, hover)
-           .arg(QApplication::font().pointSize());
+        return QString(R"(
+QTabBar { background: %1; border-bottom: 1px solid %5; qproperty-drawBase: 0; }
+QTabBar::tab { background: %1; color: %2; border: none; border-right: 1px solid %5; padding: 4px 20px; font-size: %7pt; }
+QTabBar::tab:first { border-left: 1px solid %5; }
+QTabBar::tab:selected { background: %3; color: %4; }
+QTabBar::tab:hover:!selected { background: %6; }
+)").arg(bg, text, sel, selText, border, hover).arg(QApplication::font().pointSize());
     });
 }
 
