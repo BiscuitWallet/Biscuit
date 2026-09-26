@@ -3,7 +3,11 @@
 
 #include "Appearance.h"
 
+#include <QApplication>
 #include <QGuiApplication>
+#include <QStatusBar>
+#include <QTabWidget>
+#include <functional>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
@@ -13,6 +17,42 @@
 #include "utils/config.h"
 
 namespace Appearance {
+
+namespace {
+    // Re-applies `style` now and whenever light / dark changes.
+    void keepStyled(QWidget *widget, const std::function<QString()> &style) {
+        widget->setStyleSheet(style());
+        QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, widget,
+                         [widget, style] { widget->setStyleSheet(style()); });
+    }
+}
+
+void styleTabs(QTabWidget *tabs, bool centered) {
+    tabs->setDocumentMode(true);
+    keepStyled(tabs, [centered] {
+        const bool dark = isDark();
+        const QString bg = dark ? "#2b2b2b" : "#ececec", text = dark ? "#c8c8c8" : "#3a3a3a",
+                      sel = dark ? "#404040" : "#ffffff", selText = dark ? "#ffffff" : "#000000",
+                      border = dark ? "#1e1e1e" : "#d2d2d2", hover = dark ? "#353535" : "#f6f6f6";
+        return QString(R"(%1
+QTabWidget::pane { border: none; border-top: 1px solid %6; }
+QTabBar { background: %2; qproperty-drawBase: 0; }
+QTabBar::tab { background: %2; color: %3; border: none; border-right: 1px solid %6; padding: 4px 20px; font-size: %8pt; }
+QTabBar::tab:first { border-left: 1px solid %6; }
+QTabBar::tab:selected { background: %4; color: %5; }
+QTabBar::tab:hover:!selected { background: %7; }
+)").arg(centered ? "QTabWidget::tab-bar { alignment: center; }" : "", bg, text, sel, selText, border, hover)
+           .arg(QApplication::font().pointSize());
+    });
+}
+
+void styleStatusBar(QStatusBar *bar) {
+    keepStyled(bar, [] {
+        const bool dark = isDark();
+        return QString("QStatusBar { background: %1; border-top: 1px solid %3; } QStatusBar QLabel { color: %2; }")
+                .arg(dark ? "#252525" : "#f4f4f4", dark ? "#e6e6e6" : "#1e1e1e", dark ? "#1a1a1a" : "#d2d2d2");
+    });
+}
 
 void apply() {
     const QString choice = conf()->get(Config::appearance).toString();

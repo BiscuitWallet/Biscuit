@@ -13,6 +13,9 @@ TickersWidget::TickersWidget(QWidget *parent, Wallet *wallet)
     , m_wallet(wallet)
 {
     ui->setupUi(this);
+    // Biscuit: Home's sections are separated by titles; this line was drawn
+    // bright white in dark mode.
+    ui->line->hide();
     this->setup();
 
     // TODO: this is a hack: find a better way to route settings signals to plugins

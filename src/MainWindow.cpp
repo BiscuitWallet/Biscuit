@@ -70,7 +70,8 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     // Biscuit: flat main tabs, centered (MacLayoutStyle), without the rounded
     // panel that left a band of another colour under them on macOS.
     ui->tabWidget->tabBar()->setObjectName("mainTabBar");
-    ui->tabWidget->setDocumentMode(true);
+    Appearance::styleTabs(ui->tabWidget, true);
+    Appearance::styleStatusBar(this->statusBar());
 
     // Biscuit: light / dark appearance in one click, top right, in sight.
     auto *appearanceButton = new StatusBarButton(Appearance::toggleIcon(), "Dark mode", this);

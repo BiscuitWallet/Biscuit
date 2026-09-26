@@ -25,6 +25,7 @@
 #include "libwalletqt/WalletManager.h"
 #include "libwalletqt/rows/TransactionRow.h"
 #include "utils/AppData.h"
+#include "utils/Appearance.h"
 #include "utils/Icons.h"
 #include "utils/Utils.h"
 #include "utils/config.h"
@@ -58,6 +59,7 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
         , m_wallet(wallet)
 {
     ui->setupUi(this);
+    Appearance::styleTabs(ui->tabHomeWidget, false);   // Crowdfunding, Converter
 
     // Biscuit: recent activity of every coin and wallet, between the prices
     // (plugins, widgetLayout) and the Crowdfunding tab.
