@@ -7,12 +7,14 @@
 #include <algorithm>
 #include <limits>
 
-#include <QFrame>
+#include <QAbstractItemView>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QPushButton>
 #include <QTabWidget>
+#include <QTreeView>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
@@ -32,7 +34,7 @@
 
 namespace {
     constexpr int recentCount = 5;
-    constexpr int crowdfundingHeight = 230;   // about 6 rows, then it scrolls
+    constexpr int maxListRows = 6;   // Crowdfunding: then it scrolls
 
     struct Activity {
         QDateTime time;       // invalid while unknown (sorted first, as pending)
@@ -65,13 +67,11 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
     // recent activity, then a short Crowdfunding list.
     auto *top = new QHBoxLayout;
     top->setSpacing(24);
-    auto *totalBox = new QFrame(this);
-    totalBox->setFrameShape(QFrame::StyledPanel);
+    // Same native box as the price tiles next to it.
+    auto *totalBox = new QGroupBox("Total", this);
     auto *totalLayout = new QVBoxLayout(totalBox);
-    totalLayout->setContentsMargins(16, 10, 16, 10);
+    totalLayout->setContentsMargins(12, 6, 12, 8);
     totalLayout->setSpacing(2);
-    auto *totalTitle = new QLabel("Total", totalBox);
-    totalTitle->setStyleSheet("color: gray;");
     m_total = new QLabel(totalBox);
     QFont big = m_total->font();
     big.setPointSizeF(big.pointSizeF() * 2.2);
@@ -81,7 +81,6 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
     m_coins = new QLabel(totalBox);
     m_coins->setStyleSheet("color: gray;");
     m_coins->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    totalLayout->addWidget(totalTitle);
     totalLayout->addWidget(m_total);
     totalLayout->addWidget(m_coins);
     top->addWidget(totalBox, 0, Qt::AlignTop);
@@ -118,8 +117,8 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
     ui->verticalLayout->insertWidget(4, m_recentEmpty);
     ui->verticalLayout->insertSpacing(5, 12);
 
-    // Crowdfunding: a short list rather than a full-page table.
-    ui->tabHomeWidget->setMaximumHeight(crowdfundingHeight);
+    // Crowdfunding: a short list rather than a full-page table (see fitList).
+    ui->tabHomeWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     ui->verticalLayout->addStretch(1);
 
     if (m_wallet) {
@@ -170,7 +169,7 @@ void HomeWidget::updateTotal() {
         m_coins->clear();
         return;
     }
-    m_total->setText(known ? Utils::amountToCurrencyString(total, fiat) : QString("–"));
+    m_total->setText(known ? Utils::amountToCurrencyString(total, fiat) : QString("…"));
     m_total->setToolTip(known ? QString("Every coin and wallet together, at market prices (%1, changeable in Settings).").arg(fiat)
                               : QString("Prices are not loaded yet."));
     m_coins->setText(coins.join(" · "));
@@ -233,6 +232,17 @@ void HomeWidget::updateRecent() {
     }
 }
 
+void HomeWidget::fitList(QAbstractItemView *view) {
+    const int rows = std::min(view->model()->rowCount(), maxListRows);
+    const int rowHeight = view->model()->rowCount() > 0 ? view->sizeHintForRow(0) : view->fontMetrics().height() + 6;
+    int header = 0;
+    if (auto *tree = qobject_cast<QTreeView *>(view)) {
+        header = tree->header()->isHidden() ? 0 : tree->header()->sizeHint().height();
+    }
+    view->setFixedHeight(header + std::max(rows, 1) * rowHeight + 2 * view->frameWidth());
+    ui->tabHomeWidget->setMaximumHeight(ui->tabHomeWidget->tabBar()->sizeHint().height() + view->height() + 8);
+}
+
 // "See all": the History tab of the main window.
 void HomeWidget::showHistoryTab() {
     for (QWidget *w = parentWidget(); w; w = w->parentWidget()) {
@@ -251,6 +261,16 @@ void HomeWidget::addPlugin(Plugin *plugin)
 {
     if (plugin->type() == Plugin::TAB) {
         ui->tabHomeWidget->addTab(plugin->tab(), plugin->displayName());
+        // Biscuit: lists on Home are as tall as their rows (at most a few),
+        // never a screen of empty lines.
+        for (auto *view : plugin->tab()->findChildren<QAbstractItemView *>()) {
+            if (!view->model()) continue;
+            auto fit = [this, view] { fitList(view); };
+            connect(view->model(), &QAbstractItemModel::modelReset, this, fit);
+            connect(view->model(), &QAbstractItemModel::rowsInserted, this, fit);
+            connect(view->model(), &QAbstractItemModel::rowsRemoved, this, fit);
+            fitList(view);
+        }
     }
     else if (plugin->type() == Plugin::WIDGET) {
         ui->widgetLayout->addWidget(plugin->tab());

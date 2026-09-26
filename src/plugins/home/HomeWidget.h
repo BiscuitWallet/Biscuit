@@ -9,6 +9,7 @@
 
 #include "plugins/Plugin.h"
 
+class QAbstractItemView;
 class QLabel;
 class QTreeWidget;
 class Wallet;
@@ -34,6 +35,7 @@ private:
     void updateTotal();
     void updateRecent();
     void showHistoryTab();
+    void fitList(QAbstractItemView *view);
 
     QScopedPointer<Ui::HomeWidget> ui;
     QPointer<Wallet> m_wallet;
