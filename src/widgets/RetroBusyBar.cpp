@@ -3,6 +3,7 @@
 
 #include "RetroBusyBar.h"
 
+#include <QApplication>
 #include <QPainter>
 
 namespace {
@@ -55,12 +56,15 @@ void RetroBusyBar::setBusy(bool busy) {
 void RetroBusyBar::paintEvent(QPaintEvent *) {
     QPainter p(this);
     const QRect r = rect().adjusted(0, 0, -1, -1);
+    // The colours of the text fields (Biscuit's palette is set on their
+    // class; a plain widget could get the system's colours on macOS).
+    const QPalette pal = QApplication::palette("QLineEdit");
     // Sunken frame: dark top / left, light bottom / right.
-    p.fillRect(rect(), palette().color(QPalette::Base));
-    p.setPen(palette().color(QPalette::Dark));
+    p.fillRect(rect(), pal.color(QPalette::Base));
+    p.setPen(pal.color(QPalette::Mid));
     p.drawLine(r.topLeft(), r.topRight());
     p.drawLine(r.topLeft(), r.bottomLeft());
-    p.setPen(palette().color(QPalette::Light));
+    p.setPen(pal.color(QPalette::Light));
     p.drawLine(r.bottomLeft(), r.bottomRight());
     p.drawLine(r.topRight(), r.bottomRight());
     if (!m_busy) {
@@ -69,7 +73,7 @@ void RetroBusyBar::paintEvent(QPaintEvent *) {
     // The blocks, clipped to the inside of the frame.
     const QRect inside = rect().adjusted(2, 2, -2, -2);
     p.setClipRect(inside);
-    const QColor block = palette().color(QPalette::Highlight);
+    const QColor block = pal.color(QPalette::Highlight);
     for (int i = 0; i < blockCount; ++i) {
         const int x = inside.left() + m_offset + i * (blockWidth + blockGap);
         p.fillRect(QRect(x, inside.top(), blockWidth, inside.height()), block);

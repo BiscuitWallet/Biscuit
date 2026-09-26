@@ -31,21 +31,21 @@ namespace {
 
     const char *const modemRows[16] = {
         "................",
-        "................",
-        "................",
-        "................",
-        "....kkkkkkkkkkk.",
-        "...kcccccccccck.",
-        "..kcccccccccck..",
-        ".kkkkkkkkkkkkk..",
-        ".kddddddddddddk.",
-        ".kd1d2d3ddddddk.",
-        ".kddddddddddddk.",
+        "...kkkkkkkkkk...",
+        "..kyyyyyyyyyyk..",
+        "..kyykkkkkkyyk..",
+        "..kkk......kkk..",
+        "....kkkkkkkk....",
+        "...kyyyyyyyyk...",
+        "..kyyyykkyyyyk..",
+        "..kyyykwwkyyyk..",
+        "..kyyyykkyyyyk..",
+        ".kyyyyyyyyyyyyk.",
         ".kkkkkkkkkkkkkk.",
-        "..kk........kk..",
-        "................",
-        "................",
-        "................",
+        ".kggggggggggggk.",
+        ".kg1g2g3g4ggggk.",
+        ".kGGGGGGGGGGGGk.",
+        "..kkkkkkkkkkkk..",
     };
 
     const char *const computerRows[16] = {
@@ -68,22 +68,22 @@ namespace {
     };
 
     const char *const networkRows[16] = {
-        "kkkkkk..........",
-        "kbbbbk..........",
-        "kbwbbk..........",
-        "kkkkkk..........",
-        "..kk............",
-        ".kkkk...........",
-        "..y.............",
-        "..y.............",
-        "..yyyyyyyyyyy...",
-        "............y...",
-        "..........kkkkkk",
-        "..........kbbbbk",
-        "..........kbwbbk",
-        "..........kkkkkk",
         "............kk..",
-        "...........kkkk.",
+        ".kkkkkkkkkkkyyk.",
+        ".kyyyyyyyyyyyyyk",
+        ".kkkkkkkkkkkyyk.",
+        "....kkkkkkk.kk..",
+        "...kbbgggbbk....",
+        "..kbgggggbbbk...",
+        "..kbbgggbbwbk...",
+        "..kbbbgbbbbbk...",
+        "..kbbbbbggbbk...",
+        "...kbbbgggbk....",
+        "....kkkkkkk.....",
+        "..kk............",
+        ".kyykkkkkkkkkkk.",
+        "kyyyyyyyyyyyyyk.",
+        ".kyykkkkkkkkkkk.",
     };
 
     const char *const clockRows[16] = {
@@ -166,13 +166,13 @@ QPixmap hourglass() {
 }
 
 QPixmap modem(bool connected, int phase) {
-    const QColor off(110, 96, 70), green(70, 220, 80), red(232, 72, 50);
-    auto led = [&](int index) {
-        if (connected) return green;
-        return phase % 3 == index ? (index == 2 ? red : green) : off;
-    };
-    return draw(modemRows, {{'k', outline}, {'c', QColor(236, 226, 200)}, {'d', QColor(205, 192, 160)},
-                            {'1', led(0)}, {'2', led(1)}, {'3', led(2)}});
+    // A yellow desk phone on a grey modem; the modem's lights run while it
+    // dials and all stay lit once connected.
+    const QColor off(120, 40, 34), on(236, 58, 40);
+    auto led = [&](int index) { return connected || phase % 4 == index ? on : off; };
+    return draw(modemRows, {{'k', outline}, {'y', QColor(242, 211, 60)}, {'w', Qt::white},
+                            {'g', QColor(201, 201, 201)}, {'G', QColor(138, 138, 138)},
+                            {'1', led(0)}, {'2', led(1)}, {'3', led(2)}, {'4', led(3)}});
 }
 
 QIcon computer() {
@@ -181,8 +181,9 @@ QIcon computer() {
 }
 
 QIcon network() {
-    return QIcon(draw(networkRows, {{'k', outline}, {'b', QColor(0, 128, 128)}, {'w', QColor(200, 240, 240)},
-                                    {'y', QColor(230, 160, 40)}}));
+    // The globe with two arrows: exchange around the world.
+    return QIcon(draw(networkRows, {{'k', outline}, {'b', QColor(40, 110, 210)}, {'g', QColor(60, 170, 70)},
+                                    {'w', Qt::white}, {'y', QColor(242, 211, 60)}}));
 }
 
 QIcon history() {

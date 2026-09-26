@@ -10,10 +10,10 @@
 // Biscuit's own 16x16 pixel-art icons (original drawings), sharp on Retina.
 namespace PixelIcons {
     QPixmap hourglass();                        // waiting
-    // Dialing: the LEDs light up in turn (`phase`); connected: all green.
+    // A phone on a modem. Dialing: the lights run (`phase`); connected: all lit.
     QPixmap modem(bool connected, int phase);
     QIcon computer();                           // Home tab
-    QIcon network();                            // Swap tab
+    QIcon network();                            // Swap tab: a globe and two arrows
     QIcon history();                            // History tab: a clock
     QIcon send();                               // Send tab: an envelope going out
     QIcon receive();                            // Receive tab: a tray, arrow in

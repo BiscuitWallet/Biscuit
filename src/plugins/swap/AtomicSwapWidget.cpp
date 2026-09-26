@@ -185,11 +185,14 @@ void AtomicSwapWidget::onSummary(const atomic::DiscoverySummary &summary) {
         headline = "Dialing makers...";
     }
     setHeadline(headline, active);
-    if (summary.connected > 0) {
-        setPhone(!active && summary.offers > 0 ? Phone::Done : Phone::PickedUp);
+    // Modem dialing, then connected while offers come in; hourglass when
+    // waiting. The check mark only when the search is over (onFinished).
+    if (summary.dialing > 0 && summary.connected == 0) {
+        setPhone(Phone::Dialing);
+    } else if (active) {
+        setPhone(Phone::PickedUp);
     } else {
-        // Hourglass while waiting, modem while dialing makers.
-        setPhone(summary.dialing > 0 ? Phone::Dialing : Phone::Waiting);
+        setPhone(Phone::Waiting);
     }
     ui->label_peers->setText(QString("Connected to %1 peers").arg(summary.connected));
     setBusy(atomic::discoveryActive(summary));
