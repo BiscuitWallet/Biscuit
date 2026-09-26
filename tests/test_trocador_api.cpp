@@ -187,6 +187,17 @@ private slots:
         QCOMPARE(coins->at(0).minimum, QString("0.01"));
         QCOMPARE(coins->at(1).maximum, QString("50000"));
     }
+
+    void relayErrorsAreNotTrocadorErrors() {
+        QCOMPARE(trocador::parseRelayError(R"({"error":"tor_exit","message":"Not through Tor."})"),
+                 QString("Not through Tor."));
+        QCOMPARE(trocador::parseRelayError(R"({"error":"rate_limited","message":"Slow down."})"),
+                 QString("Slow down."));
+        // Trocador's own errors, including a rejected key, are left to the caller.
+        QVERIFY(trocador::parseRelayError(R"({"error":"Invalid API key"})").isEmpty());
+        QVERIFY(trocador::parseRelayError(R"({"trade_id":"ABC"})").isEmpty());
+        QVERIFY(trocador::parseRelayError("not json").isEmpty());
+    }
 };
 
 QTEST_APPLESS_MAIN(TestTrocadorApi)

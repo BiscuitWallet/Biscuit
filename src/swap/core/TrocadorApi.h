@@ -49,6 +49,10 @@ namespace biscuit::swap::trocador {
 
     // Extracts {"error": ..., "message": ...} or returns an empty string.
     QString parseErrorMessage(const QByteArray &body);
+
+    // Errors produced by the Biscuit relay itself (relay/relay.go), never by
+    // Trocador: returns the message to show, or an empty string.
+    QString parseRelayError(const QByteArray &body);
 }
 
 #endif // BISCUIT_SWAP_TROCADORAPI_H

@@ -12,15 +12,21 @@ class QNetworkReply;
 
 namespace biscuit::swap {
 
-// Trocador aggregator (https://trocador.app). Requires an API key injected at
-// build time (see BUILD.md), never stored in the repository.
+// Trocador aggregator (https://trocador.app). Official builds go through the
+// Biscuit relay, which adds the partner key server side (relay/README.md).
+// Development builds may call Trocador directly with a key from secrets.cmake.
 class TrocadorSwapProvider : public SwapProvider {
     Q_OBJECT
 
 public:
-    explicit TrocadorSwapProvider(const QString &apiKey, QObject *parent = nullptr);
+    // baseUrl ends with '/'. apiKey is empty when baseUrl is the relay.
+    TrocadorSwapProvider(const QString &baseUrl, const QString &apiKey, QObject *parent = nullptr);
 
-    // Key compiled into this build, empty if none.
+    // API base configured for this build: the relay, or Trocador itself in a
+    // development build with a key. Empty: swaps run in demo mode.
+    static QString builtInBaseUrl();
+
+    // Key compiled into a development build, empty otherwise.
     static QString builtInApiKey();
 
     // Trocador and its exchanges do not accept Tor connections. In Tor mode
@@ -47,6 +53,7 @@ private:
     void get(const QString &method, const QUrlQuery &query, ReplyHandler handler, int attempt = 0);
     void send(const QString &method, const QUrlQuery &query, ReplyHandler handler, int attempt = 0);
 
+    QString m_baseUrl;
     QString m_apiKey;
 };
 

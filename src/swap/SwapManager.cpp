@@ -24,11 +24,11 @@ SwapManager::SwapManager(Wallet *wallet, QObject *parent)
     : QObject(parent)
     , m_wallet(wallet)
 {
-    const QString key = TrocadorSwapProvider::builtInApiKey();
-    if (key.isEmpty()) {
+    const QString baseUrl = TrocadorSwapProvider::builtInBaseUrl();
+    if (baseUrl.isEmpty()) {
         m_allProviders.append(new DemoSwapProvider(this));
     } else {
-        m_allProviders.append(new TrocadorSwapProvider(key, this));
+        m_allProviders.append(new TrocadorSwapProvider(baseUrl, TrocadorSwapProvider::builtInApiKey(), this));
     }
 
     m_history = SwapHistory::fromJson(m_wallet->getCacheAttribute(SwapHistory::walletAttribute).toUtf8());

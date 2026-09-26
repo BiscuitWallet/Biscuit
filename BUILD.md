@@ -41,15 +41,25 @@ cmake --build . -j "$(sysctl -n hw.ncpu)"
 ctest --test-dir tests --output-on-failure
 ```
 
-## Clé API Trocador (builds officiels)
+## Trocador : relais (builds officiels) ou clé (développement)
 
-La clé ne doit jamais être commitée. Créer `secrets.cmake` à la racine (ignoré par git) :
+Les builds officiels passent par le relais Biscuit, qui garde la clé Trocador côté
+serveur (voir `relay/README.md`). La clé n'est alors jamais compilée dans l'app.
+Créer `secrets.cmake` à la racine (ignoré par git) :
+
+```cmake
+set(BISCUIT_TROCADOR_RELAY_URL "https://relay.example.org/api/")
+```
+
+Pour le développement seulement, l'app peut appeler Trocador directement avec la clé :
 
 ```cmake
 set(BISCUIT_TROCADOR_API_KEY "votre-cle")
 ```
 
-Sans ce fichier, l'onglet Swap fonctionne en **mode démo** : offres simulées, aucun
+Pour tester avec un relais local : `-DBISCUIT_TROCADOR_RELAY_URL=http://127.0.0.1:8080/api/`.
+
+Sans relais ni clé, l'onglet Swap fonctionne en **mode démo** : offres simulées, aucun
 échange réel, aucun envoi possible. CMake affiche le mode utilisé à la configuration.
 
 ## Linux

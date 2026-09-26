@@ -228,4 +228,16 @@ QString parseErrorMessage(const QByteArray &body) {
     return err.isEmpty() ? message : err;
 }
 
+QString parseRelayError(const QByteArray &body) {
+    static const QStringList relayCodes = {
+        "tor_exit", "rate_limited", "unavailable", "upstream_unreachable", "upstream_error",
+        "not_found", "method_not_allowed", "query_too_long", "bad_query", "internal",
+    };
+    const QJsonObject obj = QJsonDocument::fromJson(body).object();
+    if (!relayCodes.contains(obj.value("error").toString())) {
+        return {};
+    }
+    return obj.value("message").toString();
+}
+
 }

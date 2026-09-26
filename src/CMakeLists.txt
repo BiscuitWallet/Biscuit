@@ -200,21 +200,32 @@ if(WITH_FEATHER_SERVICES)
     target_compile_definitions(feather PRIVATE WITH_FEATHER_SERVICES=1)
 endif()
 
-# Biscuit partner keys: never in the repository. Official builds provide them in
-# secrets.cmake (ignored by git), e.g. set(BISCUIT_TROCADOR_API_KEY "..."). Without
-# a key, swaps run in offline demo mode.
+# Trocador. Official builds go through the Biscuit relay, which holds the partner
+# key: set(BISCUIT_TROCADOR_RELAY_URL "https://relay.example.org/api/") in
+# secrets.cmake (ignored by git) or with -D. The key is then never compiled in.
+# Development builds may instead call Trocador directly with
+# set(BISCUIT_TROCADOR_API_KEY "..."). With neither, swaps run in demo mode.
 if(EXISTS "${CMAKE_SOURCE_DIR}/secrets.cmake")
     include("${CMAKE_SOURCE_DIR}/secrets.cmake")
 endif()
-if(BISCUIT_TROCADOR_API_KEY)
+if(BISCUIT_TROCADOR_RELAY_URL)
+    if(NOT BISCUIT_TROCADOR_RELAY_URL MATCHES "^(https://[^/]+|http://(127\\.0\\.0\\.1|localhost)(:[0-9]+)?)/api/$")
+        message(FATAL_ERROR "BISCUIT_TROCADOR_RELAY_URL must be https://<host>/api/ (or http://127.0.0.1:<port>/api/ for tests)")
+    endif()
+    target_compile_definitions(feather PRIVATE BISCUIT_TROCADOR_RELAY_URL="${BISCUIT_TROCADOR_RELAY_URL}")
+    if(BISCUIT_TROCADOR_API_KEY)
+        message(WARNING "BISCUIT_TROCADOR_API_KEY ignored: the relay holds the key, it is not compiled in")
+    endif()
+    message(STATUS "Trocador: through the relay ${BISCUIT_TROCADOR_RELAY_URL}")
+elseif(BISCUIT_TROCADOR_API_KEY)
     # Masked into a generated header (build tree only), never a compiler flag.
     include(BiscuitSecrets)
     biscuit_write_secret_header(trocador_key "${BISCUIT_TROCADOR_API_KEY}" "${CMAKE_BINARY_DIR}/generated/BiscuitSecrets.h")
     target_include_directories(feather PRIVATE "${CMAKE_BINARY_DIR}/generated")
     target_compile_definitions(feather PRIVATE BISCUIT_HAS_TROCADOR_KEY=1)
-    message(STATUS "Trocador API key: provided (swaps use Trocador)")
+    message(STATUS "Trocador: direct with a key (development build only)")
 else()
-    message(STATUS "Trocador API key: none (swaps run in demo mode)")
+    message(STATUS "Trocador: no relay and no key (swaps run in demo mode)")
 endif()
 
 if(WITH_SCANNER)
