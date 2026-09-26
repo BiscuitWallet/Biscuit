@@ -31,8 +31,6 @@ public:
     SwapProvider *provider(const QString &id) const;
     bool demoMode() const;
 
-    KycRating minKycRating() const;
-    void setMinKycRating(KycRating rating);
 
     using QuotesCallback = std::function<void(const QList<Quote> &ranked, const QStringList &errors)>;
     // Queries every provider in parallel, then ranks all offers together.

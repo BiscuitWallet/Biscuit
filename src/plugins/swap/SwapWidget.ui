@@ -244,16 +244,6 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="label_kyc">
-           <property name="text">
-            <string>KYC</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="combo_kyc"/>
-         </item>
-         <item>
           <spacer name="spacer_options">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
@@ -308,11 +298,6 @@
          <column>
           <property name="text">
            <string>You get</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>KYC</string>
           </property>
          </column>
          <column>

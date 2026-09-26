@@ -131,7 +131,6 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
 
         // Biscuit: swaps
         {Config::swapDisabledProviders, {QS("swapDisabledProviders"), QStringList{}}},
-        {Config::swapMinKycRating, {QS("swapMinKycRating"), "C"}},
         {Config::atomicSwapTor, {QS("atomicSwapTor"), false}},
 };
 

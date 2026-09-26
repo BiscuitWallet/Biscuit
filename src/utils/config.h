@@ -142,7 +142,6 @@ public:
 
         // Biscuit: swaps
         swapDisabledProviders,
-        swapMinKycRating,
         atomicSwapTor,       // atomic swaps through Tor when Tor mode is off
     };
 

@@ -76,15 +76,6 @@ bool SwapManager::demoMode() const {
     return false;
 }
 
-KycRating SwapManager::minKycRating() const {
-    const KycRating rating = kycRatingFromString(conf()->get(Config::swapMinKycRating).toString());
-    return rating == KycRating::Unknown ? KycRating::C : rating;
-}
-
-void SwapManager::setMinKycRating(KycRating rating) {
-    conf()->set(Config::swapMinKycRating, kycRatingToString(rating));
-}
-
 void SwapManager::requestQuotes(const QuoteRequest &request, QuotesCallback callback) {
     const QList<SwapProvider *> active = providers();
     if (active.isEmpty()) {

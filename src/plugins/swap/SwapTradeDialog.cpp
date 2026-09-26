@@ -88,9 +88,8 @@ void SwapTradeDialog::updateView() {
     setRowVisible(ui->label_refundTitle, ui->line_refund, !t->refundAddress.isEmpty());
     ui->line_refund->setText(t->refundAddress);
     ui->line_refund->setCursorPosition(0);
-    ui->label_exchange->setText(QString("%1 · KYC %2 · %3 rate")
-                                .arg(t->exchange, kycRatingToString(t->kycRating),
-                                     t->rateType == RateType::Fixed ? "fixed" : "floating"));
+    ui->label_exchange->setText(QString("%1 · %2 rate")
+                                .arg(t->exchange, t->rateType == RateType::Fixed ? "fixed" : "floating"));
     setRowVisible(ui->label_txTitle, ui->line_tx, !t->depositTxId.isEmpty());
     ui->line_tx->setText(t->depositTxId);
 

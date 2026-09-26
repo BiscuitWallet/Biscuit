@@ -32,7 +32,10 @@ using namespace biscuit::swap;
 using biscuit::swap::TrocadorSwapProvider;
 
 namespace {
-    enum OfferColumn { OfferExchange = 0, OfferGet, OfferKyc, OfferEta, OfferVia };
+    enum OfferColumn { OfferExchange = 0, OfferGet, OfferEta, OfferVia };
+
+    // Only exchanges rated A by Trocador: no KYC, no identity checks.
+    constexpr KycRating noKyc = KycRating::A;
     enum TradeColumn { TradeDate = 0, TradePair, TradeSent, TradeReceived, TradeStatusCol, TradeExchange };
 
     constexpr int QuoteIndexRole = Qt::UserRole;
@@ -84,13 +87,6 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         ui->label_status->setText("Swaps are only available on mainnet.");
     }
 
-    for (KycRating r : {KycRating::A, KycRating::B, KycRating::C, KycRating::D}) {
-        ui->combo_kyc->addItem(r == KycRating::A ? QString("A only") : QString("%1 or better").arg(kycRatingToString(r)),
-                               static_cast<int>(r));
-        ui->combo_kyc->setItemData(ui->combo_kyc->count() - 1, kycRatingDescription(r), Qt::ToolTipRole);
-    }
-    ui->combo_kyc->setCurrentIndex(static_cast<int>(m_manager->minKycRating()));
-    ui->combo_kyc->setToolTip("Minimum KYC rating of the exchanges, from A (no KYC) to D (funds may be held).");
     ui->combo_rate->setItemData(0, "You choose the amount you send. The amount you get may vary slightly with the market.", Qt::ToolTipRole);
     ui->combo_rate->setItemData(1, "You choose the exact amount you get. Each exchange says how much to send, usually at a slightly lower rate.", Qt::ToolTipRole);
 
@@ -108,10 +104,6 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     connect(ui->line_amount, &QLineEdit::textEdited, this, &SwapWidget::clearOffers);
     connect(ui->combo_rate, &QComboBox::currentIndexChanged, this, [this] {
         placeAmountField();
-        clearOffers();
-    });
-    connect(ui->combo_kyc, &QComboBox::currentIndexChanged, this, [this] {
-        m_manager->setMinKycRating(static_cast<KycRating>(ui->combo_kyc->currentData().toInt()));
         clearOffers();
     });
     connect(ui->combo_receiveMode, &QComboBox::currentIndexChanged, this, &SwapWidget::updateForm);
@@ -312,6 +304,12 @@ void SwapWidget::updateForm() {
 
     // Every coin offered (XMR, BTC, LTC) has its wallet in Biscuit: coins are
     // received, and refunded, to this wallet by default, or to any address.
+    if (to.isValid()) {
+        ui->combo_receiveMode->setItemText(ModeNewWalletAddress, QString("My %1 wallet (Biscuit)").arg(to.ticker.toUpper()));
+    }
+    if (from.isValid()) {
+        ui->combo_refundMode->setItemText(ModeNewWalletAddress, QString("My %1 wallet (Biscuit)").arg(from.ticker.toUpper()));
+    }
     const bool receiveInWallet = ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
     const bool refundInWallet = ui->combo_refundMode->currentIndex() == ModeNewWalletAddress;
     ui->line_receive->setVisible(!receiveInWallet);
@@ -363,7 +361,7 @@ void SwapWidget::onGetOffers() {
     request.to = to;
     request.rateType = fixedRate() ? RateType::Fixed : RateType::Floating;
     (fixedRate() ? request.amountTo : request.amountFrom) = amount::normalize(amountText);
-    request.minKycRating = static_cast<KycRating>(ui->combo_kyc->currentData().toInt());
+    request.minKycRating = noKyc;
 
     clearOffers();
     setBusy(true, "Asking swap partners for offers…");
@@ -378,9 +376,6 @@ void SwapWidget::onGetOffers() {
             item->setText(OfferGet, q.rateType == RateType::Fixed ? QString("%1 %2").arg(q.amountFrom, q.from.ticker.toUpper())
                                                                   : QString("%1 %2").arg(q.amountTo, q.to.ticker.toUpper()));
             item->setTextAlignment(OfferGet, Qt::AlignRight | Qt::AlignVCenter);
-            item->setText(OfferKyc, kycRatingToString(q.kycRating));
-            item->setToolTip(OfferKyc, kycRatingDescription(q.kycRating));
-            item->setTextAlignment(OfferKyc, Qt::AlignCenter);
             item->setText(OfferEta, q.etaMinutes ? QString("~%1 min").arg(*q.etaMinutes) : "–");
             const SwapProvider *p = m_manager->provider(q.providerId);
             item->setText(OfferVia, p ? p->displayName() : q.providerId);
@@ -526,9 +521,9 @@ void SwapWidget::createTrade(const Quote &quote) {
         box.setText(QString(quote.rateType == RateType::Fixed ? "Swap %1 %2 for exactly %3 %4 (fixed rate)?"
                                                               : "Swap %1 %2 for about %3 %4?")
                     .arg(quote.amountFrom, quote.from.ticker.toUpper(), quote.amountTo, quote.to.ticker.toUpper()));
-        box.setInformativeText(QString("Exchange: %1 (KYC %2)\nYou get the coins at: %3")
-                               .arg(quote.exchange, kycRatingToString(quote.kycRating),
-                                    receiveInWallet ? QString("your %1 wallet in Biscuit").arg(quote.to.displayName())
+        box.setInformativeText(QString("Exchange: %1 (no KYC)\nYou get the coins at: %2")
+                               .arg(quote.exchange,
+                                    receiveInWallet ? QString("your %1 wallet in Biscuit").arg(quote.to.ticker.toUpper())
                                                     : payout));
         box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         if (box.exec() != QMessageBox::Yes) {
