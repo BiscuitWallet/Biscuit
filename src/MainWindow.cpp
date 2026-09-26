@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: The Monero Project
 
 #include "MainWindow.h"
+
+#include <QGuiApplication>
+#include <QStyleHints>
 #include "ui_MainWindow.h"
 
 #include "Amount.h"
+#include "utils/Appearance.h"
 #include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinSetupDialog.h"
@@ -194,6 +198,17 @@ void MainWindow::initStatusBar() {
     m_statusBtnSeed = new StatusBarButton(icons()->icon("seed.png"), "Seed", this);
     connect(m_statusBtnSeed, &StatusBarButton::clicked, this, &MainWindow::showSeedDialog);
     this->statusBar()->addPermanentWidget(m_statusBtnSeed);
+
+    // Biscuit: light / dark appearance in one click.
+    auto *appearanceButton = new StatusBarButton(Appearance::toggleIcon(), "Dark mode", this);
+    auto updateAppearanceButton = [appearanceButton] {
+        appearanceButton->setIcon(Appearance::toggleIcon());
+        appearanceButton->setToolTip(Appearance::isDark() ? "Light mode" : "Dark mode");
+    };
+    updateAppearanceButton();
+    connect(appearanceButton, &StatusBarButton::clicked, this, [] { Appearance::toggle(); });
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, appearanceButton, updateAppearanceButton);
+    this->statusBar()->addPermanentWidget(appearanceButton);
 
     m_statusBtnProxySettings = new StatusBarButton(icons()->icon("tor_logo_disabled.png"), "Proxy settings", this);
     connect(m_statusBtnProxySettings, &StatusBarButton::clicked, this, &MainWindow::menuProxySettingsClicked);

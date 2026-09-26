@@ -19,6 +19,7 @@
 #include "libwalletqt/Wallet.h"
 #include "utils/Icons.h"
 #include "utils/NetworkManager.h"
+#include "utils/Appearance.h"
 #include "utils/os/tails.h"
 #include "utils/os/whonix.h"
 #include "utils/TorManager.h"
@@ -48,6 +49,7 @@ WindowManager::WindowManager(QObject *parent)
     this->buildTrayMenu();
     m_tray->setVisible(conf()->get(Config::showTrayIcon).toBool());
 
+    Appearance::apply();   // Biscuit: light / dark, before any window
     this->initSkins();
     this->patchMacStylesheet();
 

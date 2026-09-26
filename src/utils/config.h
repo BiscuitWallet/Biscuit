@@ -25,6 +25,7 @@ public:
         warnOnStagenet,
         warnOnTestnet,
         systemTorNotice,
+        appearance,
         warnOnKiImport,
 
         homeWidget,
