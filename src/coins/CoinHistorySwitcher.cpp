@@ -3,7 +3,6 @@
 
 #include "CoinHistorySwitcher.h"
 
-#include <QComboBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -13,6 +12,7 @@
 #include <QVBoxLayout>
 
 #include "Amount.h"
+#include "CoinPicker.h"
 #include "CoinVault.h"
 #include "CoinWallet.h"
 #include "libwalletqt/TransactionHistory.h"
@@ -60,16 +60,10 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    auto *top = new QHBoxLayout;
-    top->addWidget(new QLabel("Show", this));
-    m_filter = new QComboBox(this);
-    m_filter->addItem("All coins");
-    m_filter->addItem(QIcon(":/assets/images/appicons/monero.png"), "Monero");
-    m_filter->addItem(icons()->icon("bitcoin.png"), "Bitcoin");
-    m_filter->addItem(icons()->icon("litecoin.png"), "Litecoin");
-    top->addWidget(m_filter);
-    top->addStretch();
-    layout->addLayout(top);
+    m_filter = new CoinPicker(this);
+    m_filter->addCoin(QIcon(), "All coins");
+    addWalletCoins(m_filter);
+    layout->addWidget(m_filter);
 
     m_all = makeTree(true);
     m_btc = makeTree(false);
@@ -81,7 +75,7 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
     m_pages->addWidget(m_ltc);
     layout->addWidget(m_pages);
 
-    connect(m_filter, &QComboBox::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    connect(m_filter, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
     connect(m_wallet->history(), &TransactionHistory::refreshFinished, this, &CoinHistorySwitcher::refresh);
     connect(m_vault, &CoinVault::unlocked, this, [this] {
         for (CoinWallet *w : {m_vault->bitcoin(), m_vault->litecoin()}) {

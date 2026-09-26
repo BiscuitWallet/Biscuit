@@ -16,12 +16,14 @@ class QLabel;
 class QPushButton;
 class Wallet;
 
+namespace biscuit::coins { class CoinSendController; }
+
 namespace Ui {
-    class SwapWidget;
+class SwapWidget;
 }
 
-// Swap tab: XMR <-> other coins with an external address, in both directions.
-// One side of a swap is always XMR from or to this wallet.
+// Swap tab: exchanges between XMR, BTC and LTC through Trocador. Coins are
+// received (and refunded) to this wallet by default, or to any address.
 class SwapWidget : public QWidget
 {
     Q_OBJECT
@@ -59,6 +61,11 @@ private:
     void clearOffers();
     void setBusy(bool busy, const QString &status = {});
     QString newWalletAddress(const QString &label);
+    // Bitcoin or Litecoin address of this wallet for `asset`; sets the BTC/LTC
+    // seed up or unlocks it first if needed. Empty if not available (the user
+    // was told why, or cancelled).
+    QString coinWalletAddress(const biscuit::swap::Asset &asset);
+    void validateTypedAddresses(QList<QPair<biscuit::swap::Asset, QString>> addresses, std::function<void()> done);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);
     void sendDeposit(const biscuit::swap::Trade &trade);
@@ -66,6 +73,7 @@ private:
     QScopedPointer<Ui::SwapWidget> ui;
     QPointer<Wallet> m_wallet;
     biscuit::swap::SwapManager *m_manager;
+    biscuit::coins::CoinSendController *m_coins;
     QList<biscuit::swap::Quote> m_quotes;
     bool m_updating = false;
     InfoFrame *m_torNotice = nullptr;

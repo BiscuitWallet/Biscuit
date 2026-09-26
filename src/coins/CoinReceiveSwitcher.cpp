@@ -3,7 +3,6 @@
 
 #include "CoinReceiveSwitcher.h"
 
-#include <QComboBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -12,6 +11,7 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
+#include "CoinPicker.h"
 #include "CoinSetupDialog.h"
 #include "CoinVault.h"
 #include "CoinWallet.h"
@@ -28,15 +28,9 @@ CoinReceiveSwitcher::CoinReceiveSwitcher(Wallet *wallet, QWidget *moneroPage, QW
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    auto *top = new QHBoxLayout;
-    top->addWidget(new QLabel("Receive", this));
-    m_coin = new QComboBox(this);
-    m_coin->addItem(QIcon(":/assets/images/appicons/monero.png"), "Monero");
-    m_coin->addItem(icons()->icon("bitcoin.png"), "Bitcoin");
-    m_coin->addItem(icons()->icon("litecoin.png"), "Litecoin");
-    top->addWidget(m_coin);
-    top->addStretch();
-    layout->addLayout(top);
+    m_coin = new CoinPicker(this);
+    addWalletCoins(m_coin);
+    layout->addWidget(m_coin);
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(moneroPage);
@@ -44,7 +38,7 @@ CoinReceiveSwitcher::CoinReceiveSwitcher(Wallet *wallet, QWidget *moneroPage, QW
     m_pages->addWidget(coinPage(litecoin()));
     layout->addWidget(m_pages);
 
-    connect(m_coin, &QComboBox::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    connect(m_coin, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
     connect(m_vault, &CoinVault::unlocked, this, [this] {
         for (CoinWallet *w : {m_vault->bitcoin(), m_vault->litecoin()}) {
             connect(w, &CoinWallet::updated, this, &CoinReceiveSwitcher::refresh);

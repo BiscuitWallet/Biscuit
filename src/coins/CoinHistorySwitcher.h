@@ -7,12 +7,13 @@
 #include <QPointer>
 #include <QWidget>
 
-class QComboBox;
 class QStackedWidget;
 class QTreeWidget;
 class Wallet;
 
 namespace biscuit::coins {
+
+class CoinPicker;
 
 class CoinVault;
 struct CoinParams;
@@ -33,7 +34,7 @@ private:
 
     QPointer<Wallet> m_wallet;
     QPointer<CoinVault> m_vault;
-    QComboBox *m_filter;
+    CoinPicker *m_filter;
     QStackedWidget *m_pages;
     QTreeWidget *m_all;
     QTreeWidget *m_btc;

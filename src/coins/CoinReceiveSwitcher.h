@@ -7,7 +7,6 @@
 #include <QPointer>
 #include <QWidget>
 
-class QComboBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -16,10 +15,11 @@ class Wallet;
 
 namespace biscuit::coins {
 
+class CoinPicker;
 class CoinVault;
 struct CoinParams;
 
-// Receive tab of the unified wallet: a coin selector on top of Feather's
+// Receive tab of the unified wallet: coin buttons on top of Feather's
 // Monero receive page and one page per Bitcoin-like coin.
 class CoinReceiveSwitcher : public QWidget
 {
@@ -33,7 +33,7 @@ private:
     void refresh();
 
     QPointer<CoinVault> m_vault;
-    QComboBox *m_coin;
+    CoinPicker *m_coin;
     QStackedWidget *m_pages;
 
     struct CoinWidgets {

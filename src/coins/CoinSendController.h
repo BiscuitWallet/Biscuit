@@ -49,12 +49,14 @@ public:
     void send(QWidget *parent, const CoinParams &params, const QString &address, const QString &amountText,
               int targetBlocks);
 
+    // Makes sure Bitcoin/Litecoin are set up and unlocked, asking the user if needed.
+    // Also used by Swap to receive into this wallet.
+    bool ensureReady(QWidget *parent);
+
 signals:
     void sent(const QString &txid);
 
 private:
-    // Makes sure Bitcoin/Litecoin are set up and unlocked, asking the user if needed.
-    bool ensureReady(QWidget *parent);
 
     QPointer<Wallet> m_wallet;
     QPointer<CoinVault> m_vault;
