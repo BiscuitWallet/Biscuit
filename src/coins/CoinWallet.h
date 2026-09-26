@@ -81,6 +81,7 @@ private:
     void connectToServer();
     void onReady();
     void onFailed(const QString &reason);
+    void onRequestError(const QString &error);
     void onNotification(const QString &method, const QJsonArray &params);
     void scanNext();
     void fetchMissingTransactions(std::function<void()> then);

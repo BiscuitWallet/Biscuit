@@ -127,6 +127,17 @@ void CoinWallet::connectToServer() {
     m_client->connectToServer(server);
 }
 
+// A request answered with an error by a connected server would leave the
+// synchronization unfinished: drop that server and synchronize with another.
+// (When the connection itself failed, onFailed() already handles it.)
+void CoinWallet::onRequestError(const QString &error) {
+    if (!m_client->isReady()) {
+        return;
+    }
+    m_client->disconnectFromServer();
+    onFailed("Server error: " + error);
+}
+
 void CoinWallet::onFailed(const QString &reason) {
     qWarning() << params().ticker << "Electrum:" << reason;
     setStatus(Status::Disconnected);
@@ -179,7 +190,8 @@ void CoinWallet::scanNext() {
         m_client->call("blockchain.scripthash.get_history", {scriptHash(ref)},
                        [this, ref](const QJsonValue &result, const QString &error) {
             if (!error.isEmpty()) {
-                return;   // the connection failed, onFailed() retries later
+                onRequestError(error);
+                return;
             }
             const QJsonArray items = result.toArray();
             for (const QJsonValue &v : items) {
@@ -207,6 +219,7 @@ void CoinWallet::fetchMissingTransactions(std::function<void()> then) {
     for (const QString &txid : missing) {
         m_client->call("blockchain.transaction.get", {txid}, [this, txid, remaining, then](const QJsonValue &result, const QString &error) {
             if (!error.isEmpty()) {
+                onRequestError(error);
                 return;
             }
             // The txid is recomputed from the data: a server cannot swap transactions.
@@ -235,6 +248,7 @@ void CoinWallet::fetchBlockTimes(std::function<void()> then) {
     for (int height : missing) {
         m_client->call("blockchain.block.header", {height}, [this, height, remaining, then](const QJsonValue &result, const QString &error) {
             if (!error.isEmpty()) {
+                onRequestError(error);
                 return;
             }
             // 80-byte header; the time is the little-endian uint32 at offset 68.

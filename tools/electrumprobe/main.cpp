@@ -5,15 +5,22 @@
 // Usage: electrumprobe host:port [host:port ...]
 // Prints the server version, the network (from the genesis block hash) and
 // the fee estimate.
+//        electrumprobe address btc|ltc <address> host:port
+// Prints the balance and history the server has for one address.
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTimer>
 
 #include <algorithm>
 #include <cstdio>
 
+#include "Addresses.h"
 #include "Bip39.h"
+#include "Electrum.h"
 #include "CoinWallet.h"
 #include "ElectrumClient.h"
 
@@ -58,8 +65,54 @@ int syncMode(QCoreApplication &app, const QString &coin, const QString &mnemonic
     return app.exec();
 }
 
+int addressMode(QCoreApplication &app, const QString &coin, const QString &address, const QString &hostPort) {
+    const auto &params = coin == "ltc" ? litecoin() : bitcoin();
+    const auto script = addressToScriptPubKey(address, params);
+    if (!script) {
+        std::printf("not a valid %s address\n", qPrintable(params.name));
+        return 1;
+    }
+    const QString hash = electrumScriptHash(*script);
+    ElectrumClient::PinStore pins;
+    auto *client = new ElectrumClient(&app);
+    client->setPinStore(&pins);
+    QObject::connect(client, &ElectrumClient::failed, &app, [&app](const QString &reason) {
+        std::printf("FAILED: %s\n", qPrintable(reason));
+        app.quit();
+    });
+    QObject::connect(client, &ElectrumClient::ready, client, [client, hash, &app] {
+        client->call("blockchain.scripthash.get_balance", {hash}, [client, hash, &app](const QJsonValue &b, const QString &err) {
+            std::printf("balance: %s\n", err.isEmpty() ? qPrintable(QString::fromUtf8(QJsonDocument(b.toObject()).toJson(QJsonDocument::Compact)))
+                                                      : qPrintable(err));
+            client->call("blockchain.scripthash.get_history", {hash}, [client, &app](const QJsonValue &h, const QString &err2) {
+                std::printf("history: %s\n", err2.isEmpty() ? qPrintable(QString::fromUtf8(QJsonDocument(h.toArray()).toJson(QJsonDocument::Compact)))
+                                                           : qPrintable(err2));
+                const QString txid = h.toArray().first().toObject().value("tx_hash").toString();
+                if (txid.isEmpty()) { app.quit(); return; }
+                // Same check as the wallet: does Biscuit's parser read this transaction?
+                client->call("blockchain.transaction.get", {txid}, [txid, &app](const QJsonValue &raw, const QString &err3) {
+                    const QString hex = raw.toString();
+                    std::printf("raw tx (%lld bytes): %s\n", (long long)hex.size() / 2, err3.isEmpty() ? qPrintable(hex.left(240)) : qPrintable(err3));
+                    const auto parsed = electrum::parseTransaction(hex);
+                    if (!parsed) std::printf("PARSE FAILED\n");
+                    else std::printf("parsed txid %s (%s), %lld inputs, %lld outputs\n", qPrintable(parsed->txid),
+                                     parsed->txid == txid ? "matches" : "MISMATCH", (long long)parsed->inputs.size(), (long long)parsed->outputs.size());
+                    std::fflush(stdout);
+                    app.quit();
+                });
+            });
+        });
+    });
+    client->connectToServer({hostPort.section(':', 0, 0), quint16(hostPort.section(':', 1, 1).toUInt()), true});
+    QTimer::singleShot(60000, &app, &QCoreApplication::quit);
+    return app.exec();
+}
+
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
+    if (app.arguments().value(1) == "address") {
+        return addressMode(app, app.arguments().value(2), app.arguments().value(3), app.arguments().value(4));
+    }
     if (app.arguments().value(1) == "sync") {
         return syncMode(app, app.arguments().value(2), app.arguments().value(3));
     }
