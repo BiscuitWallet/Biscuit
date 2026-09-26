@@ -55,6 +55,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QLabel" name="label_changeLater">
+     <property name="text">
+      <string>You can change this later in Settings → Network.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QRadioButton" name="radio_useDefaultSettings">
      <property name="text">
       <string>Connect directly (faster)</string>
@@ -65,9 +72,41 @@
     </widget>
    </item>
    <item>
+    <widget class="QLabel" name="label_directSwaps">
+     <property name="text">
+      <string>All swaps are available: exchange swaps (Trocador) and atomic swaps. Nodes, price data and swap partners see your IP address.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>22</number>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: gray;</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QRadioButton" name="radio_tor">
      <property name="text">
-      <string>Connect through Tor (more private, Biscuit starts Tor for you)</string>
+      <string>Connect through Tor (more private)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_torSwaps">
+     <property name="text">
+      <string>Your IP address stays hidden; Biscuit starts Tor for you. Exchange swaps are off, because exchanges refuse Tor connections. Atomic swaps still work, through Tor.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>22</number>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: gray;</string>
      </property>
     </widget>
    </item>
@@ -75,6 +114,22 @@
     <widget class="QRadioButton" name="radio_configureManually">
      <property name="text">
       <string>Custom settings (your own Tor, i2p or SOCKS5 proxy)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_customSwaps">
+     <property name="text">
+      <string>Treated like Tor: exchange swaps are off, atomic swaps work.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>22</number>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: gray;</string>
      </property>
     </widget>
    </item>

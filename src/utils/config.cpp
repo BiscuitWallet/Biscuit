@@ -24,6 +24,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::firstRun, {QS("firstRun"), true}},
         {Config::warnOnStagenet,{QS("warnOnStagenet"), true}},
         {Config::warnOnTestnet,{QS("warnOnTestnet"), true}},
+        {Config::systemTorNotice,{QS("systemTorNotice"), true}},
         {Config::warnOnKiImport,{QS("warnOnKiImport"), true}},
         {Config::logLevel,{QS("logLevel"), 0}},
 

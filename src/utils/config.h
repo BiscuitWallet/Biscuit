@@ -24,6 +24,7 @@ public:
         firstRun,
         warnOnStagenet,
         warnOnTestnet,
+        systemTorNotice,
         warnOnKiImport,
 
         homeWidget,

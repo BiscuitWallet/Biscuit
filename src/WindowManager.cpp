@@ -133,6 +133,20 @@ void WindowManager::restartApplication(const QString &binaryFilename) {
 }
 
 void WindowManager::startupWarning() {
+    // Biscuit: on Tails or Whonix everything already goes through Tor, so the
+    // Tor question of the first launch is skipped. Say once what it means.
+    if ((TailsOS::detect() || WhonixOS::detect()) && conf()->get(Config::systemTorNotice).toBool()) {
+        const QString system = TailsOS::detect() ? "Tails" : "Whonix";
+        QMessageBox box;
+        box.setWindowTitle("Biscuit uses Tor");
+        box.setIcon(QMessageBox::Information);
+        box.setText(QString("It seems that you use %1: Biscuit connects through its Tor.").arg(system));
+        box.setInformativeText("Exchange swaps (Trocador) are not available, because exchanges refuse Tor "
+                               "connections. Atomic swaps work, through Tor. Everything else works as usual.");
+        box.exec();
+        conf()->set(Config::systemTorNotice, false);
+    }
+
     // Stagenet / Testnet
     auto worthlessWarning = QString("Biscuit is currently running in %1 mode. This is meant "
                                     "for developers only. Your coins are WORTHLESS.");
