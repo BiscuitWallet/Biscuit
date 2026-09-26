@@ -205,6 +205,7 @@ bool CoinVault::addEntry(const QString &id, const QString &name, bool mainSeed, 
     auto *w = new CoinWallet(std::move(*account), cache, this);
     connect(w, &CoinWallet::cacheChanged, this, &CoinVault::scheduleSave);
     connect(w, &CoinWallet::updated, this, &CoinVault::walletUpdated);
+    connect(w, &CoinWallet::statusChanged, this, &CoinVault::walletUpdated);
     m_entries.append({id, name, mainSeed, w});
     return true;
 }

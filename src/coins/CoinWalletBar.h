@@ -9,6 +9,7 @@
 
 class QButtonGroup;
 class QHBoxLayout;
+class QLabel;
 
 namespace biscuit::coins {
 
@@ -16,7 +17,7 @@ class CoinVault;
 struct CoinParams;
 
 // The Bitcoin (or Litecoin) wallets of this wallet as buttons, the selected
-// one checked, and "+ Add" to add another one from its seed or a new seed.
+// one checked, and "Add wallet" to add another one from its seed or a new seed.
 // Right-click on an added wallet to remove it. Hidden while locked.
 class CoinWalletBar : public QWidget
 {
@@ -27,12 +28,15 @@ public:
 
 private:
     void rebuild();
+    void updateBalances();
+    QString format(quint64 amount) const;
     void confirmRemove(const QString &id, const QString &name);
 
     QPointer<CoinVault> m_vault;
     const CoinParams &m_params;
     QHBoxLayout *m_layout;
     QButtonGroup *m_group;
+    QPointer<QLabel> m_balance;
 };
 
 }

@@ -31,18 +31,41 @@ CoinWalletBar::CoinWalletBar(CoinVault *vault, const CoinParams &params, QWidget
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged}) {
         connect(m_vault, signal, this, &CoinWalletBar::rebuild);
     }
-    // Balances in the tooltips.
-    connect(m_vault, &CoinVault::walletUpdated, this, [this] {
-        const auto entries = m_vault->wallets(m_params);
-        for (QAbstractButton *b : m_group->buttons()) {
-            const int i = m_group->id(b);
-            if (i >= 0 && i < entries.size()) {
-                b->setToolTip(QString("%1 %2").arg(swap::amount::fromAtomic(entries.at(i).wallet->balance().total(),
-                                                                             m_params.decimals), m_params.ticker));
-            }
-        }
-    });
+    connect(m_vault, &CoinVault::walletUpdated, this, &CoinWalletBar::updateBalances);
     rebuild();
+}
+
+QString CoinWalletBar::format(quint64 amount) const {
+    return QString("%1 %2").arg(swap::amount::fromAtomic(amount, m_params.decimals), m_params.ticker);
+}
+
+// Each button shows its wallet's balance; on the right, the selected wallet
+// in detail (pending incoming coins, synchronization).
+void CoinWalletBar::updateBalances() {
+    if (!m_vault || !m_vault->isUnlocked() || !m_balance) {
+        return;
+    }
+    const auto entries = m_vault->wallets(m_params);
+    for (QAbstractButton *b : m_group->buttons()) {
+        const int i = m_group->id(b);
+        if (i >= 0 && i < entries.size()) {
+            b->setText(QString("%1 · %2").arg(entries.at(i).name, format(entries.at(i).wallet->balance().total())));
+        }
+    }
+    CoinWallet *selected = m_vault->wallet(m_params);
+    if (!selected) {
+        m_balance->clear();
+        return;
+    }
+    const auto balance = selected->balance();
+    QString text = QString("Balance: <b>%1</b>").arg(format(balance.total()));
+    if (balance.unconfirmed > 0) {
+        text += QString(" (%1 unconfirmed)").arg(format(balance.unconfirmed));
+    }
+    if (selected->status() != CoinWallet::Status::Synchronized) {
+        text += " · <span style=\"color: gray;\">Synchronizing…</span>";
+    }
+    m_balance->setText(text);
 }
 
 void CoinWalletBar::rebuild() {
@@ -102,6 +125,10 @@ void CoinWalletBar::rebuild() {
     m_layout->addSpacing(12);
     m_layout->addWidget(add);
     m_layout->addStretch();
+    m_balance = new QLabel(this);
+    m_balance->setTextFormat(Qt::RichText);
+    m_layout->addWidget(m_balance);
+    updateBalances();
 }
 
 void CoinWalletBar::confirmRemove(const QString &id, const QString &name) {
