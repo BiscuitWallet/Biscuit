@@ -62,6 +62,7 @@ private:
     void onMax();
     void updateWalletRows();
     void showOffers();
+    void showOffersRows(bool visible);
     void showOffersMenu(const QPoint &pos);
     void setBusy(bool busy, const QString &status = {});
     QString newWalletAddress(const QString &label);

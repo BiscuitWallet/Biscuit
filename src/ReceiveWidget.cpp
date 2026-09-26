@@ -34,6 +34,11 @@ ReceiveWidget::ReceiveWidget(Wallet *wallet, QWidget *parent)
         this->updateQrCode();
     });
     connect(m_model, &SubaddressModel::modelReset, [this](){
+        // Biscuit: without a selection, show the newest address in the list,
+        // so its QR code is there right away.
+        if (!ui->addresses->currentIndex().isValid() && m_proxyModel->rowCount() > 0) {
+            ui->addresses->setCurrentIndex(m_proxyModel->index(m_proxyModel->rowCount() - 1, SubaddressModel::Address));
+        }
         this->updateQrCode();
     });
 

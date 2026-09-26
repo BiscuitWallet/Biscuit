@@ -25,7 +25,7 @@
 namespace biscuit::coins {
 
 namespace {
-    enum Column { ColDate = 0, ColCoin, ColAmount, ColStatus, ColTx };
+    enum Column { ColDate = 0, ColCoin, ColWallet, ColAmount, ColStatus, ColTx };
     enum Page { PageAll = 0, PageMonero, PageBitcoin, PageLitecoin };
     constexpr int TickerRole = Qt::UserRole;
     constexpr int SortRole = Qt::UserRole + 1;
@@ -94,8 +94,9 @@ QTreeWidget *CoinHistorySwitcher::makeTree(bool withCoinColumn) {
     auto *tree = new QTreeWidget(this);
     tree->setRootIsDecorated(false);
     tree->setUniformRowHeights(true);
-    tree->setHeaderLabels({"Date", "Coin", "Amount", "Status", "Transaction"});
+    tree->setHeaderLabels({"Date", "Coin", "Wallet", "Amount", "Status", "Transaction"});
     tree->setColumnHidden(ColCoin, !withCoinColumn);
+    tree->setColumnHidden(ColWallet, true);   // shown in "All coins" when a coin has several wallets
     tree->header()->setSectionResizeMode(ColTx, QHeaderView::Stretch);
     tree->header()->setStretchLastSection(false);
     tree->setSortingEnabled(true);
@@ -125,7 +126,6 @@ void CoinHistorySwitcher::fillCoinTree(QTreeWidget *tree, const CoinParams &para
     const QString selectedId = m_vault->selectedId(params);
     for (const auto &entry : entries) {
         CoinWallet *coin = entry.wallet;
-        const QString coinLabel = entries.size() > 1 ? QString("%1 · %2").arg(params.ticker, entry.name) : params.ticker;
         const int tip = coin->blockHeight();
         for (const auto &e : coin->history()) {
             const QDateTime time = coin->transactionTime(e.txid);
@@ -141,7 +141,8 @@ void CoinHistorySwitcher::fillCoinTree(QTreeWidget *tree, const CoinParams &para
                 item->setData(ColDate, SortRole, time.isValid() ? time.toSecsSinceEpoch() : std::numeric_limits<qint64>::max());
                 item->setData(ColDate, TickerRole, params.ticker);
                 item->setIcon(ColCoin, icons()->icon(params == bitcoin() ? "bitcoin.png" : "litecoin.png"));
-                item->setText(ColCoin, coinLabel);
+                item->setText(ColCoin, params.ticker);
+                item->setText(ColWallet, entry.name);
                 item->setText(ColAmount, amount);
                 item->setTextAlignment(ColAmount, Qt::AlignRight | Qt::AlignVCenter);
                 item->setText(ColStatus, statusText(e.height <= 0, false, confirmations, 6));
@@ -175,6 +176,8 @@ void CoinHistorySwitcher::refresh() {
     }
     fillCoinTree(m_btc, bitcoin());
     fillCoinTree(m_ltc, litecoin());
+    m_all->setColumnHidden(ColWallet, !(m_vault->isUnlocked()
+                                        && (m_vault->wallets(bitcoin()).size() > 1 || m_vault->wallets(litecoin()).size() > 1)));
 
     for (QTreeWidget *t : {m_all, m_btc, m_ltc}) {
         t->setSortingEnabled(true);

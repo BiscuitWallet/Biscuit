@@ -85,6 +85,7 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         }
     });
     ui->setupUi(this);
+    showOffersRows(false);   // until the first offers arrive
     // Atomic swaps (BTC -> XMR, public makers) sit next to the exchange swaps.
     m_atomicTab = new AtomicSwapWidget(this);
     ui->tabWidget->insertTab(1, m_atomicTab, "Atomic swap (BTC → XMR)");
@@ -411,6 +412,7 @@ void SwapWidget::updateForm() {
 void SwapWidget::clearOffers() {
     m_quotes.clear();
     ui->tree_offers->clear();
+    showOffersRows(false);
     ui->label_estimate->clear();
     ui->btn_create->setEnabled(false);
 }
@@ -469,7 +471,16 @@ void SwapWidget::onGetOffers() {
 
 // The offers with their value and cost compared with the market (redrawn
 // when prices change, the selected offer is kept).
+// The offers table, the commission note and "Create swap" appear only once
+// there are offers: before that, the form stays short.
+void SwapWidget::showOffersRows(bool visible) {
+    ui->formLayout->setRowVisible(ui->tree_offers, visible);
+    ui->formLayout->setRowVisible(ui->label_transparency, visible);
+    ui->btn_create->setVisible(visible);
+}
+
 void SwapWidget::showOffers() {
+    showOffersRows(!m_quotes.isEmpty());
     const QTreeWidgetItem *current = ui->tree_offers->currentItem();
     const int selected = current ? current->data(OfferExchange, QuoteIndexRole).toInt() : 0;
     ui->tree_offers->clear();

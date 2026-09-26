@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: The Monero Project
 
 #include "CCSWidget.h"
+
+#include <QTextDocumentFragment>
 #include "ui_CCSWidget.h"
 
 #include <QTableWidget>
@@ -46,7 +48,8 @@ CCSWidget::CCSWidget(QWidget *parent)
                 c->address = obj.value("address").toString();
                 c->author = obj.value("author").toString();
                 c->date = obj.value("date").toString();
-                c->title = obj.value("title").toString();
+                // Titles come HTML-escaped ("XMR&lt;&gt;BTC"): show them as text.
+                c->title = QTextDocumentFragment::fromHtml(obj.value("title").toString()).toPlainText();
                 c->target_amount = obj.value("target_amount").toDouble();
                 c->raised_amount = obj.value("raised_amount").toDouble();
                 c->percentage_funded = obj.value("percentage_funded").toDouble();
