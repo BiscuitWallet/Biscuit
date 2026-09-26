@@ -76,6 +76,14 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     , m_manager(new SwapManager(wallet, this))
     , m_coins(new biscuit::coins::CoinSendController(wallet, this))
 {
+    // A Bitcoin/Litecoin deposit was sent: remember it in the trade.
+    connect(m_coins, &biscuit::coins::CoinSendController::sent, this, [this](const QString &txid) {
+        if (!m_pendingDepositTrade.isEmpty()) {
+            m_manager->setDepositTx(m_pendingDepositProvider, m_pendingDepositTrade, txid);
+            m_pendingDepositProvider.clear();
+            m_pendingDepositTrade.clear();
+        }
+    });
     ui->setupUi(this);
     // Atomic swaps (BTC -> XMR, public makers) sit next to the exchange swaps.
     m_atomicTab = new AtomicSwapWidget(this);
@@ -611,6 +619,41 @@ void SwapWidget::updateWalletRows() {
     ui->formLayout->setRowVisible(m_toWalletRow, unlocked && receiveInWallet && (to == btc || to == ltc));
 }
 
+// Bitcoin/Litecoin deposit from the selected wallet, through the same path and
+// confirmation as the Send tab.
+void SwapWidget::sendCoinDeposit(const Trade &trade) {
+    using namespace biscuit::coins;
+    const CoinParams *params = trade.from == Asset{"btc", "Mainnet"} ? &bitcoin()
+                             : trade.from == Asset{"ltc", "Mainnet"} ? &litecoin() : nullptr;
+    CoinVault *vault = CoinVault::forWallet(m_wallet);
+    if (!params || !vault) {
+        return;
+    }
+    if (!m_coins->ensureReady(this) && !vault->isUnlocked()) {
+        return;
+    }
+    const auto atomic = amount::toAtomic(trade.amountFrom, params->decimals);
+    if (!atomic || *atomic == 0) {
+        Utils::showError(this, "Invalid amount", "The swap amount cannot be sent from this wallet.");
+        return;
+    }
+    // A swap of the whole balance (Max): if the network fee went up since, the
+    // exact amount no longer fits. Floating rate: send everything instead.
+    QString amountText = amount::fromAtomic(*atomic, params->decimals);
+    CoinWallet *coin = vault->wallet(*params);
+    if (trade.rateType != RateType::Fixed && coin->status() == CoinWallet::Status::Synchronized) {
+        QString error;
+        const auto all = coin->planSend(trade.depositAddress, 0, coin->feeRate(6), true, &error);
+        if (all && *atomic >= all->amount) {
+            amountText = "all";
+        }
+    }
+
+    m_pendingDepositProvider = trade.providerId;
+    m_pendingDepositTrade = trade.tradeId;
+    m_coins->send(this, *params, trade.depositAddress, amountText, 6);
+}
+
 QString SwapWidget::coinWalletLabel(const Asset &asset) const {
     using namespace biscuit::coins;
     const CoinParams *params = asset == Asset{"btc", "Mainnet"} ? &bitcoin()
@@ -813,6 +856,10 @@ void SwapWidget::showTrade(const QString &providerId, const QString &tradeId) {
 void SwapWidget::sendDeposit(const Trade &trade) {
     if (demo::isDemoAddress(trade.depositAddress)) {
         Utils::showInfo(this, "Demo swap", "This is a simulated swap: there is nothing to send.");
+        return;
+    }
+    if (trade.from != xmr()) {
+        sendCoinDeposit(trade);
         return;
     }
     if (!WalletManager::addressValid(trade.depositAddress, constants::networkType)) {

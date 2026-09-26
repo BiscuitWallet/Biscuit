@@ -74,6 +74,7 @@ private:
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);
     void sendDeposit(const biscuit::swap::Trade &trade);
+    void sendCoinDeposit(const biscuit::swap::Trade &trade);
 
     QScopedPointer<Ui::SwapWidget> ui;
     QPointer<Wallet> m_wallet;
