@@ -8,7 +8,7 @@
 
 class QComboBox;
 class QLabel;
-namespace biscuit::coins { class CoinSendController; struct CoinParams; }
+namespace biscuit::coins { class CoinPicker; class CoinSendController; struct CoinParams; }
 
 class Wallet;
 
@@ -62,7 +62,9 @@ private:
     void updateCoinFeeLabel();
 
     biscuit::coins::CoinSendController *m_coinSend = nullptr;
-    const biscuit::coins::CoinParams *m_coin = nullptr;
+    const biscuit::coins::CoinParams *m_coin = nullptr;   // nullptr = Monero
+    biscuit::coins::CoinPicker *m_coinPicker = nullptr;
+    QList<QWidget *> m_walletBars;                        // Bitcoin, Litecoin
     QLabel *m_coinHint = nullptr;
     QLabel *m_coinUnit = nullptr;
     QLabel *m_coinFeeTitle = nullptr;

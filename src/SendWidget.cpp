@@ -8,7 +8,10 @@
 #include <QHBoxLayout>
 #include <QLabel>
 
+#include "coins/CoinPicker.h"
 #include "coins/CoinSendController.h"
+#include "coins/CoinWalletBar.h"
+#include "coins/core/CoinParams.h"
 #include "coins/CoinVault.h"
 #include "coins/CoinWallet.h"
 
@@ -85,6 +88,23 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     m_coinSend = new biscuit::coins::CoinSendController(m_wallet, this);
     connect(m_coinSend, &biscuit::coins::CoinSendController::sent, this, &SendWidget::clearFields);
 
+    // The coin to send, as in Receive; for Bitcoin and Litecoin, the wallet it
+    // is sent from. Pasting an address of another coin switches to that coin.
+    m_coinPicker = new biscuit::coins::CoinPicker(this);
+    biscuit::coins::addWalletCoins(m_coinPicker);
+    ui->formLayout->insertRow(0, m_coinPicker);
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+        auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, this);
+        ui->formLayout->insertRow(1 + m_walletBars.size(), bar);
+        m_walletBars << bar;
+    }
+    connect(m_coinPicker, &biscuit::coins::CoinPicker::currentIndexChanged, this, &SendWidget::updateCoinMode);
+    for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
+                        &biscuit::coins::CoinVault::walletsChanged}) {
+        connect(vault, signal, this, &SendWidget::updateCoinMode);
+    }
+
     m_coinHint = new QLabel(this);
     m_coinHint->setStyleSheet("color: gray;");
     int row = 0;
@@ -116,8 +136,28 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
 
 void SendWidget::updateCoinMode() {
     const auto destination = biscuit::coins::detectCoinDestination(ui->lineAddress->text());
-    m_coin = destination ? destination->params : nullptr;
+    // A pasted address selects its coin (Bitcoin, Litecoin or Monero).
+    int detected = -1;
+    if (destination) {
+        detected = *destination->params == biscuit::coins::bitcoin() ? 1 : 2;
+    } else if (WalletManager::addressValid(ui->lineAddress->text().trimmed(), constants::networkType)) {
+        detected = 0;
+    }
+    if (detected >= 0 && m_coinPicker->currentIndex() != detected) {
+        QSignalBlocker blocker(m_coinPicker);
+        m_coinPicker->setCurrentIndex(detected);
+    }
+    const int coinIndex = m_coinPicker->currentIndex();
+    m_coin = coinIndex == 1 ? &biscuit::coins::bitcoin() : coinIndex == 2 ? &biscuit::coins::litecoin() : nullptr;
     const bool coinMode = m_coin != nullptr;
+
+    for (int i = 0; i < m_walletBars.size(); ++i) {
+        // A bar hides itself while Bitcoin/Litecoin are locked or not set up.
+        const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+        ui->formLayout->setRowVisible(m_walletBars.at(i), coinIndex == i + 1 && vault->isUnlocked());
+    }
+    ui->lineAddress->setPlaceholderText(m_coin ? QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1" : "ltc1")
+                                               : QString());
 
     ui->formLayout->setRowVisible(m_coinHint, coinMode);
     ui->formLayout->setRowVisible(m_coinFeeTitle, coinMode);
@@ -131,9 +171,11 @@ void SendWidget::updateCoinMode() {
     ui->check_subtractFeeFromAmount->setVisible(!coinMode && conf()->get(Config::subtractFeeFromAmount).toBool());
 
     if (coinMode) {
-        m_coinHint->setText(QString("%1 address · sent from the %1 wallet of Biscuit").arg(m_coin->name));
+        const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+        m_coinHint->setText(vault->isUnlocked() ? QString("Sent from your %1 wallet \"%2\"").arg(m_coin->ticker, vault->selectedName(*m_coin))
+                                                : QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name));
         m_coinUnit->setText(m_coin->ticker);
-        if (!destination->amount.isEmpty() && ui->lineAmount->text().isEmpty()) {
+        if (destination && !destination->amount.isEmpty() && ui->lineAmount->text().isEmpty()) {
             ui->lineAmount->setText(destination->amount);
         }
         this->updateCoinFeeLabel();
@@ -224,10 +266,12 @@ void SendWidget::scanClicked() {
 }
 
 void SendWidget::sendClicked() {
-    // Biscuit: Bitcoin and Litecoin go through their own wallet.
-    if (const auto destination = biscuit::coins::detectCoinDestination(ui->lineAddress->text())) {
-        m_coinSend->send(this, *destination->params, destination->address, ui->lineAmount->text(),
-                         m_coinFee->currentData().toInt());
+    // Biscuit: Bitcoin and Litecoin go through their own wallet (the address
+    // is checked against the selected coin before anything is sent).
+    if (m_coin) {
+        const auto destination = biscuit::coins::detectCoinDestination(ui->lineAddress->text());
+        const QString address = destination ? destination->address : ui->lineAddress->text().trimmed();
+        m_coinSend->send(this, *m_coin, address, ui->lineAmount->text(), m_coinFee->currentData().toInt());
         return;
     }
 
