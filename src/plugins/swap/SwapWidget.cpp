@@ -224,11 +224,12 @@ void SwapWidget::loadAssets() {
         return;
     }
     // One provider for now. With several, their lists will be merged.
-    providers.first()->supportedAssets([this](const QList<AssetInfo> &assets, const QString &error) {
+    providers.first()->supportedAssets([this](const QList<AssetInfo> &partnerAssets, const QString &error) {
         if (!error.isEmpty()) {
             ui->label_status->setText("Unable to load coins: " + error);
             return;
         }
+        const QList<AssetInfo> assets = walletAssets(partnerAssets);
         m_updating = true;
         for (QComboBox *combo : {ui->combo_from, ui->combo_to}) {
             combo->clear();

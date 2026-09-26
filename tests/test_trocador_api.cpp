@@ -252,6 +252,24 @@ private slots:
         QCOMPARE(coins->at(1).maximum, QString("50000"));
     }
 
+    void onlyTheWalletCoinsAreOffered() {
+        const QByteArray coins = R"json([
+            {"name": "Litecoin (BSC)", "ticker": "ltc", "network": "BEP20", "memo": false, "minimum": 0.08, "maximum": 100},
+            {"name": "Tether", "ticker": "usdt", "network": "ERC20", "memo": false, "minimum": 10, "maximum": 1000},
+            {"name": "Litecoin (Mainnet - not MW)", "ticker": "ltc", "network": "Mainnet", "memo": false, "minimum": 0.08, "maximum": 100},
+            {"name": "Bitcoin (Lightning)", "ticker": "btc", "network": "Lightning", "memo": false, "minimum": 0.0001, "maximum": 1},
+            {"name": "Bitcoin", "ticker": "btc", "network": "Mainnet", "memo": false, "minimum": 0.0001, "maximum": 20},
+            {"name": "Monero", "ticker": "xmr", "network": "Mainnet", "memo": false, "minimum": 0.01, "maximum": 3000}
+        ])json";
+        const auto parsed = trocador::parseCoins(coins, nullptr);
+        QVERIFY(parsed.has_value());
+        const QList<AssetInfo> offered = walletAssets(*parsed);
+        QCOMPARE(offered.size(), 3);
+        QCOMPARE(offered.at(0).asset, Asset({"xmr", "Mainnet"}));
+        QCOMPARE(offered.at(1).asset, Asset({"btc", "Mainnet"}));
+        QCOMPARE(offered.at(2).asset, Asset({"ltc", "Mainnet"}));
+    }
+
     void relayErrorsAreNotTrocadorErrors() {
         QCOMPARE(trocador::parseRelayError(R"({"error":"tor_exit","message":"Not through Tor."})"),
                  QString("Not through Tor."));

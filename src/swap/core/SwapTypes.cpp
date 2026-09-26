@@ -247,4 +247,18 @@ std::optional<Trade> Trade::fromJson(const QJsonObject &obj) {
     return t;
 }
 
+QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets) {
+    QList<AssetInfo> result;
+    for (const char *ticker : {"xmr", "btc", "ltc"}) {
+        const Asset wanted{ticker, "Mainnet"};
+        for (const AssetInfo &info : partnerAssets) {
+            if (info.asset == wanted) {
+                result.append(info);
+                break;
+            }
+        }
+    }
+    return result;
+}
+
 }
