@@ -39,8 +39,8 @@ QString CoinWalletBar::format(quint64 amount) const {
     return QString("%1 %2").arg(swap::amount::fromAtomic(amount, m_params.decimals), m_params.ticker);
 }
 
-// Each button shows its wallet's balance; on the right, the selected wallet
-// in detail (pending incoming coins, synchronization).
+// On the right, the selected wallet's balance in detail (pending incoming
+// coins, synchronization); each button gives its balance as a tooltip.
 void CoinWalletBar::updateBalances() {
     if (!m_vault || !m_vault->isUnlocked() || !m_balance) {
         return;
@@ -49,7 +49,8 @@ void CoinWalletBar::updateBalances() {
     for (QAbstractButton *b : m_group->buttons()) {
         const int i = m_group->id(b);
         if (i >= 0 && i < entries.size()) {
-            b->setText(QString("%1 · %2").arg(entries.at(i).name, format(entries.at(i).wallet->balance().total())));
+            // The name only: the selected wallet's balance is on the right.
+            b->setToolTip(format(entries.at(i).wallet->balance().total()));
         }
     }
     CoinWallet *selected = m_vault->wallet(m_params);
