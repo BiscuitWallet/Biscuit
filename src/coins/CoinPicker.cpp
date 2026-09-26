@@ -3,10 +3,8 @@
 
 #include "CoinPicker.h"
 
-#include <QAbstractButton>
-#include <QButtonGroup>
 #include <QHBoxLayout>
-#include <QToolButton>
+#include <QTabBar>
 
 #include "utils/Icons.h"
 
@@ -14,47 +12,29 @@ namespace biscuit::coins {
 
 CoinPicker::CoinPicker(QWidget *parent)
     : QWidget(parent)
-    , m_group(new QButtonGroup(this))
+    , m_tabs(new QTabBar(this))
 {
+    m_tabs->setDrawBase(false);
+    m_tabs->setExpanding(false);
+    m_tabs->setIconSize(QSize(16, 16));
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(6);
     layout->addStretch();
-    m_group->setExclusive(true);
-    connect(m_group, &QButtonGroup::idToggled, this, [this](int id, bool checked) {
-        if (checked) {
-            emit currentIndexChanged(id);
-        }
-    });
+    layout->addWidget(m_tabs);
+    layout->addStretch();
+    connect(m_tabs, &QTabBar::currentChanged, this, &CoinPicker::currentIndexChanged);
 }
 
 void CoinPicker::addCoin(const QIcon &icon, const QString &name) {
-    auto *button = new QToolButton(this);
-    button->setText(name);
-    button->setIcon(icon);
-    button->setIconSize(QSize(20, 20));
-    button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    button->setCheckable(true);
-    button->setMinimumHeight(32);
-    button->setMinimumWidth(110);
-    button->setCursor(Qt::PointingHandCursor);
-    const int id = m_group->buttons().size();
-    m_group->addButton(button, id);
-    auto *layout = static_cast<QHBoxLayout *>(this->layout());
-    layout->insertWidget(layout->count() - 1, button);   // before the stretch
-    if (id == 0) {
-        button->setChecked(true);
-    }
+    m_tabs->addTab(icon, name);
 }
 
 int CoinPicker::currentIndex() const {
-    return m_group->checkedId();
+    return m_tabs->currentIndex();
 }
 
 void CoinPicker::setCurrentIndex(int index) {
-    if (QAbstractButton *button = m_group->button(index)) {
-        button->setChecked(true);
-    }
+    m_tabs->setCurrentIndex(index);
 }
 
 void addWalletCoins(CoinPicker *picker) {

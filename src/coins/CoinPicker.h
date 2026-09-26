@@ -7,12 +7,12 @@
 #include <QIcon>
 #include <QWidget>
 
-class QButtonGroup;
+class QTabBar;
 
 namespace biscuit::coins {
 
-// A row of buttons, one per coin, exactly one checked: every coin stays in
-// sight, unlike a drop-down list.
+// The coins as a segmented control (same native look as the main tabs):
+// every coin stays in sight, unlike a drop-down list.
 class CoinPicker : public QWidget
 {
     Q_OBJECT
@@ -28,7 +28,7 @@ signals:
     void currentIndexChanged(int index);
 
 private:
-    QButtonGroup *m_group;
+    QTabBar *m_tabs;
 };
 
 // Monero, Bitcoin and Litecoin, in that order.

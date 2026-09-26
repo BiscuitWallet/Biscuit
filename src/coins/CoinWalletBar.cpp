@@ -8,7 +8,7 @@
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
-#include <QToolButton>
+#include <QPushButton>
 
 #include "Amount.h"
 #include "CoinParams.h"
@@ -63,22 +63,21 @@ void CoinWalletBar::rebuild() {
         return;
     }
 
-    m_layout->addWidget(new QLabel("Wallet", this));
+    m_layout->addWidget(new QLabel("Wallet:", this));
     const auto entries = m_vault->wallets(m_params);
     const QString selected = m_vault->selectedId(m_params);
     for (int i = 0; i < entries.size(); ++i) {
         const auto &entry = entries.at(i);
-        auto *button = new QToolButton(this);
-        button->setText(entry.name);
+        auto *button = new QPushButton(entry.name, this);
         button->setCheckable(true);
         button->setChecked(entry.id == selected);
-        button->setMinimumHeight(28);
+        button->setAutoDefault(false);
         button->setToolTip(QString("%1 %2").arg(swap::amount::fromAtomic(entry.wallet->balance().total(), m_params.decimals),
                                                 m_params.ticker));
         m_group->addButton(button, i);
         m_layout->addWidget(button);
         const QString id = entry.id;
-        connect(button, &QToolButton::clicked, this, [this, id] { m_vault->select(m_params, id); });
+        connect(button, &QPushButton::clicked, this, [this, id] { m_vault->select(m_params, id); });
         if (!entry.mainSeed) {
             button->setContextMenuPolicy(Qt::CustomContextMenu);
             connect(button, &QWidget::customContextMenuRequested, this, [this, button, id, name = entry.name](const QPoint &pos) {
@@ -89,9 +88,8 @@ void CoinWalletBar::rebuild() {
         }
     }
 
-    auto *add = new QToolButton(this);
-    add->setText("+ Add");
-    add->setMinimumHeight(28);
+    auto *add = new QPushButton("Add wallet", this);
+    add->setAutoDefault(false);
     add->setToolTip(QString("Add another %1 wallet").arg(m_params.name));
     auto *menu = new QMenu(add);
     menu->addAction("Restore from seed (12 or 24 words)…", this, [this] {
@@ -101,7 +99,7 @@ void CoinWalletBar::rebuild() {
         CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Create, m_params, this).exec();
     });
     add->setMenu(menu);
-    add->setPopupMode(QToolButton::InstantPopup);
+    m_layout->addSpacing(12);
     m_layout->addWidget(add);
     m_layout->addStretch();
 }

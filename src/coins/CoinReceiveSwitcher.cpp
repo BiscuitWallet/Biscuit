@@ -104,8 +104,10 @@ QWidget *CoinReceiveSwitcher::coinPage(const CoinParams &params) {
     auto *withBar = new QWidget(w.state);
     auto *withBarLayout = new QVBoxLayout(withBar);
     withBarLayout->setContentsMargins(0, 0, 0, 0);
+    withBarLayout->setSpacing(16);
     withBarLayout->addWidget(new CoinWalletBar(m_vault, params, withBar));
     withBarLayout->addWidget(page);
+    withBarLayout->addStretch(1);   // everything at the top
     w.state->addWidget(withBar);
 
     m_coinWidgets.append(w);
