@@ -3,7 +3,9 @@
 
 #include "Appearance.h"
 
+#include <QApplication>
 #include <QGuiApplication>
+#include <QPalette>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
@@ -21,7 +23,60 @@ void styleTabs(QTabWidget *tabs, bool centered) {
     tabs->setDocumentMode(true);
 }
 
+namespace {
+    // Biscuit's own palettes: light is a soft ivory, dark a neutral grey.
+    // Set on every widget class, since macOS hands some classes (combo
+    // boxes, text edits, progress bars...) the system's colours otherwise.
+    QPalette makePalette(bool dark) {
+        const QColor window = dark ? QColor("#2b2b2b") : QColor("#f5f3ec");
+        const QColor button = dark ? QColor("#353535") : QColor("#f5f3ec");
+        const QColor base = dark ? QColor("#1f1f1f") : QColor("#fdfcf8");
+        const QColor alternate = dark ? QColor("#262626") : QColor("#f5f3ec");
+        const QColor text = dark ? QColor("#e6e6e6") : QColor("#1e1e1e");
+        const QColor disabledText = dark ? QColor("#7a7a7a") : QColor("#9a978f");
+        QPalette p(button, window);   // derives light, mid, dark and shadow
+        p.setColor(QPalette::Window, window);
+        p.setColor(QPalette::Button, button);
+        p.setColor(QPalette::Base, base);
+        p.setColor(QPalette::AlternateBase, alternate);
+        p.setColor(QPalette::WindowText, text);
+        p.setColor(QPalette::Text, text);
+        p.setColor(QPalette::ButtonText, text);
+        p.setColor(QPalette::BrightText, Qt::white);
+        p.setColor(QPalette::PlaceholderText, dark ? QColor("#8c8c8c") : QColor("#8a877f"));
+        p.setColor(QPalette::ToolTipBase, dark ? QColor("#3a3a3a") : QColor("#fffdf5"));
+        p.setColor(QPalette::ToolTipText, text);
+        p.setColor(QPalette::Highlight, QColor("#2f7bd6"));
+        p.setColor(QPalette::HighlightedText, Qt::white);
+        p.setColor(QPalette::Link, dark ? QColor("#6fb1ff") : QColor("#1a5fb4"));
+        for (auto role : {QPalette::WindowText, QPalette::Text, QPalette::ButtonText}) {
+            p.setColor(QPalette::Disabled, role, disabledText);
+        }
+        return p;
+    }
+
+    bool g_dark = false;
+
+    void applyPalette() {
+        g_dark = QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+        const QPalette palette = makePalette(g_dark);
+        QApplication::setPalette(palette);
+        for (const char *cls : {"QComboBox", "QAbstractItemView", "QListView", "QTreeView", "QTableView", "QHeaderView",
+                                "QLineEdit", "QTextEdit", "QPlainTextEdit", "QAbstractSpinBox", "QProgressBar",
+                                "QMenu", "QMenuBar", "QTabBar", "QPushButton", "QToolButton", "QGroupBox",
+                                "QStatusBar", "QScrollBar", "QCheckBox", "QRadioButton", "QLabel"}) {
+            QApplication::setPalette(palette, cls);
+        }
+    }
+}
+
 void apply() {
+    static bool connected = false;
+    if (!connected) {
+        // The system switching light / dark (when following it) repaints too.
+        QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, qApp, [] { applyPalette(); });
+        connected = true;
+    }
     const QString choice = conf()->get(Config::appearance).toString();
     auto *hints = QGuiApplication::styleHints();
     if (choice == "dark") {
@@ -31,10 +86,11 @@ void apply() {
     } else {
         hints->unsetColorScheme();   // follow the system
     }
+    applyPalette();
 }
 
 bool isDark() {
-    return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+    return g_dark;
 }
 
 void toggle() {
