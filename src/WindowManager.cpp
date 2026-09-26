@@ -330,12 +330,21 @@ void WindowManager::onWalletOpened(Wallet *wallet) {
     // Biscuit: one password for everything. Bitcoin/Litecoin are unlocked with
     // the password that just opened the Monero wallet, which is then forgotten.
     auto *vault = biscuit::coins::CoinVault::forWallet(wallet);
-    if (vault->exists() && !vault->isUnlocked()) {
+    if (!m_pendingCoinMnemonic.isEmpty() && !vault->exists()) {
+        // New wallet: the Bitcoin/Litecoin seed written down in the wizard.
+        QString error;
+        if (!vault->setUp(m_pendingCoinMnemonic, {}, m_pendingPassword, &error)) {
+            Utils::showError(window, "Bitcoin and Litecoin not set up", error,
+                             {"Set them up from the Receive tab, with the 12 words you wrote down."});
+        }
+    } else if (vault->exists() && !vault->isUnlocked()) {
         QString error;
         if (!vault->unlock(m_pendingPassword, &error)) {
             qWarning() << "Biscuit: Bitcoin/Litecoin not unlocked:" << error;
         }
     }
+    m_pendingCoinMnemonic.fill(QChar(' '));
+    m_pendingCoinMnemonic.clear();
     m_pendingPassword.fill(QChar(' '));
     m_pendingPassword.clear();
 }
@@ -376,7 +385,8 @@ bool WindowManager::autoOpenWallet() {
 // ######################## WALLET CREATION ########################
 
 void WindowManager::tryCreateWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage,
-                                    const QString &seedOffset, const QString &subaddressLookahead, bool newWallet) {
+                                    const QString &seedOffset, const QString &subaddressLookahead, bool newWallet,
+                                    const QString &coinMnemonic) {
     m_pendingPassword = password;
     if (Utils::fileExists(path)) {
         this->handleWalletError({nullptr, Utils::ERROR, "Failed to create wallet", QString("File already exists: %1").arg(path)});
@@ -410,6 +420,8 @@ void WindowManager::tryCreateWallet(Seed seed, const QString &path, const QStrin
         wallet->setNewWallet();
     }
 
+    // Only set once this wallet exists, so it can never reach another wallet.
+    m_pendingCoinMnemonic = coinMnemonic;
     this->onWalletOpened(wallet);
 }
 

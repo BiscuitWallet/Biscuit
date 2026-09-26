@@ -37,16 +37,26 @@ namespace {
         }
         return rows.join('\n');
     }
+}
 
-    QPlainTextEdit *wordsView(const QString &mnemonic, QWidget *parent) {
-        auto *view = new QPlainTextEdit(numberedWords(mnemonic), parent);
-        view->setReadOnly(true);
-        QFont mono("Menlo");
-        mono.setStyleHint(QFont::Monospace);
-        view->setFont(mono);
-        view->setMaximumHeight(view->fontMetrics().lineSpacing() * 7);
-        return view;
+QPlainTextEdit *seedWordsView(const QString &mnemonic, QWidget *parent) {
+    auto *view = new QPlainTextEdit(numberedWords(mnemonic), parent);
+    view->setReadOnly(true);
+    QFont mono("Menlo");
+    mono.setStyleHint(QFont::Monospace);
+    view->setFont(mono);
+    view->setMaximumHeight(view->fontMetrics().lineSpacing() * 7);
+    return view;
+}
+
+QList<int> randomWordIndexes(int wordCount, int count) {
+    QList<int> indexes;
+    while (indexes.size() < count) {
+        const int i = QRandomGenerator::global()->bounded(wordCount);
+        if (!indexes.contains(i)) indexes << i;
     }
+    std::sort(indexes.begin(), indexes.end());
+    return indexes;
 }
 
 CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent)
@@ -73,12 +83,7 @@ CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent)
 
     if (mode == Mode::Create) {
         m_mnemonic = bip39::generateMnemonic(12);
-        // Three distinct words to type back.
-        while (m_checkIndexes.size() < 3) {
-            const int i = QRandomGenerator::global()->bounded(12);
-            if (!m_checkIndexes.contains(i)) m_checkIndexes << i;
-        }
-        std::sort(m_checkIndexes.begin(), m_checkIndexes.end());
+        m_checkIndexes = randomWordIndexes(12, 3);
         m_pages->addWidget(pageShowWords());
         m_pages->addWidget(pageVerifyWords());
     } else {
@@ -101,7 +106,7 @@ QWidget *CoinSetupDialog::pageShowWords() {
                              "them can take your coins.", page);
     intro->setWordWrap(true);
     l->addWidget(intro);
-    l->addWidget(wordsView(m_mnemonic, page));
+    l->addWidget(seedWordsView(m_mnemonic, page));
     auto *note = new QLabel("This seed is separate from your Monero seed: back up both.", page);
     note->setWordWrap(true);
     l->addWidget(note);
@@ -239,7 +244,7 @@ void showCoinSeed(CoinVault *vault, QWidget *parent) {
     auto *intro = new QLabel("Never share these words. Anyone who has them can take your Bitcoin and Litecoin.", &dialog);
     intro->setWordWrap(true);
     l->addWidget(intro);
-    l->addWidget(wordsView(seed->first, &dialog));
+    l->addWidget(seedWordsView(seed->first, &dialog));
     if (!seed->second.isEmpty()) {
         l->addWidget(new QLabel("This seed also uses a passphrase.", &dialog));
     }

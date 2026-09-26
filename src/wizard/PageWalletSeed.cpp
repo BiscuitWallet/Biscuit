@@ -139,10 +139,8 @@ void PageWalletSeed::onError() {
 }
 
 int PageWalletSeed::nextId() const {
-    if (m_fields->showSetSeedPassphrasePage) {
-        return WalletWizard::Page_SetSeedPassphrase;
-    }
-    return WalletWizard::Page_WalletFile;
+    // Biscuit: the Bitcoin/Litecoin seed comes next, then the usual path.
+    return WalletWizard::Page_CoinSeed;
 }
 
 bool PageWalletSeed::validatePage() {

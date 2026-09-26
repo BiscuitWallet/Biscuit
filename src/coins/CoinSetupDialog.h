@@ -17,6 +17,11 @@ namespace biscuit::coins {
 
 class CoinVault;
 
+// Seed words numbered in rows, read-only, monospace. Shared with the wizard.
+QPlainTextEdit *seedWordsView(const QString &mnemonic, QWidget *parent);
+// `count` distinct word positions (0-based, sorted) to type back.
+QList<int> randomWordIndexes(int wordCount, int count);
+
 // Sets up the Bitcoin/Litecoin seed of a wallet:
 //  - create: shows 12 new words, asks for 3 of them to make sure they were
 //    written down, then the wallet password;

@@ -44,6 +44,9 @@ struct WizardFields {
     Seed::Type seedType;
     DeviceType deviceType;
     QString subaddressLookahead;
+    // New wallet: Bitcoin/Litecoin BIP39 seed, set up once the wallet exists.
+    QString coinMnemonic;
+    QList<int> coinCheckIndexes;
 
     void clearFields() {
         showSetSeedPassphrasePage = false;
@@ -82,7 +85,9 @@ public:
         Page_HardwareDevice,
         Page_NetworkProxy,
         Page_NetworkWebsocket,
-        Page_Plugins
+        Page_Plugins,
+        Page_CoinSeed,
+        Page_CoinSeedVerify
     };
 
     explicit WalletWizard(QWidget *parent = nullptr);
@@ -95,7 +100,7 @@ signals:
 
     void createWalletFromDevice(const QString &path, const QString &password, const QString &deviceName, int restoreHeight, const QString &subaddressLookahead);
     void createWalletFromKeys(const QString &path, const QString &password, const QString &address, const QString &viewkey, const QString &spendkey, quint64 restoreHeight, const QString subaddressLookahead = "");
-    void createWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage, const QString &seedOffset, const QString &subaddressLookahead, bool newWallet);
+    void createWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage, const QString &seedOffset, const QString &subaddressLookahead, bool newWallet, const QString &coinMnemonic);
 
 private slots:
     void onCreateWallet();

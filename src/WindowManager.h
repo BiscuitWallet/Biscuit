@@ -73,7 +73,7 @@ private slots:
     void onChangeTheme(const QString &themeName);
 
 private:
-    void tryCreateWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage, const QString &seedOffset, const QString &subaddressLookahead, bool newWallet);
+    void tryCreateWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage, const QString &seedOffset, const QString &subaddressLookahead, bool newWallet, const QString &coinMnemonic);
     void tryCreateWalletFromDevice(const QString &path, const QString &password, const QString &deviceName, int restoreHeight, const QString &subaddressLookahead);
     void tryCreateWalletFromKeys(const QString &path, const QString &password, const QString &address, const QString &viewkey, const QString &spendkey, quint64 restoreHeight, const QString &subaddressLookahead);
 
@@ -115,6 +115,7 @@ private:
     // Biscuit: password of the wallet being opened, kept only until it is
     // open, to unlock Bitcoin/Litecoin with the same password.
     QString m_pendingPassword;
+    QString m_pendingCoinMnemonic;   // new wallet: BTC/LTC seed to set up once opened
     bool m_initialNetworkConfigured = false;
 
     QThread *m_cleanupThread;

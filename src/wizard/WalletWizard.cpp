@@ -5,6 +5,7 @@
 
 #include <QPushButton>
 
+#include "PageCoinSeed.h"
 #include "PageMenu.h"
 #include "PageOpenWallet.h"
 #include "PagePlugins.h"
@@ -58,6 +59,8 @@ WalletWizard::WalletWizard(QWidget *parent)
     setPage(Page_SetSeedPassphrase, walletSetSeedPassphrasePage);
     setPage(Page_SetSubaddressLookahead, walletSetSubaddressLookaheadPage);
     setPage(Page_Plugins, new PagePlugins(this));
+    setPage(Page_CoinSeed, new PageCoinSeed(&m_wizardFields, this));
+    setPage(Page_CoinSeedVerify, new PageCoinSeedVerify(&m_wizardFields, this));
 
     setStartId(Page_Menu);
 
@@ -157,7 +160,10 @@ void WalletWizard::onCreateWallet() {
 
     bool newWallet = m_wizardFields.mode == WizardMode::CreateWallet;
 
-    emit createWallet(m_wizardFields.seed, walletPath, m_wizardFields.password, m_wizardFields.seedLanguage, m_wizardFields.seedOffsetPassphrase, m_wizardFields.subaddressLookahead, newWallet);
+    emit createWallet(m_wizardFields.seed, walletPath, m_wizardFields.password, m_wizardFields.seedLanguage, m_wizardFields.seedOffsetPassphrase, m_wizardFields.subaddressLookahead, newWallet,
+                      newWallet ? m_wizardFields.coinMnemonic : QString());
+    m_wizardFields.coinMnemonic.fill(QChar(' '));
+    m_wizardFields.coinMnemonic.clear();
 }
 
 QString WalletWizard::helpPage() {
