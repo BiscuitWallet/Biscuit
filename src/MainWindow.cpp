@@ -9,6 +9,7 @@
 
 #include "Amount.h"
 #include "utils/Appearance.h"
+#include "utils/MacTitleBar.h"
 #include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinSetupDialog.h"
@@ -82,6 +83,12 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     connect(appearanceButton, &StatusBarButton::clicked, this, [] { Appearance::toggle(); });
     connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, appearanceButton, updateAppearanceButton);
     ui->tabWidget->setCornerWidget(appearanceButton, Qt::TopRightCorner);
+
+    // macOS: the title bar in the window colour (ivory or dark grey), once
+    // the window exists, and again when the appearance changes.
+    auto colorTitleBar = [this] { MacTitleBar::setColor(this, QApplication::palette().color(QPalette::Window)); };
+    QTimer::singleShot(0, this, colorTitleBar);
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, colorTitleBar);
 
     // Ensure the destructor is called after closeEvent()
     setAttribute(Qt::WA_DeleteOnClose);
