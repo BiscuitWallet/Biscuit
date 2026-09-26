@@ -9,7 +9,6 @@
 
 #include "Amount.h"
 #include "utils/Appearance.h"
-#include "utils/MacTitleBar.h"
 #include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinSetupDialog.h"
@@ -84,8 +83,11 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, appearanceButton, updateAppearanceButton);
     ui->tabWidget->setCornerWidget(appearanceButton, Qt::TopRightCorner);
 
-    // macOS: the title bar shows the window colour (ivory or dark grey), set
-    // up once the native window exists (see showEvent).
+    // The title bar shows the window colour (ivory or dark grey) instead of
+    // the system's white or black: content extends under a title bar without
+    // its own background (Qt keeps the tabs clear of the window buttons).
+    this->setWindowFlag(Qt::ExpandedClientAreaHint, true);
+    this->setWindowFlag(Qt::NoTitleBarBackgroundHint, true);
 
     // Ensure the destructor is called after closeEvent()
     setAttribute(Qt::WA_DeleteOnClose);
@@ -1345,21 +1347,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     }
 
     event->accept();
-}
-
-void MainWindow::showEvent(QShowEvent *event) {
-    QMainWindow::showEvent(event);
-    // The native window only exists once shown.
-    this->colorTitleBar();
-}
-
-void MainWindow::colorTitleBar() {
-    // Content under a transparent title bar: Qt paints it with the window
-    // colour; the top margin keeps the tabs clear of the window buttons.
-    const int titleBar = MacTitleBar::extendUnderTitleBar(this);
-    if (titleBar > 0) {
-        ui->centralWidget->setContentsMargins(0, titleBar, 0, 0);
-    }
 }
 
 void MainWindow::changeEvent(QEvent* event)

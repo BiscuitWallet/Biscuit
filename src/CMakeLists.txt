@@ -228,12 +228,6 @@ else()
     message(STATUS "Trocador: no relay and no key (swaps run in demo mode)")
 endif()
 
-# macOS: title bar in the window colour (Objective-C++).
-if(APPLE)
-    enable_language(OBJCXX)
-    target_sources(feather PRIVATE utils/MacTitleBar.mm)
-endif()
-
 # Atomic swaps: the biscuit-swapd helper (built from the eigenwallet fork, see
 # BUILD.md) is copied next to the Biscuit executable when BISCUIT_SWAPD_BINARY
 # points to it. Without it, the atomic swap tab says the helper is missing.
