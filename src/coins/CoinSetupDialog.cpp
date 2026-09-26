@@ -19,6 +19,7 @@
 #include <QVBoxLayout>
 
 #include "Bip39.h"
+#include "CoinParams.h"
 #include "CoinVault.h"
 
 namespace biscuit::coins {
@@ -59,12 +60,23 @@ QList<int> randomWordIndexes(int wordCount, int count) {
     return indexes;
 }
 
-CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent)
+CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, const CoinParams &addTo, QWidget *parent)
+    : CoinSetupDialog(vault, mode, parent, &addTo)
+{
+}
+
+CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent, const CoinParams *addTo)
     : QDialog(parent)
     , m_vault(vault)
     , m_mode(mode)
+    , m_addTo(addTo)
 {
-    setWindowTitle(mode == Mode::Create ? "New Bitcoin and Litecoin seed" : "Restore Bitcoin and Litecoin");
+    if (m_addTo) {
+        setWindowTitle(mode == Mode::Create ? QString("New %1 wallet").arg(m_addTo->name)
+                                            : QString("Add a %1 wallet").arg(m_addTo->name));
+    } else {
+        setWindowTitle(mode == Mode::Create ? "New Bitcoin and Litecoin seed" : "Restore Bitcoin and Litecoin");
+    }
     auto *layout = new QVBoxLayout(this);
     m_pages = new QStackedWidget(this);
     layout->addWidget(m_pages);
@@ -89,7 +101,11 @@ CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent)
     } else {
         m_pages->addWidget(pageRestore());
     }
-    m_pages->addWidget(pagePassword());
+    if (!m_addTo) {
+        m_pages->addWidget(pagePassword());   // an added wallet uses the open vault
+    } else if (m_pages->count() == 1) {
+        m_btnNext->setText("Add");
+    }
     resize(560, sizeHint().height());
 }
 
@@ -101,13 +117,15 @@ CoinSetupDialog::~CoinSetupDialog() {
 QWidget *CoinSetupDialog::pageShowWords() {
     auto *page = new QWidget(this);
     auto *l = new QVBoxLayout(page);
-    auto *intro = new QLabel("Write these 12 words on paper, in order, and keep them offline. They are the only "
-                             "way to recover your Bitcoin and Litecoin if this computer is lost. Anyone who has "
-                             "them can take your coins.", page);
+    auto *intro = new QLabel(QString("Write these 12 words on paper, in order, and keep them offline. They are the only "
+                                     "way to recover your %1 if this computer is lost. Anyone who has "
+                                     "them can take your coins.").arg(coinsText()), page);
     intro->setWordWrap(true);
     l->addWidget(intro);
+    if (m_addTo) addNameField(page, l);
     l->addWidget(seedWordsView(m_mnemonic, page));
-    auto *note = new QLabel("This seed is separate from your Monero seed: back up both.", page);
+    auto *note = new QLabel(m_addTo ? QString("This seed is separate from your other seeds: back it up too.")
+                                    : QString("This seed is separate from your Monero seed: back up both."), page);
     note->setWordWrap(true);
     l->addWidget(note);
     m_checkWritten = new QCheckBox("I have written down these 12 words", page);
@@ -140,6 +158,16 @@ QWidget *CoinSetupDialog::pageRestore() {
                              "non-BIP39 wallets are not supported.", page);
     intro->setWordWrap(true);
     l->addWidget(intro);
+    if (m_addTo) {
+        auto *note = new QLabel(QString("Biscuit uses native SegWit addresses (%1, BIP84), like most recent wallets. "
+                                        "Coins on older address types of this seed are not shown.")
+                                .arg(*m_addTo == coins::bitcoin() ? "bc1q…" : "ltc1q…"), page);
+        note->setWordWrap(true);
+        note->setStyleSheet("color: gray;");
+        l->addWidget(note);
+        addNameField(page, l);
+    }
+    m_restorePage = page;
     m_restoreWords = new QPlainTextEdit(page);
     m_restoreWords->setPlaceholderText("word1 word2 word3 …");
     m_restoreWords->setMaximumHeight(m_restoreWords->fontMetrics().lineSpacing() * 5);
@@ -151,6 +179,18 @@ QWidget *CoinSetupDialog::pageRestore() {
     l->addLayout(form);
     l->addStretch();
     return page;
+}
+
+void CoinSetupDialog::addNameField(QWidget *page, QVBoxLayout *layout) {
+    auto *form = new QFormLayout;
+    m_name = new QLineEdit(m_vault->nextName(*m_addTo), page);
+    m_name->setMaximumWidth(260);
+    form->addRow("Name", m_name);
+    layout->addLayout(form);
+}
+
+QString CoinSetupDialog::coinsText() const {
+    return m_addTo ? m_addTo->name : QString("Bitcoin and Litecoin");
 }
 
 QWidget *CoinSetupDialog::pagePassword() {
@@ -187,7 +227,7 @@ void CoinSetupDialog::next() {
                 return;
             }
         }
-    } else if (m_mode == Mode::Restore && current != m_pages->widget(m_pages->count() - 1)) {
+    } else if (m_mode == Mode::Restore && current == m_restorePage) {
         const QString words = m_restoreWords->toPlainText();
         if (!bip39::isValidMnemonic(words)) {
             m_error->setText("These words are not a valid BIP39 seed (check spelling, order and the number of words).");
@@ -202,8 +242,12 @@ void CoinSetupDialog::next() {
     }
     m_pages->setCurrentIndex(m_pages->currentIndex() + 1);
     if (m_pages->currentIndex() == m_pages->count() - 1) {
-        m_btnNext->setText(m_mode == Mode::Create ? "Create" : "Restore");
-        m_password->setFocus();
+        if (m_addTo) {
+            m_btnNext->setText("Add");
+        } else {
+            m_btnNext->setText(m_mode == Mode::Create ? "Create" : "Restore");
+            m_password->setFocus();
+        }
     }
 }
 
@@ -214,8 +258,13 @@ void CoinSetupDialog::finish() {
 
     QString error;
     const QString passphrase = m_passphrase ? m_passphrase->text() : QString();
-    const bool ok = m_vault->setUp(m_mnemonic, passphrase, m_password->text(), &error);
-    m_password->clear();
+    bool ok = false;
+    if (m_addTo) {
+        ok = m_vault->addWallet(*m_addTo, m_name->text(), m_mnemonic, passphrase, &error);
+    } else {
+        ok = m_vault->setUp(m_mnemonic, passphrase, m_password->text(), &error);
+        m_password->clear();
+    }
     m_btnNext->setEnabled(true);
     if (!ok) {
         m_error->setText(error);

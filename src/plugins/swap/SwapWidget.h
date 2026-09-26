@@ -65,6 +65,7 @@ private:
     // seed up or unlocks it first if needed. Empty if not available (the user
     // was told why, or cancelled).
     QString coinWalletAddress(const biscuit::swap::Asset &asset);
+    QString coinWalletLabel(const biscuit::swap::Asset &asset) const;
     void validateTypedAddresses(QList<QPair<biscuit::swap::Asset, QString>> addresses, std::function<void()> done);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);

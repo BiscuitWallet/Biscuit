@@ -3,12 +3,16 @@
 
 #include "CoinVault.h"
 
+#include <algorithm>
+
 #include <QDateTime>
 #include <QFile>
 #include <QHash>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
+#include <QUuid>
 
 #include "Bip39.h"
 #include "libwalletqt/Wallet.h"
@@ -18,7 +22,19 @@
 namespace biscuit::coins {
 
 namespace {
-    constexpr int fileVersion = 1;
+    // 1: main seed only. 2: adds "extra" wallets and "selected".
+    constexpr int fileVersion = 2;
+    constexpr char mainName[] = "Main";
+
+    QString mainId(const CoinParams &params) {
+        return QString("main-%1").arg(params.ticker);
+    }
+
+    const CoinParams *paramsForTicker(const QString &ticker) {
+        if (ticker == coins::bitcoin().ticker) return &coins::bitcoin();
+        if (ticker == coins::litecoin().ticker) return &coins::litecoin();
+        return nullptr;
+    }
     constexpr int saveDelayMs = 3000;
 
     QHash<Wallet *, QPointer<CoinVault>> &vaults() {
@@ -88,6 +104,7 @@ bool CoinVault::setUp(const QString &mnemonic, const QString &passphrase, const 
         {"passphrase", passphrase},
         {"created", m_created},
         {"coins", QJsonObject{}},
+        {"extra", QJsonArray{}},
     }).toJson(QJsonDocument::Compact);
 
     const bool saved = session->save(path(), content, error);
@@ -124,34 +141,80 @@ bool CoinVault::unlock(const QString &password, QString *error) {
 
 bool CoinVault::load(const QByteArray &content, QString *error) {
     const QJsonObject obj = parseContent(content);
-    if (obj.value("version").toInt() != fileVersion) {
+    const int version = obj.value("version").toInt();
+    if (version < 1 || version > fileVersion) {
         if (error) *error = "Unsupported wallet file version";
         return false;
     }
-    const QString mnemonic = obj.value("mnemonic").toString();
-    const auto seed = bip39::mnemonicToSeed(mnemonic, obj.value("passphrase").toString());
+    const auto seed = bip39::mnemonicToSeed(obj.value("mnemonic").toString(), obj.value("passphrase").toString());
     if (!seed) {
         if (error) *error = "Invalid seed in wallet file";
         return false;
     }
+    m_created = obj.value("created").toString();
+    const QJsonObject caches = obj.value("coins").toObject();
     QByteArray seedBytes = *seed;
-    auto btc = HdAccount::fromSeed(seedBytes, coins::bitcoin());
-    auto ltc = HdAccount::fromSeed(seedBytes, coins::litecoin());
+    bool ok = true;
+    for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
+        ok = ok && addEntry(mainId(*params), mainName, true, *params, seedBytes,
+                            caches.value(params->ticker).toObject(), error);
+    }
     walletfile::wipe(seedBytes);
-    if (!btc || !ltc) {
-        if (error) *error = "Unable to derive keys";
+
+    if (!ok) {
+        clearWallets();
         return false;
     }
 
-    m_created = obj.value("created").toString();
-    const QJsonObject caches = obj.value("coins").toObject();
-    m_btc = new CoinWallet(std::move(*btc), caches.value("BTC").toObject(), this);
-    m_ltc = new CoinWallet(std::move(*ltc), caches.value("LTC").toObject(), this);
-    for (CoinWallet *w : {m_btc, m_ltc}) {
-        connect(w, &CoinWallet::cacheChanged, this, &CoinVault::scheduleSave);
+    // An unreadable added wallet is skipped, it never blocks the others.
+    for (const QJsonValue &value : obj.value("extra").toArray()) {
+        const QJsonObject extra = value.toObject();
+        const CoinParams *params = paramsForTicker(extra.value("coin").toString());
+        const auto extraSeed = bip39::mnemonicToSeed(extra.value("mnemonic").toString(), extra.value("passphrase").toString());
+        if (!params || !extraSeed) {
+            qWarning() << "Biscuit: skipping an unreadable Bitcoin/Litecoin wallet entry";
+            continue;
+        }
+        QByteArray extraBytes = *extraSeed;
+        QString extraError;
+        if (!addEntry(extra.value("id").toString(), extra.value("name").toString(), false, *params, extraBytes,
+                      extra.value("cache").toObject(), &extraError)) {
+            qWarning() << "Biscuit: skipping a Bitcoin/Litecoin wallet:" << extraError;
+        }
+        walletfile::wipe(extraBytes);
+    }
+
+    const QJsonObject selected = obj.value("selected").toObject();
+    for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
+        const QString id = selected.value(params->ticker).toString();
+        const auto list = wallets(*params);
+        const bool known = std::any_of(list.begin(), list.end(), [&id](const Entry &e) { return e.id == id; });
+        m_selected[params->ticker] = known ? id : mainId(*params);
     }
     applyNetworkSettings();   // sets the proxy and starts the wallets
     return true;
+}
+
+bool CoinVault::addEntry(const QString &id, const QString &name, bool mainSeed, const CoinParams &params,
+                         const QByteArray &seed, const QJsonObject &cache, QString *error) {
+    auto account = HdAccount::fromSeed(seed, params);
+    if (!account) {
+        if (error) *error = "Unable to derive keys";
+        return false;
+    }
+    auto *w = new CoinWallet(std::move(*account), cache, this);
+    connect(w, &CoinWallet::cacheChanged, this, &CoinVault::scheduleSave);
+    connect(w, &CoinWallet::updated, this, &CoinVault::walletUpdated);
+    m_entries.append({id, name, mainSeed, w});
+    return true;
+}
+
+void CoinVault::clearWallets() {
+    for (const Entry &e : m_entries) {
+        delete e.wallet;
+    }
+    m_entries.clear();
+    m_selected.clear();
 }
 
 void CoinVault::lock() {
@@ -160,9 +223,7 @@ void CoinVault::lock() {
     }
     m_saveTimer.stop();
     save();
-    delete m_btc;
-    delete m_ltc;
-    m_btc = m_ltc = nullptr;
+    clearWallets();
     m_session.reset();   // wipes the key
     emit locked();
 }
@@ -229,9 +290,165 @@ std::optional<QPair<QString, QString>> CoinVault::revealMnemonic(const QString &
 }
 
 CoinWallet *CoinVault::wallet(const CoinParams &params) const {
-    if (params == coins::bitcoin()) return m_btc;
-    if (params == coins::litecoin()) return m_ltc;
+    const QString id = selectedId(params);
+    for (const Entry &e : m_entries) {
+        if (e.id == id) return e.wallet;
+    }
     return nullptr;
+}
+
+QString CoinVault::selectedId(const CoinParams &params) const {
+    return m_selected.value(params.ticker, mainId(params));
+}
+
+QString CoinVault::selectedName(const CoinParams &params) const {
+    const QString id = selectedId(params);
+    for (const Entry &e : m_entries) {
+        if (e.id == id) return e.name;
+    }
+    return {};
+}
+
+void CoinVault::select(const CoinParams &params, const QString &id) {
+    const auto list = wallets(params);
+    if (id == selectedId(params) || std::none_of(list.begin(), list.end(), [&id](const Entry &e) { return e.id == id; })) {
+        return;
+    }
+    m_selected[params.ticker] = id;
+    scheduleSave();
+    emit walletsChanged();
+}
+
+QList<CoinVault::Entry> CoinVault::wallets(const CoinParams &params) const {
+    QList<Entry> list;
+    for (const Entry &e : m_entries) {
+        if (e.wallet->params() == params) list.append(e);
+    }
+    return list;
+}
+
+QList<CoinWallet *> CoinVault::allWallets() const {
+    QList<CoinWallet *> list;
+    for (const Entry &e : m_entries) list.append(e.wallet);
+    return list;
+}
+
+QString CoinVault::nextName(const CoinParams &params) const {
+    const auto list = wallets(params);
+    for (int n = list.size() + 1;; ++n) {
+        const QString name = QString("%1 %2").arg(params.name).arg(n);
+        if (std::none_of(list.begin(), list.end(), [&name](const Entry &e) { return e.name == name; })) {
+            return name;
+        }
+    }
+}
+
+bool CoinVault::rewrite(const std::function<void(QJsonObject &)> &change, QString *error) {
+    if (!m_session) {
+        if (error) *error = "Bitcoin and Litecoin are locked";
+        return false;
+    }
+    QFile file(path());
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = file.errorString();
+        return false;
+    }
+    auto content = m_session->unseal(file.readAll());
+    file.close();
+    if (!content) {
+        if (error) *error = "Unable to read the Bitcoin/Litecoin wallet file";
+        return false;
+    }
+    QJsonObject obj = parseContent(*content);
+    walletfile::wipe(*content);
+    change(obj);
+    obj["version"] = fileVersion;
+    QByteArray updated = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    obj = {};
+    const bool saved = m_session->save(path(), updated, error);
+    walletfile::wipe(updated);
+    return saved;
+}
+
+bool CoinVault::addWallet(const CoinParams &params, const QString &name, const QString &mnemonic,
+                          const QString &passphrase, QString *error) {
+    if (!m_session) {
+        if (error) *error = "Bitcoin and Litecoin are locked";
+        return false;
+    }
+    if (!bip39::isValidMnemonic(mnemonic)) {
+        if (error) *error = "Invalid seed phrase (12 or 24 BIP39 words)";
+        return false;
+    }
+    const QString cleanName = name.trimmed().isEmpty() ? nextName(params) : name.trimmed();
+    const auto seed = bip39::mnemonicToSeed(mnemonic, passphrase);
+    if (!seed) {
+        if (error) *error = "Invalid seed phrase";
+        return false;
+    }
+    // Same keys as a wallet already here: nothing to add.
+    auto account = HdAccount::fromSeed(*seed, params);
+    const QString firstAddress = account ? account->address(HdAccount::Receive, 0) : QString();
+    for (const Entry &e : wallets(params)) {
+        if (e.wallet->firstAddress() == firstAddress) {
+            if (error) *error = QString("This %1 wallet is already in Biscuit (\"%2\").").arg(params.name, e.name);
+            return false;
+        }
+    }
+
+    const QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const QString created = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    const QString normalized = bip39::normalizeMnemonic(mnemonic);
+    const bool written = rewrite([&](QJsonObject &obj) {
+        QJsonArray extra = obj.value("extra").toArray();
+        extra.append(QJsonObject{
+            {"id", id}, {"name", cleanName}, {"coin", params.ticker},
+            {"mnemonic", normalized}, {"passphrase", passphrase},
+            {"created", created}, {"cache", QJsonObject{}},
+        });
+        obj["extra"] = extra;
+    }, error);
+    if (!written) {
+        return false;
+    }
+    QByteArray seedBytes = *seed;
+    const bool added = addEntry(id, cleanName, false, params, seedBytes, {}, error);
+    walletfile::wipe(seedBytes);
+    if (!added) {
+        return false;
+    }
+    applyNetworkSettings();
+    m_selected[params.ticker] = id;
+    scheduleSave();
+    emit walletsChanged();
+    return true;
+}
+
+bool CoinVault::removeWallet(const QString &id, QString *error) {
+    const auto it = std::find_if(m_entries.begin(), m_entries.end(), [&id](const Entry &e) { return e.id == id; });
+    if (it == m_entries.end() || it->mainSeed) {
+        if (error) *error = "This wallet cannot be removed";
+        return false;
+    }
+    const bool written = rewrite([&id](QJsonObject &obj) {
+        QJsonArray kept;
+        for (const QJsonValue &v : obj.value("extra").toArray()) {
+            if (v.toObject().value("id").toString() != id) kept.append(v);
+        }
+        obj["extra"] = kept;
+    }, error);
+    if (!written) {
+        return false;
+    }
+    const CoinParams &params = it->wallet->params();
+    delete it->wallet;
+    m_entries.erase(it);
+    if (m_selected.value(params.ticker) == id) {
+        m_selected[params.ticker] = mainId(params);
+    }
+    scheduleSave();
+    emit walletsChanged();
+    return true;
 }
 
 void CoinVault::applyNetworkSettings() {
@@ -242,8 +459,7 @@ void CoinVault::applyNetworkSettings() {
         networkProxy = getNetworkSocks5()->proxy();
     }
     const bool onionOnly = proxy == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool();
-    for (CoinWallet *w : {m_btc, m_ltc}) {
-        if (!w) continue;
+    for (CoinWallet *w : allWallets()) {
         // No onion Electrum server is built in yet: in onion-only mode the
         // wallets stay offline rather than contacting clearnet servers.
         if (onionOnly) {
@@ -260,31 +476,42 @@ void CoinVault::scheduleSave() {
 }
 
 void CoinVault::save() {
-    if (!m_session || !m_btc || !m_ltc) {
+    if (!m_session || m_entries.isEmpty()) {
         return;
     }
-    QFile file(path());
-    if (!file.open(QIODevice::ReadOnly)) {
-        return;
-    }
-    // Read the seed back with the session key (it is not kept in memory),
-    // replace the caches, write again with a fresh nonce.
-    auto content = m_session->unseal(file.readAll());
-    file.close();
-    if (!content) {
-        qWarning() << "Biscuit: unable to update the Bitcoin/Litecoin wallet file";
-        return;
-    }
-    QJsonObject obj = parseContent(*content);
-    walletfile::wipe(*content);
-    obj["coins"] = QJsonObject{{"BTC", m_btc->cache()}, {"LTC", m_ltc->cache()}};
-    QByteArray updated = QJsonDocument(obj).toJson(QJsonDocument::Compact);
-    obj = {};
+    // The seeds are read back with the session key (they are not kept in
+    // memory); only the caches and the selection are replaced.
     QString error;
-    if (!m_session->save(path(), updated, &error)) {
+    const bool saved = rewrite([this](QJsonObject &obj) {
+        QJsonObject caches;
+        QHash<QString, QJsonObject> extraCaches;
+        for (const Entry &e : m_entries) {
+            if (e.mainSeed) {
+                caches[e.wallet->params().ticker] = e.wallet->cache();
+            } else {
+                extraCaches.insert(e.id, e.wallet->cache());
+            }
+        }
+        obj["coins"] = caches;
+        QJsonArray extra = obj.value("extra").toArray();
+        for (int i = 0; i < extra.size(); ++i) {
+            QJsonObject entry = extra.at(i).toObject();
+            const QString id = entry.value("id").toString();
+            if (extraCaches.contains(id)) {
+                entry["cache"] = extraCaches.value(id);
+                extra[i] = entry;
+            }
+        }
+        obj["extra"] = extra;
+        QJsonObject selected;
+        for (auto it = m_selected.cbegin(); it != m_selected.cend(); ++it) {
+            selected[it.key()] = it.value();
+        }
+        obj["selected"] = selected;
+    }, &error);
+    if (!saved) {
         qWarning() << "Biscuit: unable to save the Bitcoin/Litecoin wallet file:" << error;
     }
-    walletfile::wipe(updated);
 }
 
 }

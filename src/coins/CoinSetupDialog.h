@@ -12,10 +12,12 @@ class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 class QStackedWidget;
+class QVBoxLayout;
 
 namespace biscuit::coins {
 
 class CoinVault;
+struct CoinParams;
 
 // Seed words numbered in rows, read-only, monospace. Shared with the wizard.
 QPlainTextEdit *seedWordsView(const QString &mnemonic, QWidget *parent);
@@ -26,25 +28,34 @@ QList<int> randomWordIndexes(int wordCount, int count);
 //  - create: shows 12 new words, asks for 3 of them to make sure they were
 //    written down, then the wallet password;
 //  - restore: words (+ optional BIP39 passphrase), then the wallet password.
+// With `addTo`, adds one more Bitcoin or Litecoin wallet with its own seed to
+// an unlocked vault instead (a name, no password page).
 class CoinSetupDialog : public QDialog
 {
     Q_OBJECT
 
 public:
     enum class Mode { Create, Restore };
-    CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent = nullptr);
+    CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent = nullptr) : CoinSetupDialog(vault, mode, parent, nullptr) {}
+    CoinSetupDialog(CoinVault *vault, Mode mode, const CoinParams &addTo, QWidget *parent = nullptr);
     ~CoinSetupDialog() override;
 
 private:
+    CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent, const CoinParams *addTo);
     void next();
     void finish();
     QWidget *pageShowWords();
     QWidget *pageVerifyWords();
     QWidget *pageRestore();
     QWidget *pagePassword();
+    void addNameField(QWidget *page, QVBoxLayout *layout);
+    QString coinsText() const;   // "Bitcoin and Litecoin" or the added coin
 
     CoinVault *m_vault;
     Mode m_mode;
+    const CoinParams *m_addTo = nullptr;
+    QWidget *m_restorePage = nullptr;
+    QLineEdit *m_name = nullptr;
     QString m_mnemonic;           // wiped on destruction
     QList<int> m_checkIndexes;    // words asked back (0-based)
 

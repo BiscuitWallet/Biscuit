@@ -149,8 +149,11 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
     box.setWindowTitle(QString("Send %1").arg(params.name));
     box.setIcon(QMessageBox::Question);
     box.setText(QString("Send %1?").arg(format(plan->amount)));
-    box.setInformativeText(QString("To: %1\nNetwork fee: %2 (%3 sat/vB)\nTotal: %4")
-                           .arg(address, format(plan->fee))
+    // With several wallets of this coin, say which one pays.
+    const QString from = m_vault->wallets(params).size() > 1
+                         ? QString("From: %1 wallet \"%2\"\n").arg(params.ticker, m_vault->selectedName(params)) : QString();
+    box.setInformativeText(QString("%1To: %2\nNetwork fee: %3 (%4 sat/vB)\nTotal: %5")
+                           .arg(from, address, format(plan->fee))
                            .arg(rate, 0, 'f', 1)
                            .arg(format(plan->amount + plan->fee)));
     box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);

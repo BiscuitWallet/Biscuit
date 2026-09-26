@@ -424,6 +424,17 @@ void SwapWidget::onCreateSwap() {
     }
 }
 
+QString SwapWidget::coinWalletLabel(const Asset &asset) const {
+    using namespace biscuit::coins;
+    const CoinParams *params = asset == Asset{"btc", "Mainnet"} ? &bitcoin()
+                             : asset == Asset{"ltc", "Mainnet"} ? &litecoin() : nullptr;
+    CoinVault *vault = CoinVault::forWallet(m_wallet);
+    if (params && vault && vault->wallets(*params).size() > 1) {
+        return QString("your %1 wallet \"%2\" in Biscuit").arg(params->ticker, vault->selectedName(*params));
+    }
+    return QString("your %1 wallet in Biscuit").arg(asset.ticker.toUpper());
+}
+
 QString SwapWidget::coinWalletAddress(const Asset &asset) {
     using namespace biscuit::coins;
     const CoinParams *params = asset == Asset{"btc", "Mainnet"} ? &bitcoin()
@@ -529,7 +540,7 @@ void SwapWidget::createTrade(const Quote &quote) {
         box.setInformativeText(QString("Exchange: %1 (no KYC)\nYou get the coins at: %2")
                                .arg(quote.exchange,
                                     receiveInWallet ? (receiveXmr ? QString("a new subaddress of your XMR wallet")
-                                                               : QString("your %1 wallet in Biscuit").arg(quote.to.ticker.toUpper()))
+                                                               : coinWalletLabel(quote.to))
                                                     : payout));
         box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         if (box.exec() != QMessageBox::Yes) {

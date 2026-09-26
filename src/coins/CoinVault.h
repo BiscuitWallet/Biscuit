@@ -4,9 +4,11 @@
 #ifndef BISCUIT_COINVAULT_H
 #define BISCUIT_COINVAULT_H
 
+#include <functional>
 #include <memory>
 #include <optional>
 
+#include <QHash>
 #include <QObject>
 #include <QPointer>
 #include <QTimer>
@@ -20,6 +22,10 @@ namespace biscuit::coins {
 
 // The BTC/LTC side of a Monero wallet: a companion file "<wallet>.btcltc"
 // next to the Monero wallet, encrypted with the same password.
+//
+// It holds the main BTC/LTC seed (one Bitcoin and one Litecoin wallet) and any
+// other Bitcoin or Litecoin wallet the user added from its own seed. One
+// wallet per coin is selected: Receive, Send, History and Swap use it.
 //
 // The seed words are never kept in memory: only the derived keys are. They
 // are shown again only after the password is typed again (revealMnemonic).
@@ -49,9 +55,34 @@ public:
     // Seed and optional passphrase, read from the file with the password.
     std::optional<QPair<QString, QString>> revealMnemonic(const QString &password, QString *error) const;
 
-    CoinWallet *bitcoin() const { return m_btc; }
-    CoinWallet *litecoin() const { return m_ltc; }
+    struct Entry {
+        QString id;          // "main-BTC", "main-LTC" or a random id
+        QString name;        // shown on the wallet buttons
+        bool mainSeed = false;
+        CoinWallet *wallet = nullptr;
+    };
+
+    // Selected wallet of each coin (nullptr while locked).
+    CoinWallet *bitcoin() const { return wallet(coins::bitcoin()); }
+    CoinWallet *litecoin() const { return wallet(coins::litecoin()); }
     CoinWallet *wallet(const CoinParams &params) const;
+    QString selectedId(const CoinParams &params) const;
+    QString selectedName(const CoinParams &params) const;
+    void select(const CoinParams &params, const QString &id);
+
+    // Every wallet of a coin, main seed first, then in the order added.
+    QList<Entry> wallets(const CoinParams &params) const;
+    QList<CoinWallet *> allWallets() const;
+    // Suggested name for the next wallet of a coin, e.g. "Litecoin 2".
+    QString nextName(const CoinParams &params) const;
+
+    // Adds a Bitcoin or Litecoin wallet from its own BIP39 seed (vault
+    // unlocked), and selects it. The seed is stored in the encrypted file.
+    bool addWallet(const CoinParams &params, const QString &name, const QString &mnemonic,
+                   const QString &passphrase, QString *error);
+    // Removes an added wallet (never the main seed). Its seed is erased from
+    // the file: the user needs their own backup to add it again.
+    bool removeWallet(const QString &id, QString *error);
 
     // Applies the current proxy settings (Tor) to the Electrum connections.
     void applyNetworkSettings();
@@ -59,17 +90,24 @@ public:
 signals:
     void unlocked();
     void locked();
+    void walletsChanged();    // added, removed or selection changed
+    void walletUpdated();     // balance, history or height of any wallet
 
 private:
     explicit CoinVault(Wallet *wallet);
     bool load(const QByteArray &content, QString *error);
+    bool addEntry(const QString &id, const QString &name, bool mainSeed, const CoinParams &params,
+                  const QByteArray &seed, const QJsonObject &cache, QString *error);
+    // Reads the file, lets `change` edit it, writes it back (vault unlocked).
+    bool rewrite(const std::function<void(QJsonObject &)> &change, QString *error);
+    void clearWallets();
     void scheduleSave();
     void save();
 
     QPointer<Wallet> m_wallet;
     std::optional<walletfile::Session> m_session;
-    CoinWallet *m_btc = nullptr;
-    CoinWallet *m_ltc = nullptr;
+    QList<Entry> m_entries;
+    QHash<QString, QString> m_selected;   // ticker -> entry id
     QString m_created;
     QTimer m_saveTimer;
 };

@@ -59,6 +59,8 @@ public:
 
     // Next address never used to receive (a new one each time a payment arrives).
     QString receiveAddress() const;
+    // First receive address: identifies the seed without exposing it.
+    QString firstAddress() const { return m_account.address(HdAccount::Receive, 0); }
 
     double feeRate(int targetBlocks) const;   // sat/vB
 

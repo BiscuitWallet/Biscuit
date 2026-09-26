@@ -12,6 +12,7 @@
 #include <QVBoxLayout>
 
 #include "CoinPicker.h"
+#include "CoinWalletBar.h"
 #include "CoinSetupDialog.h"
 #include "CoinVault.h"
 #include "CoinWallet.h"
@@ -39,13 +40,9 @@ CoinReceiveSwitcher::CoinReceiveSwitcher(Wallet *wallet, QWidget *moneroPage, QW
     layout->addWidget(m_pages);
 
     connect(m_coin, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
-    connect(m_vault, &CoinVault::unlocked, this, [this] {
-        for (CoinWallet *w : {m_vault->bitcoin(), m_vault->litecoin()}) {
-            connect(w, &CoinWallet::updated, this, &CoinReceiveSwitcher::refresh);
-        }
-        refresh();
-    });
-    connect(m_vault, &CoinVault::locked, this, &CoinReceiveSwitcher::refresh);
+    for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged, &CoinVault::walletUpdated}) {
+        connect(m_vault, signal, this, &CoinReceiveSwitcher::refresh);
+    }
     refresh();
 }
 
@@ -102,7 +99,14 @@ QWidget *CoinReceiveSwitcher::coinPage(const CoinParams &params) {
     w.qr->setAlignment(Qt::AlignCenter);
     pageLayout->addWidget(w.qr, 0, Qt::AlignTop);
     connect(copy, &QPushButton::clicked, this, [address = w.address] { Utils::copyToClipboard(address->text()); });
-    w.state->addWidget(page);
+
+    // Wallet buttons ([Main] [Litecoin 2] [+ Add]) above the address.
+    auto *withBar = new QWidget(w.state);
+    auto *withBarLayout = new QVBoxLayout(withBar);
+    withBarLayout->setContentsMargins(0, 0, 0, 0);
+    withBarLayout->addWidget(new CoinWalletBar(m_vault, params, withBar));
+    withBarLayout->addWidget(page);
+    w.state->addWidget(withBar);
 
     m_coinWidgets.append(w);
     return w.state;
