@@ -307,9 +307,13 @@ void MainWindow::initWidgets() {
         }
     }
 
-    // Biscuit: pixel-art icons for Home and Swap.
-    if (const int home = this->findTab("Home"); home >= 0) ui->tabWidget->setTabIcon(home, PixelIcons::computer());
-    if (const int swap = this->findTab("Swap"); swap >= 0) ui->tabWidget->setTabIcon(swap, PixelIcons::network());
+    // Biscuit: pixel-art icons on the main tabs.
+    const QList<QPair<QString, QIcon>> tabIcons = {{"Home", PixelIcons::computer()}, {"History", PixelIcons::history()},
+                                                   {"Send", PixelIcons::send()}, {"Receive", PixelIcons::receive()},
+                                                   {"Swap", PixelIcons::network()}};
+    for (const auto &[name, icon] : tabIcons) {
+        if (const int index = this->findTab(name); index >= 0) ui->tabWidget->setTabIcon(index, icon);
+    }
 
     ui->frame_coinControl->setVisible(false);
     connect(ui->btn_resetCoinControl, &QPushButton::clicked, [this]{

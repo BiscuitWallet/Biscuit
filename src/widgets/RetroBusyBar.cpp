@@ -9,9 +9,9 @@ namespace {
     constexpr int barHeight = 14;
     constexpr int blockWidth = 7;
     constexpr int blockGap = 2;
-    constexpr int blockCount = 5;
-    constexpr int step = 1;          // pixel per tick: smooth
-    constexpr int tickMs = 12;       // ~80 px per second
+    constexpr int blockCount = 8;
+    constexpr int step = 2;          // pixels per tick
+    constexpr int tickMs = 16;       // ~125 px per second, smooth
 }
 
 RetroBusyBar::RetroBusyBar(QWidget *parent)
@@ -20,8 +20,17 @@ RetroBusyBar::RetroBusyBar(QWidget *parent)
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     m_timer.setInterval(tickMs);
     connect(&m_timer, &QTimer::timeout, this, [this] {
-        const int group = blockCount * (blockWidth + blockGap);
-        m_offset = (m_offset + step) % (width() + group);
+        // Back and forth between the two ends of the bar.
+        const int group = blockCount * (blockWidth + blockGap) - blockGap;
+        const int travel = qMax(0, width() - 4 - group);
+        m_offset += m_direction * step;
+        if (m_offset >= travel) {
+            m_offset = travel;
+            m_direction = -1;
+        } else if (m_offset <= 0) {
+            m_offset = 0;
+            m_direction = 1;
+        }
         update();
     });
 }
@@ -38,6 +47,7 @@ void RetroBusyBar::setBusy(bool busy) {
     }
     m_busy = busy;
     m_offset = 0;
+    m_direction = 1;
     busy ? m_timer.start() : m_timer.stop();
     update();
 }
@@ -60,9 +70,8 @@ void RetroBusyBar::paintEvent(QPaintEvent *) {
     const QRect inside = rect().adjusted(2, 2, -2, -2);
     p.setClipRect(inside);
     const QColor block = palette().color(QPalette::Highlight);
-    const int group = blockCount * (blockWidth + blockGap);
     for (int i = 0; i < blockCount; ++i) {
-        const int x = inside.left() + m_offset - group + i * (blockWidth + blockGap);
+        const int x = inside.left() + m_offset + i * (blockWidth + blockGap);
         p.fillRect(QRect(x, inside.top(), blockWidth, inside.height()), block);
     }
 }

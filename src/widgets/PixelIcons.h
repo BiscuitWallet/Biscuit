@@ -14,6 +14,9 @@ namespace PixelIcons {
     QPixmap modem(bool connected, int phase);
     QIcon computer();                           // Home tab
     QIcon network();                            // Swap tab
+    QIcon history();                            // History tab: a clock
+    QIcon send();                               // Send tab: an envelope going out
+    QIcon receive();                            // Receive tab: a tray, arrow in
 }
 
 #endif // BISCUIT_PIXELICONS_H

@@ -8,7 +8,7 @@
 #include <QWidget>
 
 // A small "busy" bar in the style of 1990s installers: a sunken frame with a
-// group of square blocks that slides across and starts over. Empty when idle.
+// group of square blocks going back and forth. Empty when idle.
 class RetroBusyBar : public QWidget
 {
     Q_OBJECT
@@ -24,6 +24,7 @@ protected:
 private:
     QTimer m_timer;
     int m_offset = 0;
+    int m_direction = 1;
     bool m_busy = false;
 };
 

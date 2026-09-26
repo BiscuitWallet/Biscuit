@@ -86,6 +86,63 @@ namespace {
         "...........kkkk.",
     };
 
+    const char *const clockRows[16] = {
+        ".....kkkkkk.....",
+        "...kkwwwwwwkk...",
+        "..kwwwwkwwwwwk..",
+        ".kwwwwwkwwwwwwk.",
+        ".kwwwwwkwwwwwwk.",
+        "kwwwwwwkwwwwwwwk",
+        "kwwwwwwkwwwwwwwk",
+        "kkwwwwwrkkkkwwkk",
+        "kwwwwwwwwwwwwwwk",
+        "kwwwwwwwwwwwwwwk",
+        ".kwwwwwwwwwwwwk.",
+        ".kwwwwwwwwwwwwk.",
+        "..kwwwwwkwwwwk..",
+        "...kkwwwwwwkk...",
+        ".....kkkkkk.....",
+        "................",
+    };
+
+    const char *const sendRows[16] = {
+        "................",
+        "................",
+        "................",
+        "kkkkkkkkkkkk....",
+        "kwkwwwwwwkwk....",
+        "kwwkwwwwkwwk.a..",
+        "kwwwkwwkwwwk.aa.",
+        "kwwwwkkwwwwkaaaa",
+        "kwwwwwwwwwwk.aa.",
+        "kwwwwwwwwwwk.a..",
+        "kwwwwwwwwwwk....",
+        "kkkkkkkkkkkk....",
+        "................",
+        "................",
+        "................",
+        "................",
+    };
+
+    const char *const receiveRows[16] = {
+        "......aaaa......",
+        "......aaaa......",
+        "......aaaa......",
+        "......aaaa......",
+        "...aaaaaaaaaa...",
+        "....aaaaaaaa....",
+        ".....aaaaaa.....",
+        "......aaaa......",
+        ".......aa.......",
+        "................",
+        "kk............kk",
+        "kdk..........kdk",
+        "kddkkkkkkkkkkddk",
+        "kddddddddddddddk",
+        "kkkkkkkkkkkkkkkk",
+        "................",
+    };
+
     QPixmap draw(const char *const rows[16], const QHash<char, QColor> &colors) {
         QImage image(16, 16, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
@@ -126,6 +183,18 @@ QIcon computer() {
 QIcon network() {
     return QIcon(draw(networkRows, {{'k', outline}, {'b', QColor(0, 128, 128)}, {'w', QColor(200, 240, 240)},
                                     {'y', QColor(230, 160, 40)}}));
+}
+
+QIcon history() {
+    return QIcon(draw(clockRows, {{'k', outline}, {'w', QColor(255, 251, 232)}, {'r', QColor(200, 50, 40)}}));
+}
+
+QIcon send() {
+    return QIcon(draw(sendRows, {{'k', outline}, {'w', QColor(255, 251, 232)}, {'a', QColor(47, 123, 214)}}));
+}
+
+QIcon receive() {
+    return QIcon(draw(receiveRows, {{'k', outline}, {'d', QColor(205, 192, 160)}, {'a', QColor(63, 174, 74)}}));
 }
 
 }
