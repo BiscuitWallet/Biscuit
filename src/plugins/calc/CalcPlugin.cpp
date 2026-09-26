@@ -24,11 +24,11 @@ int CalcPlugin::idx() const {
 }
 
 QString CalcPlugin::parent() {
-    return {};
+    return "home";   // Biscuit: a tab of Home, next to Crowdfunding (with the prices)
 }
 
 QString CalcPlugin::displayName() {
-    return "Calc";
+    return "Converter";
 }
 
 QString CalcPlugin::description() {

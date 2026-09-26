@@ -7,11 +7,20 @@
 #include <QAbstractSpinBox>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QTabWidget>
 
 int MacLayoutStyle::styleHint(StyleHint hint, const QStyleOption *option, const QWidget *widget,
                               QStyleHintReturn *returnData) const {
     if (hint == SH_FormLayoutLabelAlignment) {
         return Qt::AlignLeft | Qt::AlignVCenter;
+    }
+    if (hint == SH_TabBar_Alignment && widget) {
+        // Asked by the tab bar itself or by the tab widget that holds it.
+        const auto *tabs = qobject_cast<const QTabWidget *>(widget);
+        const QWidget *bar = tabs ? tabs->tabBar() : widget;
+        if (bar && bar->objectName() == QLatin1String("mainTabBar")) {
+            return Qt::AlignCenter;
+        }
     }
     return QProxyStyle::styleHint(hint, option, widget, returnData);
 }

@@ -63,6 +63,10 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     , m_rpc(new DaemonRpc(this, ""))
 {
     ui->setupUi(this);
+    // Biscuit: flat main tabs, centered (MacLayoutStyle), without the rounded
+    // panel that left a band of another colour under them on macOS.
+    ui->tabWidget->tabBar()->setObjectName("mainTabBar");
+    ui->tabWidget->setDocumentMode(true);
 
     // Ensure the destructor is called after closeEvent()
     setAttribute(Qt::WA_DeleteOnClose);

@@ -48,7 +48,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::useOnionNodes,{QS("useOnionNodes"), false}},
 
         // Tabs
-        {Config::enabledTabs, {QS("enabledTabs"), QStringList{"Home", "History", "Send", "Receive", "Calc", "Swap"}}},
+        {Config::enabledTabs, {QS("enabledTabs"), QStringList{"Home", "History", "Send", "Receive", "Swap"}}},
         {Config::showSearchbar,{QS("showSearchbar"), true}},
 
         // History
