@@ -62,6 +62,30 @@ Pour tester avec un relais local : `-DBISCUIT_TROCADOR_RELAY_URL=http://127.0.0.
 Sans relais ni clé, l'onglet Swap fonctionne en **mode démo** : offres simulées, aucun
 échange réel, aucun envoi possible. CMake affiche le mode utilisé à la configuration.
 
+## Swaps atomiques : le programme biscuit-swapd
+
+Les swaps atomiques (BTC → XMR) passent par `biscuit-swapd`, compilé depuis le
+fork d'eigenwallet (`~/Developer/_ref/eigenwallet`, branche `biscuit`). Rust est
+installé par le `rustup` de Homebrew, dont `cargo` n'est pas dans le PATH :
+
+```sh
+export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
+cd ~/Developer/_ref/eigenwallet
+cargo build --release -p biscuit-swapd      # 10 à 20 min (LTO complète)
+strip target/release/biscuit-swapd          # environ 15 Mo
+```
+
+Ne pas rediriger la sortie de la compilation (`| tail`…) : une étape peut poser
+une question et rester bloquée sans rien afficher.
+
+Puis l'inclure dans Biscuit (copié à côté de l'exécutable à chaque build) :
+
+```sh
+cmake .. -DBISCUIT_SWAPD_BINARY=$HOME/Developer/_ref/eigenwallet/target/release/biscuit-swapd
+```
+
+Sans cette option, l'onglet du swap atomique indique que le programme manque.
+
 ## Linux
 
 À documenter (voir `HACKING.md` en attendant).
