@@ -85,11 +85,29 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
     connect(m_recent, &QTreeWidget::itemDoubleClicked, this, &HomeWidget::showHistoryTab);
     m_recentEmpty = new QLabel("No transactions yet.", this);
     m_recentEmpty->setStyleSheet("color: gray;");
-    ui->verticalLayout->insertSpacing(1, 8);
+    m_recentSpacerTop = new QSpacerItem(0, 8, QSizePolicy::Minimum, QSizePolicy::Fixed);
+    m_recentSpacerBottom = new QSpacerItem(0, 8, QSizePolicy::Minimum, QSizePolicy::Fixed);
+    ui->verticalLayout->insertItem(1, m_recentSpacerTop);
     ui->verticalLayout->insertLayout(2, recentHeader);
     ui->verticalLayout->insertWidget(3, m_recent);
     ui->verticalLayout->insertWidget(4, m_recentEmpty);
-    ui->verticalLayout->insertSpacing(5, 8);
+    ui->verticalLayout->insertItem(5, m_recentSpacerBottom);
+
+    // Recent activity only when chosen in Settings (off by default).
+    m_recentHeader = recentHeader;
+    auto updateRecentVisibility = [this] {
+        const bool on = conf()->get(Config::homeRecentActivity).toBool();
+        for (int i = 0; i < m_recentHeader->count(); ++i) {
+            if (QWidget *w = m_recentHeader->itemAt(i)->widget()) w->setVisible(on);
+        }
+        m_recentSpacerTop->changeSize(0, on ? 8 : 0);
+        m_recentSpacerBottom->changeSize(0, on ? 8 : 0);
+        ui->verticalLayout->invalidate();
+        updateRecent();
+    };
+    connect(conf(), &Config::changed, this, [updateRecentVisibility](Config::ConfigKey key) {
+        if (key == Config::homeRecentActivity) updateRecentVisibility();
+    });
 
     if (m_wallet) {
         connect(m_wallet->history(), &TransactionHistory::refreshFinished, this, &HomeWidget::updateRecent);
@@ -99,7 +117,7 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
             connect(vault, signal, this, &HomeWidget::updateRecent);
         }
     }
-    updateRecent();
+    updateRecentVisibility();
 }
 
 void HomeWidget::updateRecent() {
@@ -150,9 +168,10 @@ void HomeWidget::updateRecent() {
         m_recent->resizeColumnToContents(c);
     }
     // Exactly as tall as its rows: no empty lines.
+    const bool on = conf()->get(Config::homeRecentActivity).toBool();
     const int rows = m_recent->topLevelItemCount();
-    m_recent->setVisible(rows > 0);
-    m_recentEmpty->setVisible(rows == 0);
+    m_recent->setVisible(on && rows > 0);
+    m_recentEmpty->setVisible(on && rows == 0);
     if (rows > 0) {
         const int rowHeight = m_recent->sizeHintForRow(0);
         m_recent->setFixedHeight(m_recent->header()->sizeHint().height() + rows * rowHeight + 2 * m_recent->frameWidth());

@@ -9,7 +9,9 @@
 
 #include "plugins/Plugin.h"
 
+class QHBoxLayout;
 class QLabel;
+class QSpacerItem;
 class QTreeWidget;
 class Wallet;
 
@@ -38,6 +40,9 @@ private:
     QPointer<Wallet> m_wallet;
     QTreeWidget *m_recent = nullptr;
     QLabel *m_recentEmpty = nullptr;
+    QHBoxLayout *m_recentHeader = nullptr;
+    QSpacerItem *m_recentSpacerTop = nullptr;
+    QSpacerItem *m_recentSpacerBottom = nullptr;
 };
 
 #endif //HOMEWIDGET_H

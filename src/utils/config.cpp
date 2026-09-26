@@ -26,6 +26,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::warnOnTestnet,{QS("warnOnTestnet"), true}},
         {Config::systemTorNotice,{QS("systemTorNotice"), true}},
         {Config::appearance,{QS("appearance"), "system"}},   // Biscuit: system, light or dark
+        {Config::homeRecentActivity,{QS("homeRecentActivity"), false}},   // Biscuit: Home, off unless chosen in Settings
         {Config::warnOnKiImport,{QS("warnOnKiImport"), true}},
         {Config::logLevel,{QS("logLevel"), 0}},
 

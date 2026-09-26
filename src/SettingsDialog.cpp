@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: The Monero Project
 
 #include "SettingsDialog.h"
+
+#include <QCheckBox>
+#include <QGridLayout>
 #include "ui_SettingsDialog.h"
 
 #include <QCloseEvent>
@@ -137,6 +140,22 @@ void Settings::setupAppearanceTab() {
        conf()->set(Config::balanceShowFiat, toggled);
        emit updateBalance();
     });
+
+    // Biscuit: [Recent activity on Home], off by default.
+    auto *recentActivity = new QCheckBox("Show recent activity on Home", this);
+    recentActivity->setChecked(conf()->get(Config::homeRecentActivity).toBool());
+    connect(recentActivity, &QCheckBox::toggled, [](bool toggled) {
+        conf()->set(Config::homeRecentActivity, toggled);
+    });
+    for (auto *grid : ui->checkBox_balanceShowFiat->parentWidget()->findChildren<QGridLayout *>()) {
+        int index = grid->indexOf(ui->checkBox_balanceShowFiat);
+        if (index >= 0) {
+            int row, column, rowSpan, columnSpan;
+            grid->getItemPosition(index, &row, &column, &rowSpan, &columnSpan);
+            grid->addWidget(recentActivity, row + 1, column);
+            break;
+        }
+    }
 
     // [Preferred fiat currency]
     QStringList availableFiatCurrencies = appData()->prices.rates.keys();
