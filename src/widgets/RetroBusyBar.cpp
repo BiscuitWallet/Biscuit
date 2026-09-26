@@ -10,8 +10,8 @@ namespace {
     constexpr int blockWidth = 7;
     constexpr int blockGap = 2;
     constexpr int blockCount = 5;
-    constexpr int step = 3;          // pixels per tick
-    constexpr int tickMs = 40;
+    constexpr int step = 1;          // pixel per tick: smooth
+    constexpr int tickMs = 12;       // ~80 px per second
 }
 
 RetroBusyBar::RetroBusyBar(QWidget *parent)
@@ -31,6 +31,11 @@ QSize RetroBusyBar::sizeHint() const {
 }
 
 void RetroBusyBar::setBusy(bool busy) {
+    // Called on every progress update: only a change restarts the blocks,
+    // otherwise they would jump back to the start before crossing the bar.
+    if (busy == m_busy) {
+        return;
+    }
     m_busy = busy;
     m_offset = 0;
     busy ? m_timer.start() : m_timer.stop();

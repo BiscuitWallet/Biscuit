@@ -9,6 +9,7 @@
 
 #include "Amount.h"
 #include "utils/Appearance.h"
+#include "widgets/PixelIcons.h"
 #include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinSetupDialog.h"
@@ -305,6 +306,10 @@ void MainWindow::initWidgets() {
             }
         }
     }
+
+    // Biscuit: pixel-art icons for Home and Swap.
+    if (const int home = this->findTab("Home"); home >= 0) ui->tabWidget->setTabIcon(home, PixelIcons::computer());
+    if (const int swap = this->findTab("Swap"); swap >= 0) ui->tabWidget->setTabIcon(swap, PixelIcons::network());
 
     ui->frame_coinControl->setVisible(false);
     connect(ui->btn_resetCoinControl, &QPushButton::clicked, [this]{

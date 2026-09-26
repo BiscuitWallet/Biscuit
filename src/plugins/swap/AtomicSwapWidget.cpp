@@ -15,6 +15,7 @@
 #include <QTreeWidgetItem>
 
 #include "utils/AppData.h"
+#include "widgets/PixelIcons.h"
 #include "widgets/RetroBusyBar.h"
 #include "utils/config.h"
 
@@ -47,52 +48,6 @@ namespace {
         return pixmap;
     }
 
-    // Original 16x16 pixel-art dial-up icon: a globe and a desk phone with
-    // a signal between them. Grey while dialing, in colour once connected.
-    QPixmap dialUpIcon(bool connected) {
-        static const char *rows[16] = {
-            "....kkkk........",
-            "..kkbbgbkk......",
-            ".kbbggbbbbk.....",
-            ".kbgggbbwbk.....",
-            "kbbbggbbbbbk....",
-            "kbbbbgbbggbk....",
-            "kbbbbbbgggbk...s",
-            ".kbbbbbbggk...s.",
-            ".kkbbbbbbkk..s..",
-            "...kkkkkk.......",
-            "......kkkkkkkkk.",
-            "......krrrrrrrk.",
-            ".....kkk.....kkk",
-            ".....kcccdddccck",
-            ".....kccddwddcck",
-            ".....kkkkkkkkkkk",
-        };
-        auto color = [connected](char c) -> QColor {
-            switch (c) {
-            case 'k': return QColor(30, 30, 30);
-            case 'b': return connected ? QColor(58, 120, 214) : QColor(154, 167, 181);
-            case 'g': return connected ? QColor(63, 174, 74) : QColor(181, 191, 168);
-            case 'w': return Qt::white;
-            case 'r': return QColor(70, 70, 70);
-            case 'c': return QColor(232, 220, 192);
-            case 'd': return QColor(154, 143, 120);
-            case 's': return connected ? QColor(63, 174, 74) : QColor(150, 150, 150);
-            default: return Qt::transparent;
-            }
-        };
-        QImage image(16, 16, QImage::Format_ARGB32);
-        image.fill(Qt::transparent);
-        for (int y = 0; y < 16; ++y) {
-            for (int x = 0; x < 16; ++x) {
-                image.setPixelColor(x, y, color(rows[y][x]));
-            }
-        }
-        // Crisp pixels on Retina screens.
-        QPixmap pixmap = QPixmap::fromImage(image.scaled(32, 32, Qt::IgnoreAspectRatio, Qt::FastTransformation));
-        pixmap.setDevicePixelRatio(2.0);
-        return pixmap;
-    }
 }
 
 AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
@@ -123,6 +78,10 @@ AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
     connect(m_dialTimer, &QTimer::timeout, this, [this] {
         m_dots = (m_dots + 1) % 4;
         ui->label_headline->setText(m_headlineBase + QString(m_dots, '.'));
+        if (m_phoneState == Phone::Dialing) {
+            // The modem's lights blink while it dials.
+            m_phone->setPixmap(PixelIcons::modem(false, ++m_modemPhase));
+        }
     });
     ui->check_tor->setChecked(conf()->get(Config::atomicSwapTor).toBool());
     connect(ui->check_tor, &QCheckBox::toggled, this, [this](bool checked) {
@@ -202,7 +161,7 @@ void AtomicSwapWidget::onDiscover() {
     ui->label_details->clear();
     ui->label_peers->setText("Connected to 0 peers");
     setHeadline(tor ? "Starting Tor" : "Starting", true);
-    setPhone(Phone::Dialing);
+    setPhone(Phone::Waiting);
     setBusy(true);
     ui->btn_discover->setText("Stop");
     ui->check_tor->setEnabled(false);
@@ -229,7 +188,8 @@ void AtomicSwapWidget::onSummary(const atomic::DiscoverySummary &summary) {
     if (summary.connected > 0) {
         setPhone(!active && summary.offers > 0 ? Phone::Done : Phone::PickedUp);
     } else {
-        setPhone(Phone::Dialing);
+        // Hourglass while waiting, modem while dialing makers.
+        setPhone(summary.dialing > 0 ? Phone::Dialing : Phone::Waiting);
     }
     ui->label_peers->setText(QString("Connected to %1 peers").arg(summary.connected));
     setBusy(atomic::discoveryActive(summary));
@@ -335,12 +295,16 @@ void AtomicSwapWidget::setPhone(Phone phone) {
     case Phone::Hidden:
         m_phone->hide();
         return;
+    case Phone::Waiting:
+        m_phone->setPixmap(PixelIcons::hourglass());
+        m_phone->setToolTip("Waiting");
+        break;
     case Phone::Dialing:
-        m_phone->setPixmap(dialUpIcon(false));
+        m_phone->setPixmap(PixelIcons::modem(false, m_modemPhase));
         m_phone->setToolTip("Dialing makers");
         break;
     case Phone::PickedUp:
-        m_phone->setPixmap(dialUpIcon(true));
+        m_phone->setPixmap(PixelIcons::modem(true, 0));
         m_phone->setToolTip("A maker answered");
         break;
     case Phone::Done:

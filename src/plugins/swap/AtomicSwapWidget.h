@@ -45,7 +45,8 @@ private:
     // Dialing indicator: a handset and "Dialing makers..." with dots that
     // appear one by one, like a modem; the handset picks up once a maker
     // answers, and a check mark shows when offers are in.
-    enum class Phone { Hidden, Dialing, PickedUp, Done };
+    enum class Phone { Hidden, Waiting, Dialing, PickedUp, Done };
+    int m_modemPhase = 0;
     void setHeadline(const QString &text, bool dialing);
     void setPhone(Phone phone);
     QLabel *m_phone = nullptr;
