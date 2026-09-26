@@ -137,6 +137,7 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
             auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, row);
             bar->setTitle({});
+            bar->setAddVisible(false);   // added from Receive
             layout->addWidget(bar);
             bars << bar;
         }

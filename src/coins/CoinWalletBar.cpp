@@ -73,6 +73,11 @@ void CoinWalletBar::setTitle(const QString &title) {
     rebuild();
 }
 
+void CoinWalletBar::setAddVisible(bool visible) {
+    m_addVisible = visible;
+    rebuild();
+}
+
 void CoinWalletBar::setActive(bool active) {
     m_active = active;
     setVisible(active && m_vault && m_vault->isUnlocked());
@@ -123,19 +128,21 @@ void CoinWalletBar::rebuild() {
         }
     }
 
-    auto *add = new QPushButton("Add wallet", this);
-    add->setAutoDefault(false);
-    add->setToolTip(QString("Add another %1 wallet").arg(m_params.name));
-    auto *menu = new QMenu(add);
-    menu->addAction("Restore from seed (12 or 24 words)…", this, [this] {
-        CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Restore, m_params, this).exec();
-    });
-    menu->addAction("Create a new seed…", this, [this] {
-        CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Create, m_params, this).exec();
-    });
-    add->setMenu(menu);
-    m_layout->addSpacing(12);
-    m_layout->addWidget(add);
+    if (m_addVisible) {
+        auto *add = new QPushButton("Add wallet", this);
+        add->setAutoDefault(false);
+        add->setToolTip(QString("Add another %1 wallet").arg(m_params.name));
+        auto *menu = new QMenu(add);
+        menu->addAction("Restore from seed (12 or 24 words)…", this, [this] {
+            CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Restore, m_params, this).exec();
+        });
+        menu->addAction("Create a new seed…", this, [this] {
+            CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Create, m_params, this).exec();
+        });
+        add->setMenu(menu);
+        m_layout->addSpacing(12);
+        m_layout->addWidget(add);
+    }
     m_layout->addStretch();
     m_balance = new QLabel(this);
     m_balance->setTextFormat(Qt::RichText);

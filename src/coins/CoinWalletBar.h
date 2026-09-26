@@ -31,6 +31,8 @@ public:
     void setActive(bool active);
     // Label before the buttons ("Wallet:" by default, empty for none).
     void setTitle(const QString &title);
+    // "Add wallet" button (shown by default; compact screens leave it to Receive).
+    void setAddVisible(bool visible);
 
 private:
     void rebuild();
@@ -45,6 +47,7 @@ private:
     QPointer<QLabel> m_balance;
     bool m_active = true;
     QString m_title = "Wallet:";
+    bool m_addVisible = true;
 };
 
 }
