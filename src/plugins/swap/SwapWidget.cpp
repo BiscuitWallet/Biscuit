@@ -304,11 +304,16 @@ void SwapWidget::updateForm() {
 
     // Every coin offered (XMR, BTC, LTC) has its wallet in Biscuit: coins are
     // received, and refunded, to this wallet by default, or to any address.
+    // XMR: a new subaddress of this wallet for each swap (never the main address).
+    auto walletChoice = [this](const Asset &asset) {
+        return asset == xmr() ? QString("New XMR subaddress (Biscuit)")
+                              : QString("My %1 wallet (Biscuit)").arg(asset.ticker.toUpper());
+    };
     if (to.isValid()) {
-        ui->combo_receiveMode->setItemText(ModeNewWalletAddress, QString("My %1 wallet (Biscuit)").arg(to.ticker.toUpper()));
+        ui->combo_receiveMode->setItemText(ModeNewWalletAddress, walletChoice(to));
     }
     if (from.isValid()) {
-        ui->combo_refundMode->setItemText(ModeNewWalletAddress, QString("My %1 wallet (Biscuit)").arg(from.ticker.toUpper()));
+        ui->combo_refundMode->setItemText(ModeNewWalletAddress, walletChoice(from));
     }
     const bool receiveInWallet = ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
     const bool refundInWallet = ui->combo_refundMode->currentIndex() == ModeNewWalletAddress;
@@ -523,7 +528,8 @@ void SwapWidget::createTrade(const Quote &quote) {
                     .arg(quote.amountFrom, quote.from.ticker.toUpper(), quote.amountTo, quote.to.ticker.toUpper()));
         box.setInformativeText(QString("Exchange: %1 (no KYC)\nYou get the coins at: %2")
                                .arg(quote.exchange,
-                                    receiveInWallet ? QString("your %1 wallet in Biscuit").arg(quote.to.ticker.toUpper())
+                                    receiveInWallet ? (receiveXmr ? QString("a new subaddress of your XMR wallet")
+                                                               : QString("your %1 wallet in Biscuit").arg(quote.to.ticker.toUpper()))
                                                     : payout));
         box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         if (box.exec() != QMessageBox::Yes) {
