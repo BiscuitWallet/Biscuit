@@ -59,6 +59,8 @@ private:
     void updateTorMode();
     void updateForm();
     void clearOffers();
+    void showOffers();
+    void showOffersMenu(const QPoint &pos);
     void setBusy(bool busy, const QString &status = {});
     QString newWalletAddress(const QString &label);
     // Bitcoin or Litecoin address of this wallet for `asset`; sets the BTC/LTC

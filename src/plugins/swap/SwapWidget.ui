@@ -302,6 +302,16 @@
          </column>
          <column>
           <property name="text">
+           <string>Value</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Cost</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
            <string>ETA</string>
           </property>
          </column>

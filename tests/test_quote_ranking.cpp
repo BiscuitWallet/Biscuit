@@ -43,6 +43,20 @@ class TestQuoteRanking : public QObject
 Q_OBJECT
 
 private slots:
+    void swapCostComparedWithTheMarket() {
+        // 0.1 XMR worth 55.82 for 0.751 LTC worth 55.30: 0.9% cost.
+        QCOMPARE(formatCostPercent(*swapCostPercent(55.82, 55.30)), QString("0.9%"));
+        QVERIFY(!swapCostNeedsWarning(*swapCostPercent(55.82, 55.30)));
+        QVERIFY(swapCostNeedsWarning(*swapCostPercent(100, 96)));
+        QCOMPARE(formatCostPercent(*swapCostPercent(100, 88)), QString("12%"));
+        // Better than the reference price: shown as a negative cost.
+        QCOMPARE(formatCostPercent(*swapCostPercent(100, 100.2)), QString("-0.2%"));
+        QCOMPARE(formatCostPercent(*swapCostPercent(100, 100)), QString("0%"));
+        // No usable price: no value.
+        QVERIFY(!swapCostPercent(0, 55).has_value());
+        QVERIFY(!swapCostPercent(55, 0).has_value());
+    }
+
     void bestAmountReceivedFirst() {
         const QList<Quote> quotes = {
             quote("Low", "0.0040"),

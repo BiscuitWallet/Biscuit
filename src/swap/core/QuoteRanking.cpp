@@ -4,6 +4,7 @@
 #include "QuoteRanking.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "Amount.h"
 
@@ -44,6 +45,23 @@ QList<Quote> rankQuotes(const QList<Quote> &quotes, KycRating minKycRating) {
     });
 
     return ranked;
+}
+
+std::optional<double> swapCostPercent(double valueSent, double valueReceived) {
+    if (!(valueSent > 0) || !(valueReceived > 0)) {
+        return std::nullopt;
+    }
+    return (1.0 - valueReceived / valueSent) * 100.0;
+}
+
+QString formatCostPercent(double percent) {
+    const double rounded = std::round(percent * 10.0) / 10.0;
+    if (rounded == 0) return "0%";
+    return QString("%1%").arg(QString::number(rounded, 'f', std::abs(rounded) >= 10 ? 0 : 1));
+}
+
+bool swapCostNeedsWarning(double percent) {
+    return percent >= 3.0;
 }
 
 }

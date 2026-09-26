@@ -8,11 +8,14 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
+#include <QMenu>
 #include <QMessageBox>
+#include <QShortcut>
 
 #include "Amount.h"
 #include "AtomicSwapWidget.h"
 #include "DemoSwap.h"
+#include "QuoteRanking.h"
 #include "SwapTradeDialog.h"
 #include "coins/CoinSendController.h"
 #include "coins/CoinVault.h"
@@ -20,6 +23,7 @@
 #include "coins/core/CoinParams.h"
 #include "components.h"
 #include "swap/TrocadorSwapProvider.h"
+#include "utils/AppData.h"
 #include "utils/config.h"
 #include "constants.h"
 #include "libwalletqt/Subaddress.h"
@@ -32,7 +36,21 @@ using namespace biscuit::swap;
 using biscuit::swap::TrocadorSwapProvider;
 
 namespace {
-    enum OfferColumn { OfferExchange = 0, OfferGet, OfferEta, OfferVia };
+    enum OfferColumn { OfferExchange = 0, OfferGet, OfferValue, OfferCost, OfferEta, OfferVia };
+
+    QString preferredFiat() {
+        return conf()->get(Config::preferredFiatCurrency).toString();
+    }
+
+    // Value in the preferred currency, 0 if unknown (Biscuit's public price data).
+    double fiatValue(const Asset &asset, const QString &amount) {
+        auto &prices = appData()->prices;
+        const QString ticker = asset.ticker.toUpper();
+        if (!amount::isValid(amount) || !prices.canConvert(ticker, preferredFiat())) {
+            return 0;
+        }
+        return prices.convert(ticker, preferredFiat(), amount.toDouble());
+    }
 
     // Only exchanges rated A by Trocador: no KYC, no identity checks.
     constexpr KycRating noKyc = KycRating::A;
@@ -112,6 +130,19 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     connect(ui->btn_offers, &QPushButton::clicked, this, &SwapWidget::onGetOffers);
     connect(ui->line_amount, &QLineEdit::returnPressed, this, &SwapWidget::onGetOffers);
     connect(ui->btn_create, &QPushButton::clicked, this, &SwapWidget::onCreateSwap);
+    ui->tree_offers->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->tree_offers, &QTreeWidget::customContextMenuRequested, this, &SwapWidget::showOffersMenu);
+    // Cmd+C / Ctrl+C: amount you get of the selected offer.
+    auto *copy = new QShortcut(QKeySequence::Copy, ui->tree_offers, nullptr, nullptr, Qt::WidgetShortcut);
+    connect(copy, &QShortcut::activated, this, [this] {
+        const QTreeWidgetItem *item = ui->tree_offers->currentItem();
+        const int index = item ? item->data(OfferExchange, QuoteIndexRole).toInt() : -1;
+        if (index >= 0 && index < m_quotes.size()) {
+            Utils::copyToClipboard(m_quotes.at(index).amountTo);
+        }
+    });
+    connect(&appData()->prices, &Prices::fiatPricesUpdated, this, [this] { if (!m_quotes.isEmpty()) showOffers(); });
+    connect(&appData()->prices, &Prices::cryptoPricesUpdated, this, [this] { if (!m_quotes.isEmpty()) showOffers(); });
     connect(ui->tree_offers, &QTreeWidget::itemSelectionChanged, this, [this] {
         ui->btn_create->setEnabled(!ui->tree_offers->selectedItems().isEmpty());
     });
@@ -373,22 +404,7 @@ void SwapWidget::onGetOffers() {
 
     m_manager->requestQuotes(request, [this](const QList<Quote> &ranked, const QStringList &errors) {
         m_quotes = ranked;
-        ui->tree_offers->clear();
-        for (int i = 0; i < ranked.size(); ++i) {
-            const Quote &q = ranked.at(i);
-            auto *item = new QTreeWidgetItem(ui->tree_offers);
-            item->setText(OfferExchange, q.exchange);
-            item->setText(OfferGet, q.rateType == RateType::Fixed ? QString("%1 %2").arg(q.amountFrom, q.from.ticker.toUpper())
-                                                                  : QString("%1 %2").arg(q.amountTo, q.to.ticker.toUpper()));
-            item->setTextAlignment(OfferGet, Qt::AlignRight | Qt::AlignVCenter);
-            item->setText(OfferEta, q.etaMinutes ? QString("~%1 min").arg(*q.etaMinutes) : "–");
-            const SwapProvider *p = m_manager->provider(q.providerId);
-            item->setText(OfferVia, p ? p->displayName() : q.providerId);
-            item->setData(OfferExchange, QuoteIndexRole, i);
-        }
-        for (int c = OfferGet; c < ui->tree_offers->columnCount(); ++c) {
-            ui->tree_offers->resizeColumnToContents(c);
-        }
+        showOffers();
 
         if (ranked.isEmpty()) {
             setBusy(false, errors.isEmpty() ? "No offer for this pair and amount." : errors.join("\n"));
@@ -402,6 +418,74 @@ void SwapWidget::onGetOffers() {
                                     : QString("≈ %1 %2").arg(best.amountTo, best.to.ticker.toUpper()));
         setBusy(false, ranked.size() == 1 ? "1 offer." : QString("%1 offers, best one selected.").arg(ranked.size()));
     });
+}
+
+// The offers with their value and cost compared with the market (redrawn
+// when prices change, the selected offer is kept).
+void SwapWidget::showOffers() {
+    const QTreeWidgetItem *current = ui->tree_offers->currentItem();
+    const int selected = current ? current->data(OfferExchange, QuoteIndexRole).toInt() : 0;
+    ui->tree_offers->clear();
+    const QString fiat = preferredFiat();
+    for (int i = 0; i < m_quotes.size(); ++i) {
+        const Quote &q = m_quotes.at(i);
+        const bool fixed = q.rateType == RateType::Fixed;
+        auto *item = new QTreeWidgetItem(ui->tree_offers);
+        item->setText(OfferExchange, q.exchange);
+        item->setText(OfferGet, fixed ? QString("%1 %2").arg(q.amountFrom, q.from.ticker.toUpper())
+                                      : QString("%1 %2").arg(q.amountTo, q.to.ticker.toUpper()));
+
+        const double sent = fiatValue(q.from, q.amountFrom);
+        const double received = fiatValue(q.to, q.amountTo);
+        const double shown = fixed ? sent : received;
+        item->setText(OfferValue, shown > 0 ? Utils::amountToCurrencyString(shown, fiat) : QString("–"));
+        if (const auto cost = swapCostPercent(sent, received)) {
+            item->setText(OfferCost, QString("%1 (%2)").arg(formatCostPercent(*cost),
+                                                            Utils::amountToCurrencyString(sent - received, fiat)));
+            if (swapCostNeedsWarning(*cost)) {
+                item->setForeground(OfferCost, QBrush(Qt::red));
+            }
+            item->setToolTip(OfferCost, QString("You send %1 and get %2 at market prices (Biscuit's public price data): "
+                                                "this swap costs %3 of what you send, fees included.")
+                             .arg(Utils::amountToCurrencyString(sent, fiat), Utils::amountToCurrencyString(received, fiat),
+                                  formatCostPercent(*cost)));
+        } else {
+            item->setText(OfferCost, "–");
+            item->setToolTip(OfferCost, "No market price: public price data is off or not loaded yet.");
+        }
+        for (int column : {OfferGet, OfferValue, OfferCost}) {
+            item->setTextAlignment(column, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        item->setText(OfferEta, q.etaMinutes ? QString("~%1 min").arg(*q.etaMinutes) : "–");
+        const SwapProvider *p = m_manager->provider(q.providerId);
+        item->setText(OfferVia, p ? p->displayName() : q.providerId);
+        item->setData(OfferExchange, QuoteIndexRole, i);
+    }
+    for (int c = OfferGet; c < ui->tree_offers->columnCount(); ++c) {
+        ui->tree_offers->resizeColumnToContents(c);
+    }
+    if (QTreeWidgetItem *item = ui->tree_offers->topLevelItem(std::min(selected, ui->tree_offers->topLevelItemCount() - 1))) {
+        ui->tree_offers->setCurrentItem(item);
+    }
+}
+
+// Amounts as plain numbers, ready to paste in Calc or elsewhere.
+void SwapWidget::showOffersMenu(const QPoint &pos) {
+    const QTreeWidgetItem *item = ui->tree_offers->itemAt(pos);
+    if (!item) {
+        return;
+    }
+    const int index = item->data(OfferExchange, QuoteIndexRole).toInt();
+    if (index < 0 || index >= m_quotes.size()) {
+        return;
+    }
+    const Quote q = m_quotes.at(index);
+    QMenu menu(this);
+    menu.addAction(QString("Copy amount you get (%1 %2)").arg(q.amountTo, q.to.ticker.toUpper()),
+                   [q] { Utils::copyToClipboard(q.amountTo); });
+    menu.addAction(QString("Copy amount you send (%1 %2)").arg(q.amountFrom, q.from.ticker.toUpper()),
+                   [q] { Utils::copyToClipboard(q.amountFrom); });
+    menu.exec(ui->tree_offers->viewport()->mapToGlobal(pos));
 }
 
 QString SwapWidget::newWalletAddress(const QString &label) {

@@ -4,6 +4,8 @@
 #ifndef BISCUIT_SWAP_QUOTERANKING_H
 #define BISCUIT_SWAP_QUOTERANKING_H
 
+#include <optional>
+
 #include <QList>
 
 #include "SwapTypes.h"
@@ -22,6 +24,19 @@ namespace biscuit::swap {
 //
 // Quotes with an invalid or zero amount, or below `minKycRating`, are dropped.
 QList<Quote> rankQuotes(const QList<Quote> &quotes, KycRating minKycRating);
+
+// Display only, never used for ranking (ranking depends on the amount
+// received alone). Cost of a swap compared with the market price: the value
+// sent minus the value received, in percent of the value sent, both valued
+// with Biscuit's public price data. 0.9 = the swap costs 0.9% of what you
+// send (exchange fee, spread, network fee). Negative when the offer beats the
+// reference price (usually a slightly stale reference). No value without
+// usable prices.
+std::optional<double> swapCostPercent(double valueSent, double valueReceived);
+// "0.9%", "12%", "-0.2%".
+QString formatCostPercent(double percent);
+// High enough to point out.
+bool swapCostNeedsWarning(double percent);
 
 }
 
