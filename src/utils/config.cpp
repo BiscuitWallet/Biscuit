@@ -128,7 +128,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::restartRequired, {QS("restartRequired"), false}},
 
         {Config::tickers, {QS("tickers"), QStringList{"XMR", "BTC", "XMR/BTC"}}},
-        {Config::tickersShowFiatBalance, {QS("tickersShowFiatBalance"), false}},   // Biscuit: the Home "Total" replaces it
+        {Config::tickersShowFiatBalance, {QS("tickersShowFiatBalance"), true}},
 
         // Biscuit: swaps
         {Config::swapDisabledProviders, {QS("swapDisabledProviders"), QStringList{}}},

@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: The Monero Project
 
 #include "TickerWidget.h"
+
+#include "coins/CoinVault.h"
+#include "coins/CoinWallet.h"
 #include "ui_TickerWidget.h"
 
 #include "constants.h"
@@ -66,6 +69,11 @@ BalanceTickerWidget::BalanceTickerWidget(QWidget *parent, Wallet *wallet, bool t
     this->setPercentageVisible(false);
 
     connect(m_wallet, &Wallet::balanceUpdated, this, &BalanceTickerWidget::updateDisplay);
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::walletsChanged,
+                        &biscuit::coins::CoinVault::walletUpdated}) {
+        connect(vault, signal, this, &BalanceTickerWidget::updateDisplay);
+    }
     connect(&appData()->prices, &Prices::fiatPricesUpdated, this, &BalanceTickerWidget::updateDisplay);
     connect(&appData()->prices, &Prices::cryptoPricesUpdated, this, &BalanceTickerWidget::updateDisplay);
 }
@@ -76,6 +84,14 @@ void BalanceTickerWidget::updateDisplay() {
     double balanceFiatAmount = appData()->prices.convert("XMR", fiatCurrency, balance);
     if (balanceFiatAmount < 0)
         return;
+    // Biscuit: the Bitcoin and Litecoin wallets count too.
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    if (vault->isUnlocked()) {
+        for (auto *coin : vault->allWallets()) {
+            balanceFiatAmount += appData()->prices.convert(coin->params().ticker, fiatCurrency,
+                                                           double(coin->balance().total()) / 1e8);
+        }
+    }
     this->setFiatText(balanceFiatAmount, fiatCurrency);
 }
 

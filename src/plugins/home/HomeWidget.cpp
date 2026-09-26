@@ -7,14 +7,11 @@
 #include <algorithm>
 #include <limits>
 
-#include <QAbstractItemView>
-#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QPushButton>
 #include <QTabWidget>
-#include <QTreeView>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
@@ -34,7 +31,6 @@
 
 namespace {
     constexpr int recentCount = 5;
-    constexpr int maxListRows = 6;   // Crowdfunding: then it scrolls
 
     struct Activity {
         QDateTime time;       // invalid while unknown (sorted first, as pending)
@@ -63,32 +59,8 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
 {
     ui->setupUi(this);
 
-    // Biscuit: the dashboard. Total first, prices (plugins) next to it,
-    // recent activity, then a short Crowdfunding list.
-    auto *top = new QHBoxLayout;
-    top->setSpacing(24);
-    // Same native box as the price tiles next to it.
-    auto *totalBox = new QGroupBox("Total", this);
-    auto *totalLayout = new QVBoxLayout(totalBox);
-    totalLayout->setContentsMargins(12, 6, 12, 8);
-    totalLayout->setSpacing(2);
-    m_total = new QLabel(totalBox);
-    QFont big = m_total->font();
-    big.setPointSizeF(big.pointSizeF() * 2.2);
-    big.setBold(true);
-    m_total->setFont(big);
-    m_total->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_coins = new QLabel(totalBox);
-    m_coins->setStyleSheet("color: gray;");
-    m_coins->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    totalLayout->addWidget(m_total);
-    totalLayout->addWidget(m_coins);
-    top->addWidget(totalBox, 0, Qt::AlignTop);
-    // The price tickers (plugins) go to the right of the total.
-    ui->verticalLayout->removeItem(ui->widgetLayout);
-    top->addLayout(ui->widgetLayout, 1);
-    ui->verticalLayout->insertLayout(0, top);
-
+    // Biscuit: recent activity of every coin and wallet, between the prices
+    // (plugins, widgetLayout) and the Crowdfunding tab.
     auto *recentHeader = new QHBoxLayout;
     auto *recentTitle = new QLabel("Recent activity", this);
     QFont bold = recentTitle->font();
@@ -111,68 +83,21 @@ HomeWidget::HomeWidget(Wallet *wallet, QWidget *parent)
     connect(m_recent, &QTreeWidget::itemDoubleClicked, this, &HomeWidget::showHistoryTab);
     m_recentEmpty = new QLabel("No transactions yet.", this);
     m_recentEmpty->setStyleSheet("color: gray;");
-    ui->verticalLayout->insertSpacing(1, 12);
+    ui->verticalLayout->insertSpacing(1, 8);
     ui->verticalLayout->insertLayout(2, recentHeader);
     ui->verticalLayout->insertWidget(3, m_recent);
     ui->verticalLayout->insertWidget(4, m_recentEmpty);
-    ui->verticalLayout->insertSpacing(5, 12);
-
-    // Crowdfunding: a short list rather than a full-page table (see fitList).
-    ui->tabHomeWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-    ui->verticalLayout->addStretch(1);
+    ui->verticalLayout->insertSpacing(5, 8);
 
     if (m_wallet) {
-        connect(m_wallet, &Wallet::balanceUpdated, this, &HomeWidget::updateTotal);
         connect(m_wallet->history(), &TransactionHistory::refreshFinished, this, &HomeWidget::updateRecent);
         auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
         for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
                             &biscuit::coins::CoinVault::walletsChanged, &biscuit::coins::CoinVault::walletUpdated}) {
-            connect(vault, signal, this, &HomeWidget::updateTotal);
             connect(vault, signal, this, &HomeWidget::updateRecent);
         }
     }
-    connect(&appData()->prices, &Prices::fiatPricesUpdated, this, &HomeWidget::updateTotal);
-    connect(&appData()->prices, &Prices::cryptoPricesUpdated, this, &HomeWidget::updateTotal);
-    updateTotal();
     updateRecent();
-}
-
-void HomeWidget::updateTotal() {
-    if (!m_wallet) {
-        return;
-    }
-    const bool hide = conf()->get(Config::hideBalance).toBool();
-    const QString fiat = conf()->get(Config::preferredFiatCurrency).toString();
-    auto &prices = appData()->prices;
-    const quint64 xmr = m_wallet->balance();
-    bool known = prices.canConvert("XMR", fiat);
-    double total = prices.convert("XMR", fiat, xmr / constants::cdiv);
-    QStringList coins{QString("%1 XMR").arg(WalletManager::displayAmount(xmr, false))};
-
-    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-    if (vault->isUnlocked()) {
-        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
-            quint64 amount = 0;
-            for (const auto &entry : vault->wallets(*params)) {
-                amount += entry.wallet->balance().total();
-            }
-            coins << QString("%1 %2").arg(biscuit::swap::amount::fromAtomic(amount, params->decimals), params->ticker);
-            if (amount > 0) {
-                known = known && prices.canConvert(params->ticker, fiat);
-            }
-            total += prices.convert(params->ticker, fiat, double(amount) / 1e8);
-        }
-    }
-
-    if (hide) {
-        m_total->setText("Hidden");
-        m_coins->clear();
-        return;
-    }
-    m_total->setText(known ? Utils::amountToCurrencyString(total, fiat) : QString("…"));
-    m_total->setToolTip(known ? QString("Every coin and wallet together, at market prices (%1, changeable in Settings).").arg(fiat)
-                              : QString("Prices are not loaded yet."));
-    m_coins->setText(coins.join(" · "));
 }
 
 void HomeWidget::updateRecent() {
@@ -232,17 +157,6 @@ void HomeWidget::updateRecent() {
     }
 }
 
-void HomeWidget::fitList(QAbstractItemView *view) {
-    const int rows = std::min(view->model()->rowCount(), maxListRows);
-    const int rowHeight = view->model()->rowCount() > 0 ? view->sizeHintForRow(0) : view->fontMetrics().height() + 6;
-    int header = 0;
-    if (auto *tree = qobject_cast<QTreeView *>(view)) {
-        header = tree->header()->isHidden() ? 0 : tree->header()->sizeHint().height();
-    }
-    view->setFixedHeight(header + std::max(rows, 1) * rowHeight + 2 * view->frameWidth());
-    ui->tabHomeWidget->setMaximumHeight(ui->tabHomeWidget->tabBar()->sizeHint().height() + view->height() + 8);
-}
-
 // "See all": the History tab of the main window.
 void HomeWidget::showHistoryTab() {
     for (QWidget *w = parentWidget(); w; w = w->parentWidget()) {
@@ -261,16 +175,6 @@ void HomeWidget::addPlugin(Plugin *plugin)
 {
     if (plugin->type() == Plugin::TAB) {
         ui->tabHomeWidget->addTab(plugin->tab(), plugin->displayName());
-        // Biscuit: lists on Home are as tall as their rows (at most a few),
-        // never a screen of empty lines.
-        for (auto *view : plugin->tab()->findChildren<QAbstractItemView *>()) {
-            if (!view->model()) continue;
-            auto fit = [this, view] { fitList(view); };
-            connect(view->model(), &QAbstractItemModel::modelReset, this, fit);
-            connect(view->model(), &QAbstractItemModel::rowsInserted, this, fit);
-            connect(view->model(), &QAbstractItemModel::rowsRemoved, this, fit);
-            fitList(view);
-        }
     }
     else if (plugin->type() == Plugin::WIDGET) {
         ui->widgetLayout->addWidget(plugin->tab());

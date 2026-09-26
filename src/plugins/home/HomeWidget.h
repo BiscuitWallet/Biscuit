@@ -9,7 +9,6 @@
 
 #include "plugins/Plugin.h"
 
-class QAbstractItemView;
 class QLabel;
 class QTreeWidget;
 class Wallet;
@@ -31,16 +30,12 @@ public:
     void uiSetup();
 
 private:
-    // Biscuit dashboard: total of every coin, recent activity of every wallet.
-    void updateTotal();
+    // Biscuit: recent activity of every coin and wallet.
     void updateRecent();
     void showHistoryTab();
-    void fitList(QAbstractItemView *view);
 
     QScopedPointer<Ui::HomeWidget> ui;
     QPointer<Wallet> m_wallet;
-    QLabel *m_total = nullptr;
-    QLabel *m_coins = nullptr;
     QTreeWidget *m_recent = nullptr;
     QLabel *m_recentEmpty = nullptr;
 };
