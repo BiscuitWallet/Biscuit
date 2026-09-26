@@ -26,6 +26,7 @@
 #include "components.h"
 #include "swap/TrocadorSwapProvider.h"
 #include "utils/AppData.h"
+#include "utils/Appearance.h"
 #include "utils/config.h"
 #include "constants.h"
 #include "libwalletqt/Subaddress.h"
@@ -86,6 +87,9 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     });
     ui->setupUi(this);
     showOffersRows(false);   // until the first offers arrive
+    // Same form and place as the coin selectors (Monero, Bitcoin, Litecoin).
+    ui->tabWidget->tabBar()->setObjectName("centeredTabBar");
+    Appearance::styleTabs(ui->tabWidget, true);
     // Atomic swaps (BTC -> XMR, public makers) sit next to the exchange swaps.
     m_atomicTab = new AtomicSwapWidget(this);
     ui->tabWidget->insertTab(1, m_atomicTab, "Atomic swap (BTC → XMR)");

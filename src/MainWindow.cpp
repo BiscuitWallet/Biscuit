@@ -71,7 +71,6 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     // panel that left a band of another colour under them on macOS.
     ui->tabWidget->tabBar()->setObjectName("mainTabBar");
     Appearance::styleTabs(ui->tabWidget, true);
-    Appearance::styleStatusBar(this->statusBar());
 
     // Biscuit: light / dark appearance in one click, top right, in sight.
     auto *appearanceButton = new StatusBarButton(Appearance::toggleIcon(), "Dark mode", this);

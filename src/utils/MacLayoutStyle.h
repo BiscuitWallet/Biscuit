@@ -13,8 +13,9 @@
 //    not on the larger rect that includes the macOS shadow and focus ring, so
 //    a "Max" button or a currency selector sits on the same line as the field
 //    next to it;
-//  - the main tab bar (object name "mainTabBar", flat document mode) is
-//    centered, like native macOS tabs, instead of pinned to the left.
+//  - tab bars named "mainTabBar" (main tabs) or "centeredTabBar" (Swap) are
+//    centered, like the coin selectors, instead of pinned to the left.
+// Used on every platform on top of Fusion.
 class MacLayoutStyle : public QProxyStyle
 {
 public:

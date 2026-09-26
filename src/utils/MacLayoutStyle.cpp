@@ -18,7 +18,7 @@ int MacLayoutStyle::styleHint(StyleHint hint, const QStyleOption *option, const 
         // Asked by the tab bar itself or by the tab widget that holds it.
         const auto *tabs = qobject_cast<const QTabWidget *>(widget);
         const QWidget *bar = tabs ? tabs->tabBar() : widget;
-        if (bar && bar->objectName() == QLatin1String("mainTabBar")) {
+        if (bar && (bar->objectName() == QLatin1String("mainTabBar") || bar->objectName() == QLatin1String("centeredTabBar"))) {
             return Qt::AlignCenter;
         }
     }

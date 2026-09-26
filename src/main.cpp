@@ -86,10 +86,9 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
 
     Application app(argc, argv);
 
-#if defined(Q_OS_MACOS)
-    // Biscuit: align form rows (labels, fields, buttons) with the native macOS style.
-    QApplication::setStyle(new MacLayoutStyle(QApplication::style()->name()));
-#endif
+    // Biscuit: one square, consistent look on every platform (Fusion), with
+    // form rows aligned and the main tabs centered (MacLayoutStyle).
+    QApplication::setStyle(new MacLayoutStyle("Fusion"));
 
     QApplication::setApplicationName("Biscuit");
     QApplication::setApplicationVersion(FEATHER_VERSION);

@@ -3,57 +3,22 @@
 
 #include "Appearance.h"
 
-#include <QApplication>
 #include <QGuiApplication>
-#include <QStatusBar>
-#include <QTabBar>
-#include <QTabWidget>
-#include <functional>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
 #include <QStyleHints>
+#include <QTabWidget>
 #include <QtMath>
 
 #include "utils/config.h"
 
 namespace Appearance {
 
-namespace {
-    // Re-applies `style` now and whenever light / dark changes.
-    void keepStyled(QWidget *widget, const std::function<QString()> &style) {
-        widget->setStyleSheet(style());
-        QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, widget,
-                         [widget, style] { widget->setStyleSheet(style()); });
-    }
-}
-
 void styleTabs(QTabWidget *tabs, bool centered) {
-    Q_UNUSED(centered)   // centering comes from MacLayoutStyle ("mainTabBar")
+    Q_UNUSED(centered)   // centering: MacLayoutStyle, by tab bar name
+    // Fusion draws flat, square tabs that match the rest of the interface.
     tabs->setDocumentMode(true);
-    // On the tab bar only: a style sheet on the tab widget would cascade to
-    // every page (combo boxes, text fields and backgrounds drawn differently).
-    keepStyled(tabs->tabBar(), [] {
-        const bool dark = isDark();
-        const QString bg = dark ? "#2b2b2b" : "#ececec", text = dark ? "#c8c8c8" : "#3a3a3a",
-                      sel = dark ? "#404040" : "#ffffff", selText = dark ? "#ffffff" : "#000000",
-                      border = dark ? "#1e1e1e" : "#d2d2d2", hover = dark ? "#353535" : "#f6f6f6";
-        return QString(R"(
-QTabBar { background: %1; border-bottom: 1px solid %5; qproperty-drawBase: 0; }
-QTabBar::tab { background: %1; color: %2; border: none; border-right: 1px solid %5; padding: 4px 20px; font-size: %7pt; }
-QTabBar::tab:first { border-left: 1px solid %5; }
-QTabBar::tab:selected { background: %3; color: %4; }
-QTabBar::tab:hover:!selected { background: %6; }
-)").arg(bg, text, sel, selText, border, hover).arg(QApplication::font().pointSize());
-    });
-}
-
-void styleStatusBar(QStatusBar *bar) {
-    keepStyled(bar, [] {
-        const bool dark = isDark();
-        return QString("QStatusBar { background: %1; border-top: 1px solid %3; } QStatusBar QLabel { color: %2; }")
-                .arg(dark ? "#252525" : "#f4f4f4", dark ? "#e6e6e6" : "#1e1e1e", dark ? "#1a1a1a" : "#d2d2d2");
-    });
 }
 
 void apply() {
