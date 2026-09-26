@@ -83,11 +83,6 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, appearanceButton, updateAppearanceButton);
     ui->tabWidget->setCornerWidget(appearanceButton, Qt::TopRightCorner);
 
-    // The title bar shows the window colour (ivory or dark grey) instead of
-    // the system's white or black: content extends under a title bar without
-    // its own background (Qt keeps the tabs clear of the window buttons).
-    this->setWindowFlag(Qt::ExpandedClientAreaHint, true);
-    this->setWindowFlag(Qt::NoTitleBarBackgroundHint, true);
 
     // Ensure the destructor is called after closeEvent()
     setAttribute(Qt::WA_DeleteOnClose);
