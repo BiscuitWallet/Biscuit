@@ -11,7 +11,7 @@ HomePlugin::HomePlugin()
 
 void HomePlugin::initialize(Wallet *wallet, QObject *parent) {
     this->setParent(parent);
-    m_tab = new HomeWidget(nullptr);
+    m_tab = new HomeWidget(wallet, nullptr);
 }
 
 QString HomePlugin::id() {
