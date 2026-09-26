@@ -68,6 +68,16 @@ void CoinWalletBar::updateBalances() {
     m_balance->setText(text);
 }
 
+void CoinWalletBar::setTitle(const QString &title) {
+    m_title = title;
+    rebuild();
+}
+
+void CoinWalletBar::setActive(bool active) {
+    m_active = active;
+    setVisible(active && m_vault && m_vault->isUnlocked());
+}
+
 void CoinWalletBar::rebuild() {
     for (QAbstractButton *b : m_group->buttons()) {
         m_group->removeButton(b);
@@ -81,12 +91,14 @@ void CoinWalletBar::rebuild() {
         delete item;
     }
     const bool unlocked = m_vault && m_vault->isUnlocked();
-    setVisible(unlocked);
+    setVisible(unlocked && m_active);
     if (!unlocked) {
         return;
     }
 
-    m_layout->addWidget(new QLabel("Wallet:", this));
+    if (!m_title.isEmpty()) {
+        m_layout->addWidget(new QLabel(m_title, this));
+    }
     const auto entries = m_vault->wallets(m_params);
     const QString selected = m_vault->selectedId(m_params);
     for (int i = 0; i < entries.size(); ++i) {

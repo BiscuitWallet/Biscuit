@@ -152,9 +152,8 @@ void SendWidget::updateCoinMode() {
     const bool coinMode = m_coin != nullptr;
 
     for (int i = 0; i < m_walletBars.size(); ++i) {
-        // A bar hides itself while Bitcoin/Litecoin are locked or not set up.
-        const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-        ui->formLayout->setRowVisible(m_walletBars.at(i), coinIndex == i + 1 && vault->isUnlocked());
+        // A bar also hides itself while Bitcoin/Litecoin are locked or not set up.
+        static_cast<biscuit::coins::CoinWalletBar *>(m_walletBars.at(i))->setActive(coinIndex == i + 1);
     }
     ui->lineAddress->setPlaceholderText(m_coin ? QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1" : "ltc1")
                                                : QString());

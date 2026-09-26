@@ -16,7 +16,7 @@ class QLabel;
 class QPushButton;
 class Wallet;
 
-namespace biscuit::coins { class CoinSendController; }
+namespace biscuit::coins { class CoinSendController; class CoinWalletBar; }
 
 namespace Ui {
 class SwapWidget;
@@ -60,6 +60,7 @@ private:
     void updateForm();
     void clearOffers();
     void onMax();
+    void updateWalletRows();
     void showOffers();
     void showOffersMenu(const QPoint &pos);
     void setBusy(bool busy, const QString &status = {});
@@ -79,6 +80,11 @@ private:
     biscuit::swap::SwapManager *m_manager;
     biscuit::coins::CoinSendController *m_coins;
     QPushButton *m_btnMax = nullptr;
+    // Which Bitcoin/Litecoin wallet sends, and which one receives.
+    QWidget *m_fromWalletRow = nullptr;
+    QWidget *m_toWalletRow = nullptr;
+    QList<biscuit::coins::CoinWalletBar *> m_fromBars;   // Bitcoin, Litecoin
+    QList<biscuit::coins::CoinWalletBar *> m_toBars;
     QList<biscuit::swap::Quote> m_quotes;
     bool m_updating = false;
     InfoFrame *m_torNotice = nullptr;

@@ -4,6 +4,7 @@
 #include "SwapWidget.h"
 #include "ui_SwapWidget.h"
 
+#include <QFormLayout>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -20,6 +21,7 @@
 #include "coins/CoinSendController.h"
 #include "coins/CoinVault.h"
 #include "coins/CoinWallet.h"
+#include "coins/CoinWalletBar.h"
 #include "coins/core/CoinParams.h"
 #include "components.h"
 #include "swap/TrocadorSwapProvider.h"
@@ -124,6 +126,34 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     m_btnMax->setToolTip("Everything available in the selected wallet, network fee deducted.");
     ui->layout_send->insertWidget(1, m_btnMax);
     connect(m_btnMax, &QPushButton::clicked, this, &SwapWidget::onMax);
+
+    // "From wallet" under "You send", "To wallet" under "Receive at": the
+    // Bitcoin/Litecoin wallet used, with its balance (as in Receive and Send).
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    auto makeRow = [this, vault](QList<biscuit::coins::CoinWalletBar *> &bars) {
+        auto *row = new QWidget(this);
+        auto *layout = new QHBoxLayout(row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+            auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, row);
+            bar->setTitle({});
+            layout->addWidget(bar);
+            bars << bar;
+        }
+        return row;
+    };
+    m_fromWalletRow = makeRow(m_fromBars);
+    m_toWalletRow = makeRow(m_toBars);
+    int formRow = 0;
+    QFormLayout::ItemRole role;
+    ui->formLayout->getWidgetPosition(ui->label_send, &formRow, &role);
+    ui->formLayout->insertRow(formRow + 1, "From wallet", m_fromWalletRow);
+    ui->formLayout->getWidgetPosition(ui->label_receiveAt, &formRow, &role);
+    ui->formLayout->insertRow(formRow + 1, "To wallet", m_toWalletRow);
+    for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked}) {
+        connect(vault, signal, this, &SwapWidget::updateWalletRows);
+    }
+    updateWalletRows();
     connect(ui->line_amount, &QLineEdit::textEdited, this, &SwapWidget::clearOffers);
     connect(ui->combo_rate, &QComboBox::currentIndexChanged, this, [this] {
         placeAmountField();
@@ -356,6 +386,7 @@ void SwapWidget::updateForm() {
     const bool receiveInWallet = ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
     const bool refundInWallet = ui->combo_refundMode->currentIndex() == ModeNewWalletAddress;
     ui->line_receive->setVisible(!receiveInWallet);
+    updateWalletRows();
     ui->line_refund->setVisible(!refundInWallet);
 
     if (to.isValid()) {
@@ -531,7 +562,10 @@ void SwapWidget::onMax() {
     QString error;
     const auto plan = coin->planSend(coin->receiveAddress(), 0, coin->feeRate(6), true, &error);
     if (!plan) {
-        Utils::showInfo(this, "Nothing to send", error);
+        Utils::showInfo(this, "Nothing to send",
+                        QString("Your %1 wallet \"%2\" has no confirmed %1 to send (%3). "
+                                "Pick the wallet holding your coins under \"From wallet\".")
+                        .arg(params->ticker, vault->selectedName(*params), error));
         return;
     }
     ui->line_amount->setText(amount::fromAtomic(plan->amount, params->decimals));
@@ -556,6 +590,24 @@ void SwapWidget::onCreateSwap() {
     if (index >= 0 && index < m_quotes.size()) {
         createTrade(m_quotes.at(index));
     }
+}
+
+void SwapWidget::updateWalletRows() {
+    if (!m_fromWalletRow) {
+        return;   // still building the form
+    }
+    const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    const bool unlocked = vault && vault->isUnlocked();
+    const Asset from = assetOf(ui->combo_from);
+    const Asset to = assetOf(ui->combo_to);
+    const Asset btc{"btc", "Mainnet"}, ltc{"ltc", "Mainnet"};
+    const bool receiveInWallet = ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
+    m_fromBars.at(0)->setActive(from == btc);
+    m_fromBars.at(1)->setActive(from == ltc);
+    m_toBars.at(0)->setActive(to == btc);
+    m_toBars.at(1)->setActive(to == ltc);
+    ui->formLayout->setRowVisible(m_fromWalletRow, unlocked && (from == btc || from == ltc));
+    ui->formLayout->setRowVisible(m_toWalletRow, unlocked && receiveInWallet && (to == btc || to == ltc));
 }
 
 QString SwapWidget::coinWalletLabel(const Asset &asset) const {

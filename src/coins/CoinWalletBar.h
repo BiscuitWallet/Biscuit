@@ -26,6 +26,12 @@ class CoinWalletBar : public QWidget
 public:
     CoinWalletBar(CoinVault *vault, const CoinParams &params, QWidget *parent = nullptr);
 
+    // Shown only when active and Bitcoin/Litecoin are unlocked. Screens with
+    // one bar per coin activate the one of the coin in use.
+    void setActive(bool active);
+    // Label before the buttons ("Wallet:" by default, empty for none).
+    void setTitle(const QString &title);
+
 private:
     void rebuild();
     void updateBalances();
@@ -37,6 +43,8 @@ private:
     QHBoxLayout *m_layout;
     QButtonGroup *m_group;
     QPointer<QLabel> m_balance;
+    bool m_active = true;
+    QString m_title = "Wallet:";
 };
 
 }
