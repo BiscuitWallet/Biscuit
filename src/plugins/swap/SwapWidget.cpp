@@ -119,6 +119,11 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     connect(ui->combo_from, &QComboBox::currentIndexChanged, this, &SwapWidget::onFromChanged);
     connect(ui->combo_to, &QComboBox::currentIndexChanged, this, &SwapWidget::onToChanged);
     connect(ui->btn_reverse, &QPushButton::clicked, this, &SwapWidget::onReverse);
+    m_btnMax = new QPushButton("Max", this);
+    m_btnMax->setAutoDefault(false);
+    m_btnMax->setToolTip("Everything available in the selected wallet, network fee deducted.");
+    ui->layout_send->insertWidget(1, m_btnMax);
+    connect(m_btnMax, &QPushButton::clicked, this, &SwapWidget::onMax);
     connect(ui->line_amount, &QLineEdit::textEdited, this, &SwapWidget::clearOffers);
     connect(ui->combo_rate, &QComboBox::currentIndexChanged, this, [this] {
         placeAmountField();
@@ -235,7 +240,7 @@ void SwapWidget::placeAmountField() {
     ui->layout_get->removeWidget(ui->label_estimate);
     if (fixedRate()) {
         ui->layout_get->insertWidget(0, ui->line_amount);
-        ui->layout_send->insertWidget(2, ui->label_estimate);   // after the ⇄ button
+        ui->layout_send->insertWidget(3, ui->label_estimate);   // after Max and the ⇄ button
         ui->layout_get->setSpacing(0);
     } else {
         ui->layout_sendAmount->insertWidget(0, ui->line_amount);
@@ -243,6 +248,8 @@ void SwapWidget::placeAmountField() {
         ui->layout_get->setSpacing(12);
     }
     ui->tree_offers->headerItem()->setText(OfferGet, fixedRate() ? "You send" : "You get");
+    // Max fills the amount sent: meaningless when the amount typed is the one received.
+    m_btnMax->setVisible(!fixedRate());
 }
 
 void SwapWidget::loadAssets() {
@@ -488,6 +495,49 @@ void SwapWidget::showOffersMenu(const QPoint &pos) {
     menu.exec(ui->tree_offers->viewport()->mapToGlobal(pos));
 }
 
+// Everything the selected wallet can send, network fee deducted, with the
+// exact decimals.
+void SwapWidget::onMax() {
+    const Asset from = assetOf(ui->combo_from);
+    if (from == xmr()) {
+        // The Monero fee is taken from this amount when the deposit is sent
+        // (see sendDeposit), so the whole unlocked balance can be offered.
+        const quint64 unlocked = m_wallet->unlockedBalance();
+        if (unlocked == 0) {
+            Utils::showInfo(this, "Nothing to send", "This wallet has no unlocked XMR yet.");
+            return;
+        }
+        ui->line_amount->setText(amount::fromAtomic(unlocked, moneroDecimals));
+        clearOffers();
+        return;
+    }
+
+    using namespace biscuit::coins;
+    const CoinParams *params = from == Asset{"btc", "Mainnet"} ? &bitcoin()
+                             : from == Asset{"ltc", "Mainnet"} ? &litecoin() : nullptr;
+    CoinVault *vault = CoinVault::forWallet(m_wallet);
+    if (!params || !vault) {
+        return;
+    }
+    if (!m_coins->ensureReady(this) && !vault->isUnlocked()) {
+        return;
+    }
+    CoinWallet *coin = vault->wallet(*params);
+    if (coin->status() != CoinWallet::Status::Synchronized) {
+        Utils::showInfo(this, "Not synchronized", QString("Wait until your %1 wallet is synchronized.").arg(params->name));
+        return;
+    }
+    // Same computation as sending everything from Send (normal fee).
+    QString error;
+    const auto plan = coin->planSend(coin->receiveAddress(), 0, coin->feeRate(6), true, &error);
+    if (!plan) {
+        Utils::showInfo(this, "Nothing to send", error);
+        return;
+    }
+    ui->line_amount->setText(amount::fromAtomic(plan->amount, params->decimals));
+    clearOffers();
+}
+
 QString SwapWidget::newWalletAddress(const QString &label) {
     if (!m_wallet->subaddress()->addRow(label)) {
         return {};
@@ -722,6 +772,11 @@ void SwapWidget::sendDeposit(const Trade &trade) {
         return;
     }
 
+    // Swapping exactly the whole balance (Max): the network fee is taken from
+    // the amount sent. Floating rate only: a fixed rate expects the exact amount.
+    const quint64 unlocked = m_wallet->unlockedBalance();
+    const bool wholeBalance = *atomic == unlocked && trade.rateType != RateType::Fixed;
+
     m_pendingDepositProvider = trade.providerId;
     m_pendingDepositTrade = trade.tradeId;
     m_pendingDepositDescription = QString("Swap %1 → %2 (%3 %4)")
@@ -729,5 +784,6 @@ void SwapWidget::sendDeposit(const Trade &trade) {
 
     // The main window shows the usual confirmation dialog: nothing is sent
     // without the user's explicit approval.
-    m_wallet->createTransaction(trade.depositAddress, *atomic, m_pendingDepositDescription, false);
+    m_wallet->createTransaction(trade.depositAddress, wholeBalance ? unlocked : *atomic, m_pendingDepositDescription,
+                                false, 0, wholeBalance);
 }

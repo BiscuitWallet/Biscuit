@@ -59,6 +59,7 @@ private:
     void updateTorMode();
     void updateForm();
     void clearOffers();
+    void onMax();
     void showOffers();
     void showOffersMenu(const QPoint &pos);
     void setBusy(bool busy, const QString &status = {});
@@ -77,6 +78,7 @@ private:
     QPointer<Wallet> m_wallet;
     biscuit::swap::SwapManager *m_manager;
     biscuit::coins::CoinSendController *m_coins;
+    QPushButton *m_btnMax = nullptr;
     QList<biscuit::swap::Quote> m_quotes;
     bool m_updating = false;
     InfoFrame *m_torNotice = nullptr;
