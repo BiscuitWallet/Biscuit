@@ -61,9 +61,15 @@ enum class RateType {
 struct QuoteRequest {
     Asset from;
     Asset to;
-    QString amountFrom;           // decimal string
+    // Floating rate: the amount sent. Fixed rate: the exact amount received,
+    // each exchange then says how much to send (Trocador "payment" mode, as in
+    // Cake Wallet). Decimal strings; only the one matching rateType is used.
+    QString amountFrom;
+    QString amountTo;
     RateType rateType = RateType::Floating;
     KycRating minKycRating = KycRating::C;
+
+    const QString &amount() const { return rateType == RateType::Fixed ? amountTo : amountFrom; }
 };
 
 // One offer from one exchange.

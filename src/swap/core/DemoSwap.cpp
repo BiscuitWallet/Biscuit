@@ -62,16 +62,16 @@ QList<AssetInfo> assets() {
 QList<Quote> quotes(const QuoteRequest &request) {
     const DemoAsset *from = findAsset(request.from);
     const DemoAsset *to = findAsset(request.to);
-    if (!from || !to || from == to || !amount::isValid(request.amountFrom) || amount::isZero(request.amountFrom)) {
+    const bool fixed = request.rateType == RateType::Fixed;
+    if (!from || !to || from == to || !amount::isValid(request.amount()) || amount::isZero(request.amount())) {
         return {};
     }
 
     // Display-only arithmetic: demo amounts are never sent anywhere.
-    const double amountFrom = request.amountFrom.toDouble();
-    const double gross = amountFrom * from->xmrValue / to->xmrValue;
+    const double rate = from->xmrValue / to->xmrValue;
 
     const QString rateId = QString("demo-rate-%1").arg(QString::fromLatin1(
-            QCryptographicHash::hash((request.from.ticker + request.to.ticker + request.amountFrom).toUtf8(),
+            QCryptographicHash::hash((request.from.ticker + request.to.ticker + request.amount()).toUtf8(),
                                      QCryptographicHash::Sha256).toHex().left(12)));
 
     QList<Quote> result;
@@ -82,8 +82,13 @@ QList<Quote> quotes(const QuoteRequest &request) {
         q.rateId = rateId;
         q.from = request.from;
         q.to = request.to;
-        q.amountFrom = amount::normalize(request.amountFrom);
-        q.amountTo = amount::fromDouble(gross * (1.0 - ex.spread));
+        if (fixed) {
+            q.amountTo = amount::normalize(request.amountTo);
+            q.amountFrom = amount::fromDouble(request.amountTo.toDouble() / rate / (1.0 - ex.spread));
+        } else {
+            q.amountFrom = amount::normalize(request.amountFrom);
+            q.amountTo = amount::fromDouble(request.amountFrom.toDouble() * rate * (1.0 - ex.spread));
+        }
         q.rateType = request.rateType;
         q.kycRating = ex.kyc;
         q.etaMinutes = ex.eta;

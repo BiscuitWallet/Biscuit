@@ -28,6 +28,19 @@ class TestDemoSwap : public QObject
 Q_OBJECT
 
 private slots:
+    void fixedRateGivesTheExactAmountReceived() {
+        QuoteRequest r = request();
+        r.amountFrom.clear();
+        r.amountTo = "0.5";
+        r.rateType = RateType::Fixed;
+        const auto quotes = demo::quotes(r);
+        QVERIFY(!quotes.isEmpty());
+        for (const Quote &q : quotes) {
+            QCOMPARE(q.amountTo, QString("0.5"));
+            QVERIFY(amount::isValid(q.amountFrom) && !amount::isZero(q.amountFrom));
+        }
+    }
+
     void quotesAreDeterministic() {
         const auto a = demo::quotes(request());
         const auto b = demo::quotes(request());

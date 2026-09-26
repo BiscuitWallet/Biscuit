@@ -72,9 +72,10 @@ namespace {
 QUrlQuery rateQuery(const QuoteRequest &request) {
     QUrlQuery q;
     addAssets(q, request.from, request.to);
-    q.addQueryItem("amount_from", amount::normalize(request.amountFrom));
-    // "payment" = fixed rate. To verify: fixed-rate quotes may require amount_to instead.
-    q.addQueryItem("payment", request.rateType == RateType::Fixed ? "True" : "False");
+    // Fixed rate is Trocador's "payment" mode: the amount to receive is given.
+    const bool fixed = request.rateType == RateType::Fixed;
+    q.addQueryItem(fixed ? "amount_to" : "amount_from", amount::normalize(request.amount()));
+    q.addQueryItem("payment", fixed ? "True" : "False");
     q.addQueryItem("min_kycrating", kycRatingToString(request.minKycRating));
     q.addQueryItem("markup", markup);
     return q;
@@ -85,13 +86,14 @@ QUrlQuery newTradeQuery(const TradeRequest &request, const QString &rateId) {
     QUrlQuery q;
     q.addQueryItem("id", rateId);
     addAssets(q, quote.from, quote.to);
-    q.addQueryItem("amount_from", amount::normalize(quote.amountFrom));
+    const bool fixed = quote.rateType == RateType::Fixed;
+    q.addQueryItem(fixed ? "amount_to" : "amount_from", amount::normalize(fixed ? quote.amountTo : quote.amountFrom));
     q.addQueryItem("address", request.payoutAddress);
     q.addQueryItem("address_memo", memoOrZero(request.payoutMemo));
     q.addQueryItem("refund", request.refundAddress);
     q.addQueryItem("refund_memo", memoOrZero(request.refundMemo));
     q.addQueryItem("provider", quote.exchange);
-    q.addQueryItem("payment", quote.rateType == RateType::Fixed ? "True" : "False");
+    q.addQueryItem("payment", fixed ? "True" : "False");
     q.addQueryItem("markup", markup);
     return q;
 }
@@ -147,7 +149,10 @@ std::optional<RateResult> parseRate(const QByteArray &body, const QuoteRequest &
         return std::nullopt;
     }
 
+    // Floating: each quote gives amount_to for the requested amount_from.
+    // Fixed: each quote gives amount_from for the requested amount_to.
     const QString amountFrom = amountValue(obj->value("amount_from"));
+    const QString amountTo = amountValue(obj->value("amount_to"));
     const QJsonArray quotes = obj->value("quotes").toObject().value("quotes").toArray();
     for (const QJsonValue &value : quotes) {
         const QJsonObject q = value.toObject();
@@ -157,15 +162,18 @@ std::optional<RateResult> parseRate(const QByteArray &body, const QuoteRequest &
         quote.rateId = result.rateId;
         quote.from = request.from;
         quote.to = request.to;
-        quote.amountFrom = amountFrom.isEmpty() ? amount::normalize(request.amountFrom) : amountFrom;
-        quote.amountTo = amountValue(q.value("amount_to"));
+        const bool fixed = request.rateType == RateType::Fixed;
+        quote.amountFrom = fixed ? amountValue(q.value("amount_from"))
+                                 : (amountFrom.isEmpty() ? amount::normalize(request.amountFrom) : amountFrom);
+        quote.amountTo = fixed ? (amountTo.isEmpty() ? amount::normalize(request.amountTo) : amountTo)
+                               : amountValue(q.value("amount_to"));
         quote.rateType = request.rateType;
         quote.kycRating = kycRatingFromString(q.value("kycrating").toString());
-        const QJsonValue eta = q.value("eta");  // minutes, to verify
+        const QJsonValue eta = q.value("eta");  // minutes
         if (eta.isDouble()) {
             quote.etaMinutes = static_cast<int>(eta.toDouble());
         }
-        if (!quote.exchange.isEmpty() && !quote.amountTo.isEmpty()) {
+        if (!quote.exchange.isEmpty() && !quote.amountFrom.isEmpty() && !quote.amountTo.isEmpty()) {
             result.quotes.append(quote);
         }
     }
@@ -188,7 +196,7 @@ std::optional<Trade> parseTrade(const QByteArray &body, QString *error) {
     t.to = {obj->value("ticker_to").toString().toLower(), obj->value("network_to").toString()};
     t.amountFrom = amountValue(obj->value("amount_from"));
     t.amountTo = amountValue(obj->value("amount_to"));
-    t.rateType = obj->value("fixed").toBool() ? RateType::Fixed : RateType::Floating;  // to verify
+    t.rateType = obj->value("fixed").toBool() || obj->value("payment").toBool() ? RateType::Fixed : RateType::Floating;
     t.depositAddress = obj->value("address_provider").toString();
     t.depositMemo = memoFromApi(obj->value("address_provider_memo"));
     t.payoutAddress = obj->value("address_user").toString();

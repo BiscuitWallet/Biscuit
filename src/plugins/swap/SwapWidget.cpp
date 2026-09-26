@@ -86,8 +86,8 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     }
     ui->combo_kyc->setCurrentIndex(static_cast<int>(m_manager->minKycRating()));
     ui->combo_kyc->setToolTip("Minimum KYC rating of the exchanges, from A (no KYC) to D (funds may be held).");
-    ui->combo_rate->setItemData(0, "The amount you get may vary slightly with the market.", Qt::ToolTipRole);
-    ui->combo_rate->setItemData(1, "The amount you get is guaranteed, usually at a slightly lower rate.", Qt::ToolTipRole);
+    ui->combo_rate->setItemData(0, "You choose the amount you send. The amount you get may vary slightly with the market.", Qt::ToolTipRole);
+    ui->combo_rate->setItemData(1, "You choose the exact amount you get. Each exchange says how much to send, usually at a slightly lower rate.", Qt::ToolTipRole);
 
     ui->label_transparency->setStyleSheet("color: gray;");
     ui->label_historyHint->setStyleSheet("color: gray;");
@@ -101,7 +101,10 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     connect(ui->combo_to, &QComboBox::currentIndexChanged, this, &SwapWidget::onToChanged);
     connect(ui->btn_reverse, &QPushButton::clicked, this, &SwapWidget::onReverse);
     connect(ui->line_amount, &QLineEdit::textEdited, this, &SwapWidget::clearOffers);
-    connect(ui->combo_rate, &QComboBox::currentIndexChanged, this, &SwapWidget::clearOffers);
+    connect(ui->combo_rate, &QComboBox::currentIndexChanged, this, [this] {
+        placeAmountField();
+        clearOffers();
+    });
     connect(ui->combo_kyc, &QComboBox::currentIndexChanged, this, [this] {
         m_manager->setMinKycRating(static_cast<KycRating>(ui->combo_kyc->currentData().toInt()));
         clearOffers();
@@ -185,6 +188,33 @@ void SwapWidget::selectAsset(QComboBox *combo, const Asset &asset) {
 
 bool SwapWidget::sendsXmr() const {
     return assetOf(ui->combo_from) == xmr();
+}
+
+bool SwapWidget::receivesXmr() const {
+    return assetOf(ui->combo_to) == xmr();
+}
+
+bool SwapWidget::fixedRate() const {
+    return ui->combo_rate->currentIndex() == 1;
+}
+
+// Floating rate: the amount typed is the one sent. Fixed rate: it is the exact
+// amount received (as in Cake Wallet), and the estimate shows what to send.
+void SwapWidget::placeAmountField() {
+    ui->layout_sendAmount->removeWidget(ui->line_amount);
+    ui->layout_get->removeWidget(ui->line_amount);
+    ui->layout_send->removeWidget(ui->label_estimate);
+    ui->layout_get->removeWidget(ui->label_estimate);
+    if (fixedRate()) {
+        ui->layout_get->insertWidget(0, ui->line_amount);
+        ui->layout_send->insertWidget(2, ui->label_estimate);   // after the ⇄ button
+        ui->layout_get->setSpacing(0);
+    } else {
+        ui->layout_sendAmount->insertWidget(0, ui->line_amount);
+        ui->layout_get->insertWidget(1, ui->label_estimate);    // after the coin
+        ui->layout_get->setSpacing(12);
+    }
+    ui->tree_offers->headerItem()->setText(OfferGet, fixedRate() ? "You send" : "You get");
 }
 
 void SwapWidget::loadAssets() {
@@ -319,7 +349,7 @@ void SwapWidget::onGetOffers() {
         Utils::showError(this, "Invalid amount", "Enter a positive amount, with a dot as decimal separator.");
         return;
     }
-    if (sendsXmr() && !amount::toAtomic(amountText, moneroDecimals)) {
+    if ((fixedRate() ? receivesXmr() : sendsXmr()) && !amount::toAtomic(amountText, moneroDecimals)) {
         Utils::showError(this, "Invalid amount", "Monero amounts have at most 12 decimals.");
         return;
     }
@@ -327,8 +357,8 @@ void SwapWidget::onGetOffers() {
     QuoteRequest request;
     request.from = from;
     request.to = to;
-    request.amountFrom = amount::normalize(amountText);
-    request.rateType = ui->combo_rate->currentIndex() == 1 ? RateType::Fixed : RateType::Floating;
+    request.rateType = fixedRate() ? RateType::Fixed : RateType::Floating;
+    (fixedRate() ? request.amountTo : request.amountFrom) = amount::normalize(amountText);
     request.minKycRating = static_cast<KycRating>(ui->combo_kyc->currentData().toInt());
 
     clearOffers();
@@ -341,7 +371,8 @@ void SwapWidget::onGetOffers() {
             const Quote &q = ranked.at(i);
             auto *item = new QTreeWidgetItem(ui->tree_offers);
             item->setText(OfferExchange, q.exchange);
-            item->setText(OfferGet, QString("%1 %2").arg(q.amountTo, q.to.ticker.toUpper()));
+            item->setText(OfferGet, q.rateType == RateType::Fixed ? QString("%1 %2").arg(q.amountFrom, q.from.ticker.toUpper())
+                                                                  : QString("%1 %2").arg(q.amountTo, q.to.ticker.toUpper()));
             item->setTextAlignment(OfferGet, Qt::AlignRight | Qt::AlignVCenter);
             item->setText(OfferKyc, kycRatingToString(q.kycRating));
             item->setToolTip(OfferKyc, kycRatingDescription(q.kycRating));
@@ -361,7 +392,10 @@ void SwapWidget::onGetOffers() {
         }
         // Best offer preselected; the user can pick another one.
         ui->tree_offers->setCurrentItem(ui->tree_offers->topLevelItem(0));
-        ui->label_estimate->setText(QString("≈ %1 %2").arg(ranked.first().amountTo, ranked.first().to.ticker.toUpper()));
+        const Quote &best = ranked.first();
+        ui->label_estimate->setText(best.rateType == RateType::Fixed
+                                    ? QString("%1 %2").arg(best.amountFrom, best.from.ticker.toUpper())
+                                    : QString("≈ %1 %2").arg(best.amountTo, best.to.ticker.toUpper()));
         setBusy(false, ranked.size() == 1 ? "1 offer." : QString("%1 offers, best one selected.").arg(ranked.size()));
     });
 }
@@ -417,7 +451,8 @@ void SwapWidget::createTrade(const Quote &quote) {
         QMessageBox box(this);
         box.setWindowTitle("Create swap");
         box.setIcon(QMessageBox::Question);
-        box.setText(QString("Swap %1 %2 for about %3 %4?")
+        box.setText(QString(quote.rateType == RateType::Fixed ? "Swap %1 %2 for exactly %3 %4 (fixed rate)?"
+                                                              : "Swap %1 %2 for about %3 %4?")
                     .arg(quote.amountFrom, quote.from.ticker.toUpper(), quote.amountTo, quote.to.ticker.toUpper()));
         box.setInformativeText(QString("Exchange: %1 (KYC %2)\nYou get the coins at: %3")
                                .arg(quote.exchange, kycRatingToString(quote.kycRating),

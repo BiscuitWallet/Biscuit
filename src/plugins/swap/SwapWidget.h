@@ -48,6 +48,9 @@ private:
     static biscuit::swap::Asset assetOf(const QComboBox *combo);
     static void selectAsset(QComboBox *combo, const biscuit::swap::Asset &asset);
     bool sendsXmr() const;
+    bool receivesXmr() const;
+    bool fixedRate() const;
+    void placeAmountField();
 
     void loadAssets();
     // Tor mode: exchange swaps are off, atomic swaps remain.

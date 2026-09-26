@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // SPDX-FileCopyrightText: The Biscuit developers
 
-// Response samples follow the fields used by Cake Wallet's Trocador
-// integration. Replace them with real captured responses once an API key is
-// available.
+// Response samples follow real Trocador answers captured on 2026-09-26
+// (trimmed to the fields Biscuit reads).
 
 #include <QtTest>
 
@@ -35,6 +34,30 @@ namespace {
             {"provider": "WizardSwap",  "kycrating": "B", "amount_to": "0.00635", "eta": 30}
         ]}
     })";
+
+    // Fixed rate ("payment" mode): the amount to receive is given, each quote
+    // says how much to send.
+    const QByteArray fixedRateResponse = R"({
+        "trade_id": "4Upe1g2XNy",
+        "ticker_from": "xmr", "ticker_to": "ltc",
+        "network_from": "Mainnet", "network_to": "Mainnet",
+        "amount_from": 0.100624, "amount_to": 0.75,
+        "provider": "Exolix", "fixed": true, "payment": true, "status": "new",
+        "quotes": {"markup": false, "quotes": [
+            {"provider": "Exolix",   "kycrating": "A", "fixed": "True", "amount_from": "0.100624", "eta": 10},
+            {"provider": "Pegasus",  "kycrating": "A", "fixed": "True", "amount_from": "0.100590", "eta": 11}
+        ]}
+    })";
+
+    QuoteRequest xmrToLtcFixed() {
+        QuoteRequest r;
+        r.from = {"xmr", "Mainnet"};
+        r.to = {"ltc", "Mainnet"};
+        r.amountTo = "0.75";
+        r.rateType = RateType::Fixed;
+        r.minKycRating = KycRating::A;
+        return r;
+    }
 
     const QByteArray tradeResponse = R"({
         "trade_id": "TRADE77",
@@ -112,6 +135,47 @@ private slots:
         QCOMPARE(cn.etaMinutes, std::optional<int>(15));
         QCOMPARE(cn.amountFrom, QString("1.5"));
         QCOMPARE(cn.providerId, QString("trocador"));
+    }
+
+    void fixedRateAsksForTheAmountReceived() {
+        // Same parameters as Cake Wallet: amount_to and payment=True.
+        const QUrlQuery q = trocador::rateQuery(xmrToLtcFixed());
+        QCOMPARE(q.queryItemValue("amount_to"), QString("0.75"));
+        QVERIFY(!q.hasQueryItem("amount_from"));
+        QCOMPARE(q.queryItemValue("payment"), QString("True"));
+        const QUrlQuery floating = trocador::rateQuery(xmrToBtc());
+        QCOMPARE(floating.queryItemValue("amount_from"), QString("1.5"));
+        QVERIFY(!floating.hasQueryItem("amount_to"));
+        QCOMPARE(floating.queryItemValue("payment"), QString("False"));
+    }
+
+    void parsesFixedRatesAndRanksLeastSentFirst() {
+        QString error;
+        const auto result = trocador::parseRate(fixedRateResponse, xmrToLtcFixed(), &error);
+        QVERIFY2(result.has_value(), qPrintable(error));
+        QCOMPARE(result->quotes.size(), 2);
+        for (const Quote &q : result->quotes) {
+            QCOMPARE(q.amountTo, QString("0.75"));
+            QCOMPARE(q.rateType, RateType::Fixed);
+        }
+        QCOMPARE(result->quotes.at(0).amountFrom, QString("0.100624"));
+        const auto ranked = rankQuotes(result->quotes, KycRating::A);
+        QCOMPARE(ranked.first().exchange, QString("Pegasus"));
+        QCOMPARE(ranked.first().amountFrom, QString("0.10059"));
+    }
+
+    void fixedTradeGivesTheAmountReceived() {
+        TradeRequest req;
+        req.quote.exchange = "Exolix";
+        req.quote.from = {"xmr", "Mainnet"};
+        req.quote.to = {"ltc", "Mainnet"};
+        req.quote.amountFrom = "0.100624";
+        req.quote.amountTo = "0.75";
+        req.quote.rateType = RateType::Fixed;
+        const QUrlQuery q = trocador::newTradeQuery(req, "4Upe1g2XNy");
+        QCOMPARE(q.queryItemValue("amount_to"), QString("0.75"));
+        QVERIFY(!q.hasQueryItem("amount_from"));
+        QCOMPARE(q.queryItemValue("payment"), QString("True"));
     }
 
     void parsedRatesRankWithKycFilter() {
