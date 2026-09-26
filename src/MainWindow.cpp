@@ -84,9 +84,8 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, appearanceButton, updateAppearanceButton);
     ui->tabWidget->setCornerWidget(appearanceButton, Qt::TopRightCorner);
 
-    // macOS: the title bar in the window colour (ivory or dark grey), when
-    // shown (see showEvent) and again when the appearance changes.
-    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, &MainWindow::colorTitleBar);
+    // macOS: the title bar shows the window colour (ivory or dark grey), set
+    // up once the native window exists (see showEvent).
 
     // Ensure the destructor is called after closeEvent()
     setAttribute(Qt::WA_DeleteOnClose);
@@ -1355,7 +1354,12 @@ void MainWindow::showEvent(QShowEvent *event) {
 }
 
 void MainWindow::colorTitleBar() {
-    MacTitleBar::setColor(this, QApplication::palette().color(QPalette::Window));
+    // Content under a transparent title bar: Qt paints it with the window
+    // colour; the top margin keeps the tabs clear of the window buttons.
+    const int titleBar = MacTitleBar::extendUnderTitleBar(this);
+    if (titleBar > 0) {
+        ui->centralWidget->setContentsMargins(0, titleBar, 0, 0);
+    }
 }
 
 void MainWindow::changeEvent(QEvent* event)

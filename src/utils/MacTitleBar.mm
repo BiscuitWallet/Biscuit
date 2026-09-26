@@ -5,23 +5,23 @@
 
 #import <AppKit/AppKit.h>
 
-#include <QColor>
 #include <QWidget>
 
 namespace MacTitleBar {
 
-void setColor(QWidget *widget, const QColor &color) {
+int extendUnderTitleBar(QWidget *widget) {
     if (!widget) {
-        return;
+        return 0;
     }
     NSView *view = reinterpret_cast<NSView *>(widget->window()->winId());
     NSWindow *window = view.window;
     if (!window) {
-        return;   // not shown yet
+        return 0;   // not shown yet
     }
-    // The title bar becomes see-through and shows the window background.
     window.titlebarAppearsTransparent = YES;
-    window.backgroundColor = [NSColor colorWithSRGBRed:color.redF() green:color.greenF() blue:color.blueF() alpha:1.0];
+    window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+    const CGFloat height = NSHeight(window.frame) - NSHeight(window.contentLayoutRect);
+    return qMax(0, qRound(height));
 }
 
 }

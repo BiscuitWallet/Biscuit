@@ -6,16 +6,19 @@
 
 #include <QtGlobal>
 
-class QColor;
 class QWidget;
 
-// macOS: the title bar (with the red / yellow / green buttons) takes the
-// window colour instead of the system's white or black. No-op elsewhere.
+// macOS: the title bar (with the red / yellow / green buttons) shows the
+// window's own background instead of the system's white or black. The
+// window content extends under a transparent title bar, so Qt paints that
+// area like the rest of the window. No-op elsewhere.
 namespace MacTitleBar {
 #if defined(Q_OS_MACOS)
-    void setColor(QWidget *window, const QColor &color);
+    // Returns the title bar height to keep free at the top of the content
+    // (0 if the native window does not exist yet).
+    int extendUnderTitleBar(QWidget *window);
 #else
-    inline void setColor(QWidget *, const QColor &) {}
+    inline int extendUnderTitleBar(QWidget *) { return 0; }
 #endif
 }
 
