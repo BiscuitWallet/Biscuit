@@ -84,11 +84,9 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, appearanceButton, updateAppearanceButton);
     ui->tabWidget->setCornerWidget(appearanceButton, Qt::TopRightCorner);
 
-    // macOS: the title bar in the window colour (ivory or dark grey), once
-    // the window exists, and again when the appearance changes.
-    auto colorTitleBar = [this] { MacTitleBar::setColor(this, QApplication::palette().color(QPalette::Window)); };
-    QTimer::singleShot(0, this, colorTitleBar);
-    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, colorTitleBar);
+    // macOS: the title bar in the window colour (ivory or dark grey), when
+    // shown (see showEvent) and again when the appearance changes.
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, &MainWindow::colorTitleBar);
 
     // Ensure the destructor is called after closeEvent()
     setAttribute(Qt::WA_DeleteOnClose);
@@ -1348,6 +1346,16 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     }
 
     event->accept();
+}
+
+void MainWindow::showEvent(QShowEvent *event) {
+    QMainWindow::showEvent(event);
+    // The native window only exists once shown.
+    this->colorTitleBar();
+}
+
+void MainWindow::colorTitleBar() {
+    MacTitleBar::setColor(this, QApplication::palette().color(QPalette::Window));
 }
 
 void MainWindow::changeEvent(QEvent* event)
