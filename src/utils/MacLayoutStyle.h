@@ -16,6 +16,8 @@
 //  - tab bars named "mainTabBar" (main tabs) or "centeredTabBar" (Swap) are
 //    centered, like the coin selectors, instead of pinned to the left;
 //  - the selected tab has exactly the window colour (Fusion lightened it);
+//  - the line under those tab bars runs on under the corner widget (the
+//    appearance button) without a gap;
 //  - the "Pay to" field (a multi-line PayToEdit) gets the same frame as the
 //    single-line fields next to it.
 // Used on every platform on top of Fusion.

@@ -11,6 +11,12 @@
 #include <QStyleOption>
 #include <QTabWidget>
 
+namespace {
+    bool isCenteredTabBar(const QWidget *bar) {
+        return bar->objectName() == QLatin1String("mainTabBar") || bar->objectName() == QLatin1String("centeredTabBar");
+    }
+}
+
 int MacLayoutStyle::styleHint(StyleHint hint, const QStyleOption *option, const QWidget *widget,
                               QStyleHintReturn *returnData) const {
     if (hint == SH_FormLayoutLabelAlignment) {
@@ -20,7 +26,7 @@ int MacLayoutStyle::styleHint(StyleHint hint, const QStyleOption *option, const 
         // Asked by the tab bar itself or by the tab widget that holds it.
         const auto *tabs = qobject_cast<const QTabWidget *>(widget);
         const QWidget *bar = tabs ? tabs->tabBar() : widget;
-        if (bar && (bar->objectName() == QLatin1String("mainTabBar") || bar->objectName() == QLatin1String("centeredTabBar"))) {
+        if (bar && isCenteredTabBar(bar)) {
             return Qt::AlignCenter;
         }
     }
@@ -53,6 +59,15 @@ void MacLayoutStyle::drawPrimitive(PrimitiveElement element, const QStyleOption 
     if (element == PE_Frame && widget && widget->inherits("PayToEdit")) {
         // Same frame as the QLineEdit fields of the form.
         QProxyStyle::drawPrimitive(PE_FrameLineEdit, option, painter, widget);
+        return;
+    }
+    if (element == PE_FrameTabBarBase && widget && isCenteredTabBar(widget) && painter->device() != widget) {
+        // Document-mode tab widget: the base line under its corner widget
+        // (the appearance button) starts at the corner widget, leaving a gap
+        // after the tab bar. Start it from the left edge instead.
+        QStyleOptionTabBarBase base = *qstyleoption_cast<const QStyleOptionTabBarBase *>(option);
+        base.rect.setLeft(0);
+        QProxyStyle::drawPrimitive(element, &base, painter, widget);
         return;
     }
     QProxyStyle::drawPrimitive(element, option, painter, widget);

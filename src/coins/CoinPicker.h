@@ -12,7 +12,8 @@ class QTabBar;
 namespace biscuit::coins {
 
 // The coins as a segmented control (same native look as the main tabs):
-// every coin stays in sight, unlike a drop-down list.
+// every coin stays in sight, unlike a drop-down list. A line runs under it
+// across the whole width, like under the main tabs.
 class CoinPicker : public QWidget
 {
     Q_OBJECT
@@ -26,6 +27,9 @@ public:
 
 signals:
     void currentIndexChanged(int index);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     QTabBar *m_tabs;
