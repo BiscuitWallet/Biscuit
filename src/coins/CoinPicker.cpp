@@ -43,8 +43,10 @@ void CoinPicker::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)
     // The tab bar only spans the coins: draw its base line across the whole
     // width, where the selected tab overlaps it (the tabs paint on top).
+    // Colours from the tab bar itself: it always follows the current light or
+    // dark palette, while this container could keep the previous one.
     QStyleOptionTabBarBase base;
-    base.initFrom(this);
+    base.initFrom(m_tabs);
     base.shape = m_tabs->shape();
     const int overlap = style()->pixelMetric(QStyle::PM_TabBarBaseOverlap, nullptr, m_tabs);
     base.rect = QRect(0, m_tabs->geometry().bottom() - overlap + 1, width(), overlap);
