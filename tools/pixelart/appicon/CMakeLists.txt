@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.18)
+project(appicon LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+find_package(Qt6 REQUIRED COMPONENTS Gui)
+add_executable(appicon main.cpp)
+target_link_libraries(appicon PRIVATE Qt6::Gui)
