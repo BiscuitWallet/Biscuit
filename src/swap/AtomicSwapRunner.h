@@ -55,7 +55,9 @@ private:
     void onFinished(int exitCode, QProcess::ExitStatus status);
     void update(const QString &id, const std::function<void(atomic::AtomicSwapRecord &)> &change);
     void save();
-    QString newSubaddress(const QString &label);
+    // Subaddress receiving the XMR: an unused one left by a cancelled swap,
+    // or a new one.
+    QString swapSubaddress(const QString &label);
 
     QPointer<Wallet> m_wallet;
     QList<atomic::AtomicSwapRecord> m_records;

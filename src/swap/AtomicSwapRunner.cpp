@@ -17,6 +17,7 @@
 #include "coins/CoinWallet.h"
 #include "coins/core/WalletFile.h"
 #include "libwalletqt/Subaddress.h"
+#include "libwalletqt/rows/SubaddressRow.h"
 #include "libwalletqt/Wallet.h"
 #include "utils/NetworkManager.h"
 #include "utils/config.h"
@@ -130,7 +131,7 @@ bool AtomicSwapRunner::start(const MakerOffer &offer, quint64 btcSat, bool tor, 
     record.btcSat = btcSat;
     record.tor = tor;
     record.created = QDateTime::currentDateTimeUtc();
-    record.xmrAddress = newSubaddress(QString("Atomic swap BTC → XMR · %1").arg(record.makerHost));
+    record.xmrAddress = swapSubaddress(QString("Atomic swap BTC → XMR · %1").arg(record.makerHost));
     if (record.xmrAddress.isEmpty()) {
         if (error) *error = "Could not create a Monero subaddress for the swap.";
         return false;
@@ -363,11 +364,38 @@ void AtomicSwapRunner::save() {
     emit recordsChanged();
 }
 
-QString AtomicSwapRunner::newSubaddress(const QString &label) {
-    if (!m_wallet || !m_wallet->subaddress()->addRow(label)) {
+QString AtomicSwapRunner::swapSubaddress(const QString &label) {
+    if (!m_wallet) {
         return {};
     }
+    // A swap cancelled during setup never used its subaddress (no XMR could
+    // be sent to it): give it to the new swap instead of adding another one.
+    auto usedElsewhere = [this](const QString &address) {
+        return std::any_of(m_records.begin(), m_records.end(), [&address](const AtomicSwapRecord &r) {
+            return r.xmrAddress == address && r.stage != stage::cancelled;
+        });
+    };
     const quint32 account = m_wallet->currentSubaddressAccount();
+    for (const AtomicSwapRecord &r : m_records) {
+        if (r.stage != stage::cancelled || r.xmrAddress.isEmpty() || usedElsewhere(r.xmrAddress)) {
+            continue;
+        }
+        const SubaddressIndex index = m_wallet->subaddressIndex(r.xmrAddress);
+        if (!index.isValid() || static_cast<quint32>(index.major) != account) {
+            continue;
+        }
+        const auto rows = m_wallet->subaddress()->getRows();
+        const auto row = std::find_if(rows.begin(), rows.end(), [&r](const SubaddressRow &s) { return s.address == r.xmrAddress; });
+        if (row == rows.end() || row->used) {
+            continue;
+        }
+        m_wallet->subaddress()->setLabel(index.minor, label);
+        return r.xmrAddress;
+    }
+
+    if (!m_wallet->subaddress()->addRow(label)) {
+        return {};
+    }
     const quint32 count = m_wallet->numSubaddresses(account);
     return count > 0 ? m_wallet->address(account, count - 1) : QString();
 }
