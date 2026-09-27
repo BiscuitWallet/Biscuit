@@ -158,6 +158,12 @@ struct Trade {
     static std::optional<Trade> fromJson(const QJsonObject &obj);
 };
 
+// Status for the user: like tradeStatusDescription, but once Biscuit has sent
+// the deposit it says so, instead of "Waiting for your deposit" until the
+// exchange sees it.
+QString tradeStatusText(const Trade &trade);
+
+
 // Applies a status update if allowed. Returns true if the trade changed.
 bool applyStatus(Trade &trade, TradeStatus status, const QDateTime &now);
 

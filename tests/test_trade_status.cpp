@@ -13,6 +13,19 @@ class TestTradeStatus : public QObject
 Q_OBJECT
 
 private slots:
+    void statusTextAfterDeposit() {
+        Trade t;
+        t.status = TradeStatus::Waiting;
+        QCOMPARE(tradeStatusText(t), QString("Waiting for your deposit"));
+        t.depositTxId = "a1b2";
+        QCOMPARE(tradeStatusText(t), QString("Deposit sent, waiting for the exchange to see it"));
+        t.status = TradeStatus::New;
+        QCOMPARE(tradeStatusText(t), QString("Deposit sent, waiting for the exchange to see it"));
+        // Once the exchange reports progress, its own status wins.
+        t.status = TradeStatus::Confirming;
+        QCOMPARE(tradeStatusText(t), QString("Deposit received, waiting for confirmations"));
+    }
+
     void parsesAllDocumentedStatuses() {
         const QList<QPair<QString, TradeStatus>> cases = {
             {"new", TradeStatus::New},

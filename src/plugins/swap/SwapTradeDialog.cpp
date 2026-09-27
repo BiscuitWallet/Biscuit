@@ -59,7 +59,7 @@ void SwapTradeDialog::updateView() {
     const bool demo = t->providerId == demo::providerId;
     ui->label_status->setText(QString("%1%2 → %3: %4")
                               .arg(demo ? "[Demo] " : "", t->from.displayName(), t->to.displayName(),
-                                   tradeStatusDescription(t->status)));
+                                   tradeStatusText(*t)));
 
     if (needsSupport(t->status)) {
         ui->frame_attention->setInfo(icons()->icon("warning.png"),

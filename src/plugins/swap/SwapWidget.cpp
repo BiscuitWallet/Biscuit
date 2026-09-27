@@ -843,7 +843,7 @@ void SwapWidget::refreshTrades() {
         item->setTextAlignment(TradeSent, Qt::AlignRight | Qt::AlignVCenter);
         item->setText(TradeReceived, t.amountTo);
         item->setTextAlignment(TradeReceived, Qt::AlignRight | Qt::AlignVCenter);
-        item->setText(TradeStatusCol, tradeStatusDescription(t.status));
+        item->setText(TradeStatusCol, tradeStatusText(t));
         if (needsSupport(t.status)) {
             item->setIcon(TradeStatusCol, icons()->icon("warning.png"));
         }

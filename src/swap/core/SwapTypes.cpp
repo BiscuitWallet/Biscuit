@@ -130,6 +130,14 @@ QString tradeStatusDescription(TradeStatus status) {
     return QStringLiteral("Unknown status");
 }
 
+QString tradeStatusText(const Trade &trade) {
+    const bool awaiting = trade.status == TradeStatus::New || trade.status == TradeStatus::Waiting;
+    if (awaiting && !trade.depositTxId.isEmpty()) {
+        return QStringLiteral("Deposit sent, waiting for the exchange to see it");
+    }
+    return tradeStatusDescription(trade.status);
+}
+
 bool isTerminal(TradeStatus status) {
     // Expired, Failed and Halted are not terminal: a late deposit or a support
     // intervention can still move the trade forward.
