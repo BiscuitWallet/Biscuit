@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 
 namespace biscuit::swap::atomic {
 
@@ -31,6 +32,48 @@ QString stageText(const QString &s) {
     if (s == stage::punished) return "BTC kept by the maker";
     if (s == stage::cancelled) return "Cancelled, no BTC sent";
     return s;
+}
+
+namespace {
+    // "0.01000000" -> "0.01"
+    QString trimBtc(QString value) {
+        if (value.contains('.')) {
+            while (value.endsWith('0')) value.chop(1);
+            if (value.endsWith('.')) value.chop(1);
+        }
+        return value;
+    }
+}
+
+QString failureReason(const QString &error) {
+    if (error.isEmpty()) {
+        return {};
+    }
+    // Refusals sent by the maker (eigenwallet swap setup), most specific first.
+    static const QRegularExpression below("minimum configured buy limit is ([0-9.]+) BTC");
+    static const QRegularExpression above("maximum configured buy limit is ([0-9.]+) BTC");
+    static const QRegularExpression rejected("Swap rejected: ([^\n]+)");
+    if (const auto m = below.match(error); m.hasMatch()) {
+        return QString("The maker refused: its real minimum is %1 BTC").arg(trimBtc(m.captured(1)));
+    }
+    if (const auto m = above.match(error); m.hasMatch()) {
+        return QString("The maker refused: its maximum right now is %1 BTC").arg(trimBtc(m.captured(1)));
+    }
+    if (error.contains("XMR balance is currently too low")) {
+        return "The maker does not have enough XMR right now";
+    }
+    if (error.contains("does not accept incoming swap requests")) {
+        return "The maker is not accepting swaps right now";
+    }
+    if (error.contains("Seller encountered a problem")) {
+        return "The maker could not give a live price right now";
+    }
+    if (const auto m = rejected.match(error); m.hasMatch()) {
+        return QString("The maker rejected the swap: %1").arg(m.captured(1).trimmed());
+    }
+    // Otherwise the helper's own message (its first line).
+    const QStringList lines = error.split('\n', Qt::SkipEmptyParts);
+    return lines.isEmpty() ? error.trimmed() : lines.first().trimmed();
 }
 
 quint64 AtomicSwapRecord::expectedXmrAtomic() const {

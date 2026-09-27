@@ -423,7 +423,10 @@ void AtomicSwapWidget::refreshSwaps() {
         const quint64 xmr = r.expectedXmrAtomic();
         item->setText(3, xmr ? QString("≈ %1").arg(amount::fromAtomic(xmr, 12)) : QString("—"));
         QString status = atomic::stageText(r.stage);
-        if (!r.error.isEmpty() && !atomic::isFinalStage(r.stage)) {
+        if (r.stage == atomic::stage::cancelled && !r.error.isEmpty()) {
+            // Why it stopped, e.g. the maker's real minimum.
+            status = QString("Cancelled, no BTC sent · %1").arg(atomic::failureReason(r.error));
+        } else if (!r.error.isEmpty() && !atomic::isFinalStage(r.stage)) {
             status += " · retrying";
         }
         item->setText(4, status);

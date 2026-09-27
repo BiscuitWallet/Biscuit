@@ -4,6 +4,8 @@
 #include "AtomicSwapRunner.h"
 
 #include <QDir>
+#include <QFile>
+#include <QRegularExpression>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
@@ -32,6 +34,32 @@ namespace {
         return Config::defaultConfigDir().filePath("atomicswaps");
     }
 
+    QString logPath(const QString &id) {
+        return QDir(swapsDir()).filePath(QString("logs/%1.log").arg(id));
+    }
+
+    // The maker's last answer during setup, from the swap's log: the helper's
+    // final error may only say that setup timed out.
+    QString lastSetupRefusal(const QString &id) {
+        QFile file(logPath(id));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        const qint64 tail = 64 * 1024;
+        if (file.size() > tail) {
+            file.seek(file.size() - tail);
+        }
+        static const QRegularExpression ansi("\x1b\\[[0-9;]*m");
+        static const QRegularExpression refusal("Swap setup failed error=Protocol\\(\"([^\"]+)");
+        QString last;
+        for (const QString &line : QString::fromUtf8(file.readAll()).remove(ansi).split('\n')) {
+            if (const auto m = refusal.match(line); m.hasMatch()) {
+                last = m.captured(1);
+            }
+        }
+        return last;
+    }
+
     bool biscuitUsesProxy() {
         return conf()->get(Config::proxy).toInt() != Config::Proxy::None;
     }
@@ -42,6 +70,13 @@ AtomicSwapRunner::AtomicSwapRunner(Wallet *wallet, QObject *parent)
     , m_wallet(wallet)
 {
     m_records = recordsFromJson(m_wallet->getCacheAttribute(walletAttribute).toUtf8());
+    // Swaps that stopped before this was recorded: add the maker's reason.
+    for (AtomicSwapRecord &r : m_records) {
+        const QString refusal = r.stage == stage::cancelled ? lastSetupRefusal(r.id) : QString();
+        if (!refusal.isEmpty() && !r.error.contains(refusal)) {
+            r.error = refusal + "\n" + r.error;
+        }
+    }
 
     m_retryTimer.setSingleShot(true);
     m_retryTimer.setInterval(retryDelayMs);
@@ -208,7 +243,7 @@ bool AtomicSwapRunner::launch(const AtomicSwapRecord &record, bool resume, QStri
     env.insert("RUST_LOG", "warn,swap=info,biscuit_swapd=info");
     m_process->setProcessEnvironment(env);
     // A log per swap, kept for troubleshooting (no secret in it).
-    m_process->setStandardErrorFile(QDir(dataDir).filePath(QString("logs/%1.log").arg(record.id)), QIODevice::Append);
+    m_process->setStandardErrorFile(logPath(record.id), QIODevice::Append);
 
     connect(m_process, &QProcess::readyReadStandardOutput, this, &AtomicSwapRunner::onReadyRead);
     connect(m_process, &QProcess::finished, this, &AtomicSwapRunner::onFinished);
@@ -284,13 +319,18 @@ void AtomicSwapRunner::onFinished(int exitCode, QProcess::ExitStatus status) {
     m_process.clear();
     m_runningId.clear();
 
-    update(id, [&error](AtomicSwapRecord &r) {
+    update(id, [&error, &id](AtomicSwapRecord &r) {
         if (!error.isEmpty()) {
             r.error = error;
         }
         // Stopped before the BTC was locked: nothing happened, it is over.
         if (r.stage == stage::setup) {
             r.stage = stage::cancelled;
+            // Keep the maker's own reason when it refused.
+            const QString refusal = lastSetupRefusal(id);
+            if (!refusal.isEmpty() && !r.error.contains(refusal)) {
+                r.error = refusal + "\n" + r.error;
+            }
         }
     });
 

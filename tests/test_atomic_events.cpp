@@ -48,6 +48,24 @@ private slots:
         }
     }
 
+    void failureReasons() {
+        QCOMPARE(failureReason(""), QString());
+        // Real message from a maker whose offer said 0.000001 BTC.
+        QCOMPARE(failureReason("Swap failed: A network error occurred while setting up the swap: Something went wrong during the swap setup protocol: "
+                               "Seller refused to buy 0.00012802 BTC because the minimum configured buy limit is 0.01000000 BTC"),
+                 QString("The maker refused: its real minimum is 0.01 BTC"));
+        QCOMPARE(failureReason("Seller refused to buy 2.00000000 BTC because the maximum configured buy limit is 1.50000000 BTC"),
+                 QString("The maker refused: its maximum right now is 1.5 BTC"));
+        QCOMPARE(failureReason("Something went wrong during the swap setup protocol: Seller encountered a problem, please try again later."),
+                 QString("The maker could not give a live price right now"));
+        QCOMPARE(failureReason("Seller's XMR balance is currently too low to fulfill the swap request to buy 0.00010000 BTC, please try again later"),
+                 QString("The maker does not have enough XMR right now"));
+        QCOMPARE(failureReason("Swap rejected: anti-spam deposit too small"),
+                 QString("The maker rejected the swap: anti-spam deposit too small"));
+        QCOMPARE(failureReason("Not enough BTC: 0.0001 BTC + 0.00001 BTC network fee needed"),
+                 QString("Not enough BTC: 0.0001 BTC + 0.00001 BTC network fee needed"));
+    }
+
     void records() {
         AtomicSwapRecord older;
         older.id = "a";

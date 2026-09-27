@@ -39,6 +39,10 @@ namespace biscuit::swap::atomic {
     bool fundsAtStake(const QString &stage);
     // Short status for the list, e.g. "Waiting for the maker's XMR".
     QString stageText(const QString &stage);
+    // Why a swap stopped, in plain words, from the helper's error: the
+    // maker's own reason when it refused ("its real minimum is 0.01 BTC").
+    // Empty for an empty error.
+    QString failureReason(const QString &error);
 
     struct AtomicSwapRecord {
         QString id;              // swap ID (UUID) from the helper
