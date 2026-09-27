@@ -65,7 +65,10 @@ WalletWizard::WalletWizard(QWidget *parent)
     setStartId(Page_Menu);
 
     setButtonText(QWizard::CancelButton, "Close");
-    setPixmap(QWizard::WatermarkPixmap, QPixmap(":/assets/images/banners/3.png"));
+    // Side banner: 300 x 1000 px shown at 150 x 500, sharp on Retina.
+    QPixmap banner(":/assets/images/banners/bear.png");
+    banner.setDevicePixelRatio(2.0);
+    setPixmap(QWizard::WatermarkPixmap, banner);
     setWizardStyle(WizardStyle::ModernStyle);
     setOption(QWizard::NoBackButtonOnStartPage);
     setOption(QWizard::HaveHelpButton, true);
