@@ -111,6 +111,20 @@ void CoinWallet::setStatus(Status status) {
     }
 }
 
+QStringList CoinWallet::electrumUrls() const {
+    auto url = [](const QString &host, quint16 port, bool tls) {
+        return QString("%1://%2:%3").arg(tls ? "ssl" : "tcp", host).arg(port);
+    };
+    if (!m_customServer.host.isEmpty()) {
+        return {url(m_customServer.host, m_customServer.port, m_customServer.tls)};
+    }
+    QStringList urls;
+    for (const auto &server : defaultElectrumServers(params())) {
+        urls << url(server.first, server.second, true);
+    }
+    return urls;
+}
+
 void CoinWallet::connectToServer() {
     ElectrumServer server = m_customServer;
     if (server.host.isEmpty()) {

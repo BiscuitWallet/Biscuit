@@ -89,6 +89,23 @@ Event parseLine(const QByteArray &line) {
         event.message = o.value("message").toString();
     } else if (type == "stopped") {
         event.type = Event::Type::Stopped;
+    } else if (type == "bitcoin") {
+        event.type = Event::Type::Bitcoin;
+        event.bitcoinStatus = o.value("status").toString();
+        event.balanceSat = o.value("balance_sat").toInteger();
+    } else if (type == "swap_started") {
+        event.type = Event::Type::SwapStarted;
+        event.swapId = o.value("swap_id").toString();
+        event.btcAmountSat = o.value("btc_amount_sat").toInteger();
+        event.lockFeeSat = o.value("lock_fee_sat").toInteger();
+    } else if (type == "swap_resumed") {
+        event.type = Event::Type::SwapResumed;
+        event.swapId = o.value("swap_id").toString();
+    } else if (type == "swap_state" || type == "swap_finished") {
+        event.type = type == "swap_state" ? Event::Type::SwapState : Event::Type::SwapFinished;
+        event.swapId = o.value("swap_id").toString();
+        event.stage = o.value("stage").toString();
+        event.stateText = o.value("state").toString();
     } else {
         event.type = Event::Type::Ignored;
     }

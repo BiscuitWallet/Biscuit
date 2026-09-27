@@ -54,6 +54,10 @@ public:
 
     // Seed and optional passphrase, read from the file with the password.
     std::optional<QPair<QString, QString>> revealMnemonic(const QString &password, QString *error) const;
+    // BIP39 seed (64 bytes) of one wallet, read from the file (vault
+    // unlocked). For the atomic swap helper, which spends from that wallet.
+    // The caller wipes it (walletfile::wipe) once handed over.
+    std::optional<QByteArray> bip39Seed(const QString &id, QString *error) const;
 
     struct Entry {
         QString id;          // "main-BTC", "main-LTC" or a random id

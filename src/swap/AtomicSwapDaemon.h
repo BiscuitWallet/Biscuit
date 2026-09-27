@@ -12,8 +12,8 @@
 
 namespace biscuit::swap {
 
-// Runs the biscuit-swapd helper (XMR/BTC atomic swaps with public makers) and
-// turns its stdout into signals. Prototype: maker discovery and offers only.
+// Runs the biscuit-swapd helper to discover makers (XMR/BTC atomic swaps) and
+// turns its stdout into signals. Swaps themselves: AtomicSwapRunner.
 class AtomicSwapDaemon : public QObject
 {
     Q_OBJECT

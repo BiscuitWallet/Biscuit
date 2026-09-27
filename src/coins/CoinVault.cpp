@@ -344,6 +344,43 @@ QString CoinVault::nextName(const CoinParams &params) const {
     }
 }
 
+std::optional<QByteArray> CoinVault::bip39Seed(const QString &id, QString *error) const {
+    if (!m_session) {
+        if (error) *error = "Bitcoin and Litecoin are locked";
+        return std::nullopt;
+    }
+    QFile file(path());
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = file.errorString();
+        return std::nullopt;
+    }
+    auto content = m_session->unseal(file.readAll());
+    if (!content) {
+        if (error) *error = "Unable to read the Bitcoin/Litecoin wallet file";
+        return std::nullopt;
+    }
+    const QJsonObject obj = parseContent(*content);
+    walletfile::wipe(*content);
+
+    QJsonObject entry;
+    if (id == mainId(coins::bitcoin()) || id == mainId(coins::litecoin())) {
+        entry = obj;
+    } else {
+        for (const QJsonValue &value : obj.value("extra").toArray()) {
+            if (value.toObject().value("id").toString() == id) {
+                entry = value.toObject();
+            }
+        }
+    }
+    if (entry.isEmpty()) {
+        if (error) *error = "Unknown Bitcoin/Litecoin wallet";
+        return std::nullopt;
+    }
+    auto seed = bip39::mnemonicToSeed(entry.value("mnemonic").toString(), entry.value("passphrase").toString());
+    if (!seed && error) *error = "Invalid seed in wallet file";
+    return seed;
+}
+
 bool CoinVault::rewrite(const std::function<void(QJsonObject &)> &change, QString *error) {
     if (!m_session) {
         if (error) *error = "Bitcoin and Litecoin are locked";

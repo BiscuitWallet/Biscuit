@@ -58,7 +58,7 @@ void AtomicSwapDaemon::start(bool tor) {
     m_stopping = false;
     m_process = new QProcess(this);
     m_process->setProgram(program);
-    m_process->setArguments({tor ? "--tor" : "--clearnet", "--data-dir", dataDir});
+    m_process->setArguments({"discover", tor ? "--tor" : "--clearnet", "--data-dir", dataDir});
     // Logs are not needed here, and an unread pipe would eventually block the helper.
     m_process->setStandardErrorFile(QProcess::nullDevice());
 
@@ -113,6 +113,11 @@ void AtomicSwapDaemon::onReadyRead() {
                 emit failed(event.message);
                 break;
             case atomic::Event::Type::Stopped:
+            case atomic::Event::Type::Bitcoin:
+            case atomic::Event::Type::SwapStarted:
+            case atomic::Event::Type::SwapResumed:
+            case atomic::Event::Type::SwapState:
+            case atomic::Event::Type::SwapFinished:
             case atomic::Event::Type::Ignored:
             case atomic::Event::Type::Invalid:
                 break;

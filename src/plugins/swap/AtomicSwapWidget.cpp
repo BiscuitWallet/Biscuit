@@ -14,7 +14,12 @@
 #include <QTimer>
 #include <QTreeWidgetItem>
 
+#include "AtomicSwapDialog.h"
+#include "coins/CoinVault.h"
+#include "coins/CoinWallet.h"
+#include "swap/core/Amount.h"
 #include "utils/AppData.h"
+#include "utils/Utils.h"
 #include "widgets/PixelIcons.h"
 #include "widgets/RetroBusyBar.h"
 #include "utils/config.h"
@@ -50,12 +55,27 @@ namespace {
 
 }
 
-AtomicSwapWidget::AtomicSwapWidget(QWidget *parent)
+AtomicSwapWidget::AtomicSwapWidget(Wallet *wallet, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::AtomicSwapWidget)
+    , m_wallet(wallet)
     , m_daemon(new AtomicSwapDaemon(this))
+    , m_runner(new AtomicSwapRunner(wallet, this))
 {
     ui->setupUi(this);
+
+    QHeaderView *swapsHeader = ui->tree_swaps->header();
+    swapsHeader->setSectionResizeMode(QHeaderView::ResizeToContents);
+    swapsHeader->setStretchLastSection(true);
+    ui->label_swapActivity->setStyleSheet("color: gray;");
+    connect(ui->btn_swap, &QPushButton::clicked, this, &AtomicSwapWidget::onSwap);
+    connect(ui->tree_offers, &QTreeWidget::itemSelectionChanged, this, &AtomicSwapWidget::updateSwapButton);
+    connect(ui->tree_offers, &QTreeWidget::itemDoubleClicked, this, &AtomicSwapWidget::onSwap);
+    connect(m_runner, &AtomicSwapRunner::recordsChanged, this, &AtomicSwapWidget::refreshSwaps);
+    connect(m_runner, &AtomicSwapRunner::activity, this, [this](const QString &, const QString &text) {
+        ui->label_swapActivity->setText(text);
+    });
+    refreshSwaps();
 
     QHeaderView *header = ui->tree_offers->header();
     header->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -218,8 +238,11 @@ void AtomicSwapWidget::showOffers() {
     });
 
     ui->tree_offers->clear();
-    for (const auto &offer : available) {
+    m_shownOffers = available;
+    for (int row = 0; row < available.size(); ++row) {
+        const auto &offer = available.at(row);
         auto *item = new QTreeWidgetItem(ui->tree_offers);
+        item->setData(Maker, Qt::UserRole, row);
         item->setText(Maker, offer.host());
         item->setText(Price, atomic::formatBtc(offer.priceSatPerXmr));
 
@@ -251,6 +274,7 @@ void AtomicSwapWidget::showOffers() {
             : QString("No market price: public price data is off or not loaded yet."));
     }
     updateDetails();
+    updateSwapButton();
 }
 
 void AtomicSwapWidget::onFailed(const QString &message) {
@@ -342,4 +366,80 @@ void AtomicSwapWidget::updateDetails() {
         parts << QString("%1 connected without XMR right now").arg(m_unavailableOffers);
     }
     ui->label_details->setText(parts.join(" · "));
+}
+
+void AtomicSwapWidget::updateSwapButton() {
+    const auto items = ui->tree_offers->selectedItems();
+    ui->btn_swap->setEnabled(!items.isEmpty() && !m_runner->busy() && !AtomicSwapDaemon::helperPath().isEmpty());
+    ui->btn_swap->setToolTip(m_runner->busy() ? "Another atomic swap is still in progress." : QString());
+}
+
+void AtomicSwapWidget::onSwap() {
+    const auto items = ui->tree_offers->selectedItems();
+    if (items.isEmpty() || m_runner->busy()) {
+        return;
+    }
+    const int row = items.first()->data(Maker, Qt::UserRole).toInt();
+    if (row < 0 || row >= m_shownOffers.size()) {
+        return;
+    }
+    const atomic::MakerOffer offer = m_shownOffers.at(row);
+
+    using namespace biscuit::coins;
+    CoinVault *vault = CoinVault::forWallet(m_wallet);
+    CoinWallet *btc = vault && vault->isUnlocked() ? vault->bitcoin() : nullptr;
+    if (!btc) {
+        Utils::showError(this, "Bitcoin wallet not open",
+                         "Open or set up your Bitcoin wallet first (Receive → Bitcoin): the swap pays from it.");
+        return;
+    }
+    if (btc->status() != CoinWallet::Status::Synchronized) {
+        Utils::showError(this, "Bitcoin wallet not ready",
+                         "Your Bitcoin wallet is still synchronizing. Try again in a moment.");
+        return;
+    }
+
+    const bool tor = torEnabledInSettings() || ui->check_tor->isChecked();
+    AtomicSwapDialog dialog(offer, vault->selectedName(bitcoin()), btc->balance().confirmed, tor,
+                            marketBtcPerXmr(), this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    QString error;
+    if (!m_runner->start(offer, dialog.btcSat(), tor, &error)) {
+        Utils::showError(this, "Could not start the swap", error);
+    }
+    updateSwapButton();
+}
+
+void AtomicSwapWidget::refreshSwaps() {
+    const auto records = m_runner->records();
+    ui->tree_swaps->clear();
+    for (const auto &r : records) {
+        auto *item = new QTreeWidgetItem(ui->tree_swaps);
+        item->setText(0, QLocale().toString(r.created.toLocalTime(), QLocale::ShortFormat));
+        item->setText(1, r.makerHost);
+        item->setText(2, atomic::formatBtc(r.btcSat));
+        const quint64 xmr = r.expectedXmrAtomic();
+        item->setText(3, xmr ? QString("≈ %1").arg(amount::fromAtomic(xmr, 12)) : QString("—"));
+        QString status = atomic::stageText(r.stage);
+        if (!r.error.isEmpty() && !atomic::isFinalStage(r.stage)) {
+            status += " · retrying";
+        }
+        item->setText(4, status);
+        for (int column : {2, 3}) {
+            item->setTextAlignment(column, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        QStringList tooltip = {QString("Swap ID: %1").arg(r.id), QString("Maker: %1").arg(r.makerPeerId),
+                               QString("XMR to: %1").arg(r.xmrAddress)};
+        if (r.lockFeeSat) tooltip << QString("Bitcoin network fee: %1 BTC").arg(atomic::formatBtc(r.lockFeeSat));
+        if (!r.stateText.isEmpty()) tooltip << QString("Step: %1").arg(r.stateText);
+        if (!r.error.isEmpty()) tooltip << QString("Last error: %1").arg(r.error);
+        for (int column = 0; column < 5; ++column) {
+            item->setToolTip(column, tooltip.join("\n"));
+        }
+    }
+    ui->label_swapsTitle->setVisible(!records.isEmpty());
+    ui->tree_swaps->setVisible(!records.isEmpty());
+    updateSwapButton();
 }

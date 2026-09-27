@@ -157,9 +157,81 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="label_note">
+    <layout class="QHBoxLayout" name="layout_swapButton" stretch="1,0">
+     <item>
+      <widget class="QLabel" name="label_note">
+       <property name="text">
+        <string>Select an offer to swap BTC from your Biscuit wallet for XMR.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_swap">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Swap…</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_swapsTitle">
      <property name="text">
-      <string>Preview: this lists live offers but cannot start a swap yet.</string>
+      <string>Your atomic swaps</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="tree_swaps">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>120</height>
+      </size>
+     </property>
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+     <property name="uniformRowHeights">
+      <bool>true</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Maker</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>You send (BTC)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>You get (XMR)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Status</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_swapActivity">
+     <property name="text">
+      <string/>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

@@ -6,6 +6,7 @@
 #include <QtTest>
 
 #include "AtomicEvents.h"
+#include "AtomicSwapRecord.h"
 
 using namespace biscuit::swap::atomic;
 
@@ -14,6 +15,69 @@ class TestAtomicEvents : public QObject
 Q_OBJECT
 
 private slots:
+    void swapEvents() {
+        Event e = parseLine(R"({"type":"swap_started","swap_id":"ea030832-3be9-454f-bb98-5ea9a788406b","btc_amount_sat":300000,"lock_fee_sat":1420,"elapsed_ms":9000})");
+        QCOMPARE(e.type, Event::Type::SwapStarted);
+        QCOMPARE(e.swapId, QString("ea030832-3be9-454f-bb98-5ea9a788406b"));
+        QCOMPARE(e.btcAmountSat, quint64(300000));
+        QCOMPARE(e.lockFeeSat, quint64(1420));
+
+        e = parseLine(R"({"type":"swap_state","swap_id":"x","stage":"btc_locked","state":"btc is locked"})");
+        QCOMPARE(e.type, Event::Type::SwapState);
+        QCOMPARE(e.stage, QString("btc_locked"));
+        QCOMPARE(e.stateText, QString("btc is locked"));
+
+        e = parseLine(R"({"type":"swap_finished","swap_id":"x","stage":"done"})");
+        QCOMPARE(e.type, Event::Type::SwapFinished);
+        QCOMPARE(e.stage, QString("done"));
+
+        e = parseLine(R"({"type":"bitcoin","status":"ready","balance_sat":512345})");
+        QCOMPARE(e.type, Event::Type::Bitcoin);
+        QCOMPARE(e.bitcoinStatus, QString("ready"));
+        QCOMPARE(e.balanceSat, quint64(512345));
+    }
+
+    void stages() {
+        QVERIFY(!isFinalStage(stage::setup));
+        QVERIFY(!fundsAtStake(stage::setup));      // nothing left the wallet yet
+        QVERIFY(fundsAtStake(stage::btcLocked));
+        QVERIFY(fundsAtStake(stage::refunding));
+        for (const QString &s : {stage::done, stage::refunded, stage::punished, stage::cancelled}) {
+            QVERIFY(isFinalStage(s));
+            QVERIFY(!fundsAtStake(s));
+        }
+    }
+
+    void records() {
+        AtomicSwapRecord older;
+        older.id = "a";
+        older.created = QDateTime(QDate(2026, 9, 26), QTime(10, 0), QTimeZone::UTC);
+        AtomicSwapRecord newer;
+        newer.id = "b";
+        newer.walletId = "main-BTC";
+        newer.makerHost = "l7attamg....onion";
+        newer.priceSatPerXmr = 664750;
+        newer.btcSat = 300000;
+        newer.lockFeeSat = 1420;
+        newer.xmrAddress = "8AbC";
+        newer.tor = true;
+        newer.stage = stage::xmrLocked;
+        newer.created = QDateTime(QDate(2026, 9, 27), QTime(10, 0), QTimeZone::UTC);
+
+        const auto back = recordsFromJson(recordsToJson({older, newer}));
+        QCOMPARE(back.size(), 2);
+        QCOMPARE(back.at(0).id, QString("b"));    // newest first
+        QCOMPARE(back.at(0).walletId, QString("main-BTC"));
+        QCOMPARE(back.at(0).btcSat, quint64(300000));
+        QCOMPARE(back.at(0).lockFeeSat, quint64(1420));
+        QCOMPARE(back.at(0).stage, stage::xmrLocked);
+        QVERIFY(back.at(0).tor);
+        QCOMPARE(back.at(0).created, newer.created);
+        // 0.003 BTC at 0.0066475 BTC/XMR = 0.451297480... XMR
+        QCOMPARE(back.at(0).expectedXmrAtomic(), quint64(451297480255));
+        QCOMPARE(recordsFromJson("not json").size(), 0);
+    }
+
     void summary() {
         const Event e = parseLine(R"({"connected":6,"dialing":2,"makers_known":35,"offers":6,"quotes_inflight":0,"type":"summary"})");
         QCOMPARE(e.type, Event::Type::Summary);

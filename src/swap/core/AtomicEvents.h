@@ -56,6 +56,12 @@ namespace biscuit::swap::atomic {
             Offers,
             Error,      // message; the helper exits after it
             Stopped,
+            // Swap (buy / resume):
+            Bitcoin,        // bitcoinStatus: "syncing" or "ready" (balanceSat)
+            SwapStarted,    // swapId, btcAmountSat, lockFeeSat
+            SwapResumed,    // swapId
+            SwapState,      // swapId, stage, stateText
+            SwapFinished,   // swapId, stage (a final stage)
             Ignored,    // per-peer events and unknown types
             Invalid,    // not a JSON object
         };
@@ -66,6 +72,14 @@ namespace biscuit::swap::atomic {
         DiscoverySummary summary;
         QList<MakerOffer> offers;
         QString message;
+
+        QString bitcoinStatus;
+        quint64 balanceSat = 0;
+        QString swapId;
+        QString stage;        // see AtomicSwapRecord.h
+        QString stateText;    // the helper's own wording, for details
+        quint64 btcAmountSat = 0;
+        quint64 lockFeeSat = 0;
     };
 
     Event parseLine(const QByteArray &line);

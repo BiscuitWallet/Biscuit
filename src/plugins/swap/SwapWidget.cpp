@@ -91,7 +91,7 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     ui->tabWidget->tabBar()->setObjectName("centeredTabBar");
     Appearance::styleTabs(ui->tabWidget, true);
     // Atomic swaps (BTC -> XMR, public makers) sit next to the exchange swaps.
-    m_atomicTab = new AtomicSwapWidget(this);
+    m_atomicTab = new AtomicSwapWidget(m_wallet, this);
     ui->tabWidget->insertTab(1, m_atomicTab, "Atomic swap (BTC → XMR)");
 
     const bool demo = m_manager->demoMode();

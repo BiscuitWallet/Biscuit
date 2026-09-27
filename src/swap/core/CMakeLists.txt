@@ -10,6 +10,7 @@ add_library(biscuit_swap_core STATIC
         TrocadorApi.cpp
         SwapHistory.cpp
         AtomicEvents.cpp
+        AtomicSwapRecord.cpp
         DemoSwap.cpp
         RequestPolicy.cpp
 )

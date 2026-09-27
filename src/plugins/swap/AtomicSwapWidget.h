@@ -9,21 +9,24 @@
 class QLabel;
 class RetroBusyBar;
 class QTimer;
+class Wallet;
 
 #include "swap/AtomicSwapDaemon.h"
+#include "swap/AtomicSwapRunner.h"
 
 namespace Ui {
     class AtomicSwapWidget;
 }
 
 // Atomic swap page of the Swap tab: BTC -> XMR with public makers (the
-// eigenwallet network). Prototype: finds makers and lists their offers.
+// eigenwallet network). Finds makers, lists their offers, starts a swap with
+// the chosen one and follows the user's swaps.
 class AtomicSwapWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit AtomicSwapWidget(QWidget *parent = nullptr);
+    explicit AtomicSwapWidget(Wallet *wallet, QWidget *parent = nullptr);
     ~AtomicSwapWidget() override;
 
 protected:
@@ -37,6 +40,9 @@ private:
     void showOffers();
     void onFailed(const QString &message);
     void onFinished();
+    void onSwap();
+    void refreshSwaps();
+    void updateSwapButton();
 
     // With Tor enabled in Biscuit, nothing may leave outside Tor.
     void updateTorOption();
@@ -58,7 +64,10 @@ private:
     void updateDetails();
 
     QScopedPointer<Ui::AtomicSwapWidget> ui;
+    Wallet *m_wallet;
     biscuit::swap::AtomicSwapDaemon *m_daemon;
+    biscuit::swap::AtomicSwapRunner *m_runner;
+    QList<biscuit::swap::atomic::MakerOffer> m_shownOffers;   // rows of tree_offers
     biscuit::swap::atomic::DiscoverySummary m_summary;
     QList<biscuit::swap::atomic::MakerOffer> m_offers;
     int m_unavailableOffers = 0;
