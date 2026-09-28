@@ -29,23 +29,31 @@ namespace {
         "..kkkkkkkkkkkk..",
     };
 
-    const char *const modemRows[16] = {
-        "................",
-        "...kkkkkkkkkk...",
-        "..kyyyyyyyyyyk..",
-        "..kyykkkkkkyyk..",
-        "..kkk......kkk..",
-        "....kkkkkkkk....",
-        "...kyyyyyyyyk...",
-        "..kyyyykkyyyyk..",
-        "..kyyykwwkyyyk..",
-        "..kyyyykkyyyyk..",
-        ".kyyyyyyyyyyyyk.",
-        ".kkkkkkkkkkkkkk.",
-        ".kggggggggggggk.",
-        ".kg1g2g3g4ggggk.",
-        ".kGGGGGGGGGGGGk.",
-        "..kkkkkkkkkkkk..",
+    const char *const phoneRows[24] = {
+        "........................",
+        "........................",
+        "......kkkkkkkkk.........",
+        ".....khhhhhhhhhkkk......",
+        "....kyyyyyyyyyyyyyk.....",
+        "...kyyyyyyyyyyyyyyyk....",
+        "...kyyykk.kkkkkyyyyyk...",
+        "...kyyk........kyyyyyk..",
+        "..kyyyk.........kyyyyk..",
+        "..kyyyk..........kyyyk..",
+        "..kkkk...........kYYYk..",
+        "........kkkkkk....kYYk..",
+        "......kkyyyyyykkkkkkkk..",
+        "....kkyyddd2dd3dyyykkkk.",
+        ".kkkyyyyd1dwwdddyyyyyDk.",
+        ".kYYYyyydddddd4dyyyDDDk.",
+        ".kYYYYYYyyddddyyyDDDDDk.",
+        ".kYYYYYYYYYYyyyyDDDDDDk.",
+        ".kkYYYYYYYYYYYDDDDDDkk..",
+        "...kkkkYYYYYYYDDDDkk....",
+        ".......kkkYYYYDDkk......",
+        "..........kkkkkk........",
+        "........................",
+        "........................",
     };
 
     const char *const computerRows[16] = {
@@ -143,16 +151,17 @@ namespace {
         "................",
     };
 
-    QPixmap draw(const char *const rows[16], const QHash<char, QColor> &colors) {
-        QImage image(16, 16, QImage::Format_ARGB32);
+    template <int N>
+    QPixmap draw(const char *const (&rows)[N], const QHash<char, QColor> &colors) {
+        QImage image(N, N, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
-        for (int y = 0; y < 16; ++y) {
-            for (int x = 0; x < 16; ++x) {
+        for (int y = 0; y < N; ++y) {
+            for (int x = 0; x < N; ++x) {
                 image.setPixelColor(x, y, colors.value(rows[y][x], QColor(Qt::transparent)));
             }
         }
         // Nearest-neighbour upscale: crisp pixels at 2x.
-        QPixmap pixmap = QPixmap::fromImage(image.scaled(32, 32, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+        QPixmap pixmap = QPixmap::fromImage(image.scaled(2 * N, 2 * N, Qt::IgnoreAspectRatio, Qt::FastTransformation));
         pixmap.setDevicePixelRatio(2.0);
         return pixmap;
     }
@@ -165,14 +174,15 @@ QPixmap hourglass() {
                                 {'s', QColor(135, 135, 135)}});
 }
 
-QPixmap modem(bool connected, int phase) {
-    // A yellow desk phone on a grey modem; the modem's lights run while it
-    // dials and all stay lit once connected.
-    const QColor off(120, 40, 34), on(236, 58, 40);
-    auto led = [&](int index) { return connected || phase % 4 == index ? on : off; };
-    return draw(modemRows, {{'k', outline}, {'y', QColor(242, 211, 60)}, {'w', Qt::white},
-                            {'g', QColor(201, 201, 201)}, {'G', QColor(138, 138, 138)},
-                            {'1', led(0)}, {'2', led(1)}, {'3', led(2)}, {'4', led(3)}});
+QPixmap phone(bool connected, int phase) {
+    // A yellow desk phone in 3/4 view, handset on its cradle. While it
+    // dials, the dial's holes light up in turn; connected, they all stay lit.
+    const QColor lit(255, 255, 255), dim(206, 168, 36);
+    auto hole = [&](int index) { return connected || phase % 4 == index ? lit : dim; };
+    return draw(phoneRows, {{'k', outline}, {'h', QColor(255, 240, 150)}, {'y', QColor(242, 211, 60)},
+                            {'Y', QColor(206, 168, 36)}, {'D', QColor(158, 122, 22)}, {'d', QColor(96, 74, 22)},
+                            {'w', QColor(255, 251, 232)},
+                            {'1', hole(0)}, {'2', hole(1)}, {'3', hole(2)}, {'4', hole(3)}});
 }
 
 QIcon computer() {
