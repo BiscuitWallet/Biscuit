@@ -1,58 +1,60 @@
-# Feather Wallet
+<p align="center">
+  <img src="src/assets/images/appicons/256x256.png" width="128" height="128" alt="Biscuit">
+</p>
 
-Feather is a free Monero desktop wallet for Linux, Tails, macOS and Windows. It is written in C++ with the Qt framework.
+<h1 align="center">Biscuit Wallet</h1>
 
-- **easy-to-use**, **small** and **fast** - Feather runs well on any modern hardware, including virtual machines and live operating systems.
-- **beginner friendly**, but also caters to advanced Monero users by providing a [feature set](https://docs.featherwallet.org/guides/features) that is on par with the official CLI.
-- ships with **sane defaults** that suit most users, but can also be configured for high or uncommon threat models.
-- serves as a testing grounds for **experimental features** that may later be adopted in the reference wallets.
+<p align="center">
+  <em>A light, private desktop wallet for Monero, Bitcoin and Litecoin.</em><br>
+  <a href="https://biscuitwallet.com">Website</a> ·
+  <a href="https://biscuitwallet.com/download/">Download</a> ·
+  <a href="https://biscuitwallet.com/docs/">Documentation</a> ·
+  <a href="https://biscuitwallet.com/why/">Why Biscuit?</a>
+</p>
+
+---
+
+Biscuit keeps Monero, Bitcoin and Litecoin in one small desktop app. Swap between them without an account, turn on Tor with one click, and keep your keys where they belong: on your computer.
+
+It is built on [Feather Wallet](https://featherwallet.org) and keeps what makes Feather good: a native Qt app, keys that never leave your machine, and nothing that phones home. Biscuit adds Bitcoin and Litecoin wallets and built-in swaps.
+
+## Features
+
+- **Three coins, one wallet.** Monero, Bitcoin and Litecoin behind a single password. Several Bitcoin and Litecoin wallets side by side.
+- **Exchange swaps.** XMR, BTC and LTC in any direction, with offers from many exchanges through [Trocador](https://trocador.app). Offers are ranked only by what you receive; no account, no identity checks (exchanges rated A only).
+- **Atomic swaps (beta).** Bitcoin to Monero directly with independent market makers, using the [eigenwallet](https://eigenwallet.org) protocol. Nobody holds your coins during the swap.
+- **Tor built in.** One switch routes every connection through Tor. On Tails and Whonix, Biscuit uses the system's Tor.
+- **Nothing phones home.** No accounts, no analytics, no crash reports. Prices come straight from public sources, with the same requests for everyone.
+- **Everything Feather does for Monero:** coin control, subaddresses, node management and more.
+
+## Privacy
+
+Your seeds, keys, balances and history stay on your computer, encrypted with your password. Exchange swaps go through a small Biscuit server that holds our partner key; what it records is described in the [privacy policy](https://biscuitwallet.com/privacy/). Atomic swaps do not use it.
 
 ## Download
 
-You can download Feather from **[featherwallet.org](https://featherwallet.org/download/)** or **[GitHub](https://github.com/feather-wallet/feather/releases)**.
+Biscuit is not released yet. Builds for Linux (AppImage, Flatpak, Tails), macOS and Windows will be published on [biscuitwallet.com/download](https://biscuitwallet.com/download/), with checksums and a signature to [verify](https://biscuitwallet.com/docs/verify/) before you install.
 
-If you need help installing Feather, check the [installation documentation](https://docs.featherwallet.org/).
+## Building
 
-We recommend that you verify downloads with GPG. Releases are signed with our [release signing key](https://docs.featherwallet.org/guides/release-signing-key). The fingerprint is:
+See [BUILD.md](BUILD.md). Biscuit builds with CMake and Qt 6; macOS (Apple Silicon) is documented first, Linux and Windows follow.
 
-```
-8185 E158 A333 30C7 FD61 BC0D 1F76 E155 CEFB A71C
-```
+## Contact
 
-## Resources
+[biscuitwallet@tutamail.com](mailto:biscuitwallet@tutamail.com)
 
-* [Official Site](https://featherwallet.org)
-* [Documentation](https://docs.featherwallet.org)
-* [Git Repository](https://github.com/feather-wallet/feather)
-* [Matrix](https://matrix.to/#/#feather:monero.social)
-* IRC: `#feather` on [OFTC](https://www.oftc.net/)
-* Mail: dev@featherwallet.org
+Nobody from Biscuit will ever ask for your seed, password or private keys.
 
-If you need help with your wallet, please contact us via Matrix or IRC.
-If you don't have an IRC client, you can join the room via [webchat](https://webchat.oftc.net/?randomnick=1&channels=feather).
-If you don’t receive a response immediately please idle in the room.
+## Credits
 
-## Release Builds
+Biscuit stands on the work of others:
 
-To learn how to run a bootstrappable release build, see: [contrib/guix/README.md](https://github.com/feather-wallet/feather/blob/master/contrib/guix/README.md)
-
-For release attestations, see the [feather-sigs](http://github.com/feather-wallet/feather-sigs) repo.
-
-For release policy, see: [RELEASE.md](https://github.com/feather-wallet/feather/blob/master/RELEASE.md)
-
-## Development
-
-If you are looking to set up a development environment for Feather, see [HACKING.md](https://github.com/feather-wallet/feather/blob/master/HACKING.md).
-
-It is highly recommended that you join our Matrix or IRC channel if you are hacking on Feather.
-Idling in this channel is the best way to stay updated on best practices and new developments.
-
-For information on how Feather is maintained, see: [MAINTENANCE.md](https://github.com/feather-wallet/feather/blob/master/MAINTENANCE.md)
-
-To report a security vulnerability, see: [SECURITY.md](https://github.com/feather-wallet/feather/blob/master/SECURITY.md)
+- [Feather Wallet](https://featherwallet.org), the foundation of this app
+- [The Monero Project](https://getmonero.org), for Monero and its wallet library
+- [eigenwallet](https://eigenwallet.org), for the BTC → XMR atomic swap protocol
+- [libwally-core](https://github.com/ElementsProject/libwally-core), for Bitcoin and Litecoin keys and transactions
+- [Trocador](https://trocador.app), for exchange swaps
 
 ## License
 
-Feather is free and open-source software, [licensed under BSD-3](https://raw.githubusercontent.com/feather-wallet/feather/master/LICENSE).
-
-Copyright (c) 2020-2026, The Monero Project
+Biscuit is free software, released under the BSD 3-Clause License inherited from Feather Wallet and Monero. See [LICENSE](LICENSE).
