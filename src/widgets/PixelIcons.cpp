@@ -29,6 +29,41 @@ namespace {
         "..kkkkkkkkkkkk..",
     };
 
+    const char *const phoneRows[32] = {
+        "................................",
+        "................................",
+        ".........kkkkkk.................",
+        ".......kkDyyyYDkkk..............",
+        "......kDyyyyyyyyYDkkk...........",
+        ".....kDyyyYDDDYyyyyYDkk.........",
+        "....kDyyyYDDyDkyyyyyyYDkk.......",
+        "....kkyyYDDDyYkYyyyyyyyYDkk.....",
+        "....kykkDkkDyYkDDYDDDyyyyYDk....",
+        "....kyYDkDyyyYkkDDDyDkyyyyYDk...",
+        ".....kDkDyyyyyyDkkDyYkyyyyyYDk..",
+        "......kDyYDkkYYyyDkyYkkyyyyyYDk.",
+        ".....kDykkyyykkDyyyyYkDkYyyyyYDk",
+        "....kDyDyyDkDyyDYyyyyDYkyYyyYYDk",
+        "...kDyYkkykDkykkDyyyyYYkyyYYDDDk",
+        "..kDyyYyyyDkDyYYkyyyyYkkyyYYDDDk",
+        ".kDyyyYkkyyyykkDkyyyYDkkyyYYDDDk",
+        "kDyyyyykYYkkYYDkYyyYDDkykyYYDDkk",
+        "kYYyyyyykDDDDkkYyyYDDDkyYkkkkkDk",
+        "kYYYYyyyyYkkkDYyyYDDDDDkYyYYDDDk",
+        "kYYYYYYyyyyyyyyyYDDDDDDkkyYYDDk.",
+        "kYYYYYYYYyyyyyyYDDDDDDDDkkkkkk..",
+        "kkYYYYYYYYYyyyYDDDDDDDDDDkk.....",
+        "..kkYYYYYYYYYYDDDDDDDDDkk.......",
+        "....kkYYYYYYYDDDDDDDDkk.........",
+        "......kkYYYYYDDDDDDkk...........",
+        "........kkYYYDDDDkk.............",
+        "..........kkYDDkk...............",
+        "............kkk.................",
+        "................................",
+        "................................",
+        "................................",
+    };
+
     const char *const computerRows[16] = {
         "................",
         "..kkkkkkkkkkkk..",
@@ -148,12 +183,11 @@ QPixmap hourglass() {
 }
 
 QPixmap phone(bool connected, int phase) {
-    // A yellow desk phone (64x64 pixel art, shown at 32 points). While it
-    // dials, its three lights blink in turn; connected, they all stay lit.
-    const QString frame = connected ? QString("on") : QString::number(phase % 3);
-    QPixmap pixmap(QString(":/assets/images/phone/phone-%1.png").arg(frame));
-    pixmap.setDevicePixelRatio(2.0);
-    return pixmap;
+    // A yellow desk phone in 3/4 view, 32x32 (shown at 32 points).
+    Q_UNUSED(connected)
+    Q_UNUSED(phase)
+    return draw(phoneRows, {{'k', outline}, {'y', QColor(246, 214, 72)}, {'Y', QColor(212, 170, 40)},
+                            {'D', QColor(156, 118, 22)}});
 }
 
 QIcon computer() {
