@@ -29,31 +29,39 @@ namespace {
         "..kkkkkkkkkkkk..",
     };
 
-    const char *const phoneRows[24] = {
-        "........................",
-        "........................",
-        "......kkkkkkkkk.........",
-        ".....khhhhhhhhhkkk......",
-        "....kyyyyyyyyyyyyyk.....",
-        "...kyyyyyyyyyyyyyyyk....",
-        "...kyyykk.kkkkkyyyyyk...",
-        "...kyyk........kyyyyyk..",
-        "..kyyyk.........kyyyyk..",
-        "..kyyyk..........kyyyk..",
-        "..kkkk...........kYYYk..",
-        "........kkkkkk....kYYk..",
-        "......kkyyyyyykkkkkkkk..",
-        "....kkyyddd2dd3dyyykkkk.",
-        ".kkkyyyyd1dwwdddyyyyyDk.",
-        ".kYYYyyydddddd4dyyyDDDk.",
-        ".kYYYYYYyyddddyyyDDDDDk.",
-        ".kYYYYYYYYYYyyyyDDDDDDk.",
-        ".kkYYYYYYYYYYYDDDDDDkk..",
-        "...kkkkYYYYYYYDDDDkk....",
-        ".......kkkYYYYDDkk......",
-        "..........kkkkkk........",
-        "........................",
-        "........................",
+    const char *const phoneRows[32] = {
+        "................................",
+        ".........kkkkkkkkkk.............",
+        "........khhhhhhhhhhkkkk.........",
+        "......kkhyyyyyyyyyyyhhhk........",
+        ".....khhyyyyyyyyyyyyyyyhkk......",
+        "....khyyyyyYYYYkYYYyyyyyhhkk....",
+        "....khyyyYkkkkkykkkkYYyyyyhk....",
+        "...khyyyYkyyyyyyyyyykkYyyyyhk...",
+        "...khyyYkyyyyyyyyyyyyykYYyyyhk..",
+        "..khyyyYkyyyyyyyyyyyyyykYyyyhhk.",
+        "..khyyYYkyyykkyyyyyyyyyykYyyyhk.",
+        "..kyyyYkyykdd5ddkyyyyyyyykYyyhk.",
+        "...kyykkydd44556dkyyyyyyykYyyhk.",
+        "...kkkyyk33dddd6ddyyyyyyDkyyYDk.",
+        "...khyyydd3dyyyd7dkyyyyDDkyyYDk.",
+        "..khyyyyd22dyyyd7dkyyyDDDkyyYDDk",
+        ".khyyyyykd11ddd88dyyyDDDDkyyYDDk",
+        ".kyyyyyyyd11dddddkyyDDDDDkyyYDDk",
+        ".kYYyyyyyykdddddkyDDDDDDkkyyYDDk",
+        ".kYYYYYyyyyykkyyyDDDDDDk.kyyYDDk",
+        ".kYYYYYYYyyyyyyyDDDDDDk...kyYDk.",
+        ".kYYYYYYYYYYyyyDDDDDDk.....kkk..",
+        ".kkYYYYYYYYYYYDDDDDDk...........",
+        "...kkYYYYYYYYYDDDDDk............",
+        ".....kkYYYYYYYDDDkk.............",
+        ".......kkkYYYYDDk...............",
+        "..........kkYYDk................",
+        "............kkk.................",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
     };
 
     const char *const computerRows[16] = {
@@ -175,14 +183,16 @@ QPixmap hourglass() {
 }
 
 QPixmap phone(bool connected, int phase) {
-    // A yellow desk phone in 3/4 view, handset on its cradle. While it
-    // dials, the dial's holes light up in turn; connected, they all stay lit.
-    const QColor lit(255, 255, 255), dim(206, 168, 36);
-    auto hole = [&](int index) { return connected || phase % 4 == index ? lit : dim; };
-    return draw(phoneRows, {{'k', outline}, {'h', QColor(255, 240, 150)}, {'y', QColor(242, 211, 60)},
-                            {'Y', QColor(206, 168, 36)}, {'D', QColor(158, 122, 22)}, {'d', QColor(96, 74, 22)},
-                            {'w', QColor(255, 251, 232)},
-                            {'1', hole(0)}, {'2', hole(1)}, {'3', hole(2)}, {'4', hole(3)}});
+    // A yellow rotary desk phone in 3/4 view: handset arched over the base,
+    // its end resting down the right side. While it dials, the finger holes
+    // light up one after another; connected, they all stay lit.
+    const QColor lit(255, 255, 255), dim(214, 172, 40);
+    QHash<char, QColor> colors = {{'k', outline}, {'h', QColor(255, 244, 170)}, {'y', QColor(245, 212, 64)},
+                                  {'Y', QColor(214, 172, 40)}, {'D', QColor(160, 122, 24)}, {'d', QColor(90, 68, 18)}};
+    for (int i = 0; i < 8; ++i) {
+        colors.insert(char('1' + i), connected || phase % 8 == i ? lit : dim);
+    }
+    return draw(phoneRows, colors);
 }
 
 QIcon computer() {
