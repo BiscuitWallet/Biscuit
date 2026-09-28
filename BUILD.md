@@ -44,7 +44,7 @@ ctest --test-dir tests --output-on-failure
 ## Trocador : relais (builds officiels) ou clé (développement)
 
 Les builds officiels passent par le relais Biscuit, qui garde la clé Trocador côté
-serveur (voir `relay/README.md`). La clé n'est alors jamais compilée dans l'app.
+serveur (dépôt privé `BiscuitWallet/biscuit-relay`). La clé n'est alors jamais compilée dans l'app.
 Créer `secrets.cmake` à la racine (ignoré par git) :
 
 ```cmake
