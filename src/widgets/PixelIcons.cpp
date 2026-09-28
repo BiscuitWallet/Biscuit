@@ -29,39 +29,23 @@ namespace {
         "..kkkkkkkkkkkk..",
     };
 
-    const char *const phoneRows[32] = {
-        "................................",
-        "................................",
-        ".........kkkkkk.................",
-        ".......kkDyyyYDkkk..............",
-        "......kDyyyyyyyyYDkkk...........",
-        ".....kDyyyYDDDYyyyyYDkk.........",
-        "....kDyyyYDDyDkyyyyyyYDkk.......",
-        "....kkyyYDDDyYkYyyyyyyyYDkk.....",
-        "....kykkDkkDyYkDDYDDDyyyyYDk....",
-        "....kyYDkDyyyYkkDDDyDkyyyyYDk...",
-        ".....kDkDyyyyyyDkkDyYkyyyyyYDk..",
-        "......kDyYDkkYYyyDkyYkkyyyyyYDk.",
-        ".....kDykkyyykkDyyyyYkDkYyyyyYDk",
-        "....kDyDyyDkDyyDYyyyyDYkyYyyYYDk",
-        "...kDyYkkykDkykkDyyyyYYkyyYYDDDk",
-        "..kDyyYyyyDkDyYYkyyyyYkkyyYYDDDk",
-        ".kDyyyYkkyyyykkDkyyyYDkkyyYYDDDk",
-        "kDyyyyykYYkkYYDkYyyYDDkykyYYDDkk",
-        "kYYyyyyykDDDDkkYyyYDDDkyYkkkkkDk",
-        "kYYYYyyyyYkkkDYyyYDDDDDkYyYYDDDk",
-        "kYYYYYYyyyyyyyyyYDDDDDDkkyYYDDk.",
-        "kYYYYYYYYyyyyyyYDDDDDDDDkkkkkk..",
-        "kkYYYYYYYYYyyyYDDDDDDDDDDkk.....",
-        "..kkYYYYYYYYYYDDDDDDDDDkk.......",
-        "....kkYYYYYYYDDDDDDDDkk.........",
-        "......kkYYYYYDDDDDDkk...........",
-        "........kkYYYDDDDkk.............",
-        "..........kkYDDkk...............",
-        "............kkk.................",
-        "................................",
-        "................................",
-        "................................",
+    const char *const modemRows[16] = {
+        "................",
+        "...kkkkkkkkkk...",
+        "..kyyyyyyyyyyk..",
+        "..kyykkkkkkyyk..",
+        "..kkk......kkk..",
+        "....kkkkkkkk....",
+        "...kyyyyyyyyk...",
+        "..kyyyykkyyyyk..",
+        "..kyyykwwkyyyk..",
+        "..kyyyykkyyyyk..",
+        ".kyyyyyyyyyyyyk.",
+        ".kkkkkkkkkkkkkk.",
+        ".kggggggggggggk.",
+        ".kg1g2g3g4ggggk.",
+        ".kGGGGGGGGGGGGk.",
+        "..kkkkkkkkkkkk..",
     };
 
     const char *const computerRows[16] = {
@@ -159,18 +143,16 @@ namespace {
         "................",
     };
 
-    // Shown at `points` (default: one drawing pixel per point).
-    template <int N>
-    QPixmap draw(const char *const (&rows)[N], const QHash<char, QColor> &colors, int points = N) {
-        QImage image(N, N, QImage::Format_ARGB32);
+    QPixmap draw(const char *const rows[16], const QHash<char, QColor> &colors) {
+        QImage image(16, 16, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
-        for (int y = 0; y < N; ++y) {
-            for (int x = 0; x < N; ++x) {
+        for (int y = 0; y < 16; ++y) {
+            for (int x = 0; x < 16; ++x) {
                 image.setPixelColor(x, y, colors.value(rows[y][x], QColor(Qt::transparent)));
             }
         }
-        // Nearest-neighbour scaling: crisp pixels at 2x.
-        QPixmap pixmap = QPixmap::fromImage(image.scaled(2 * points, 2 * points, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+        // Nearest-neighbour upscale: crisp pixels at 2x.
+        QPixmap pixmap = QPixmap::fromImage(image.scaled(32, 32, Qt::IgnoreAspectRatio, Qt::FastTransformation));
         pixmap.setDevicePixelRatio(2.0);
         return pixmap;
     }
@@ -183,12 +165,14 @@ QPixmap hourglass() {
                                 {'s', QColor(135, 135, 135)}});
 }
 
-QPixmap phone(bool connected, int phase) {
-    // A yellow desk phone in 3/4 view, drawn 32x32 and shown at 24 points.
-    Q_UNUSED(connected)
-    Q_UNUSED(phase)
-    return draw(phoneRows, {{'k', outline}, {'y', QColor(246, 214, 72)}, {'Y', QColor(212, 170, 40)},
-                            {'D', QColor(156, 118, 22)}}, 24);
+QPixmap modem(bool connected, int phase) {
+    // A yellow desk phone on a grey modem; the modem's lights run while it
+    // dials and all stay lit once connected.
+    const QColor off(120, 40, 34), on(236, 58, 40);
+    auto led = [&](int index) { return connected || phase % 4 == index ? on : off; };
+    return draw(modemRows, {{'k', outline}, {'y', QColor(242, 211, 60)}, {'w', Qt::white},
+                            {'g', QColor(201, 201, 201)}, {'G', QColor(138, 138, 138)},
+                            {'1', led(0)}, {'2', led(1)}, {'3', led(2)}, {'4', led(3)}});
 }
 
 QIcon computer() {

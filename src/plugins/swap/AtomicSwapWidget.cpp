@@ -75,8 +75,7 @@ AtomicSwapWidget::AtomicSwapWidget(Wallet *wallet, QWidget *parent)
     ui->progress->hide();
 
     m_phone = new QLabel(this);
-    m_phone->setFixedSize(24, 24);
-    m_phone->setAlignment(Qt::AlignCenter);
+    m_phone->setFixedSize(16, 16);
     m_phone->hide();
     ui->layout_headline->insertWidget(0, m_phone);
     m_dialTimer = new QTimer(this);
@@ -85,8 +84,8 @@ AtomicSwapWidget::AtomicSwapWidget(Wallet *wallet, QWidget *parent)
         m_dots = (m_dots + 1) % 4;
         ui->label_headline->setText(m_headlineBase + QString(m_dots, '.'));
         if (m_phoneState == Phone::Dialing) {
-            // The dial's holes light up in turn while it dials.
-            m_phone->setPixmap(PixelIcons::phone(false, ++m_modemPhase));
+            // The modem's lights blink while it dials.
+            m_phone->setPixmap(PixelIcons::modem(false, ++m_modemPhase));
         }
     });
     ui->check_tor->setChecked(conf()->get(Config::atomicSwapTor).toBool());
@@ -312,11 +311,11 @@ void AtomicSwapWidget::setPhone(Phone phone) {
         m_phone->setToolTip("Waiting");
         break;
     case Phone::Dialing:
-        m_phone->setPixmap(PixelIcons::phone(false, m_modemPhase));
+        m_phone->setPixmap(PixelIcons::modem(false, m_modemPhase));
         m_phone->setToolTip("Dialing makers");
         break;
     case Phone::PickedUp:
-        m_phone->setPixmap(PixelIcons::phone(true, 0));
+        m_phone->setPixmap(PixelIcons::modem(true, 0));
         m_phone->setToolTip("A maker answered");
         break;
     }
