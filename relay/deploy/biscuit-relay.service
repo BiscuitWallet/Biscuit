@@ -4,9 +4,11 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-# Replace relay.example.org and the age1... public key.
+# Replace the age1... public key. Drop the two -site-* lines to run the relay alone.
 ExecStart=/usr/local/bin/biscuit-relay serve \
-    -domain relay.example.org \
+    -domain relay.biscuitwallet.com \
+    -site-domain biscuitwallet.com \
+    -site-dir /srv/biscuit-site \
     -key-file %d/trocador-key \
     -recipient age1REPLACE_WITH_PUBLIC_KEY \
     -log-dir /var/lib/biscuit-relay/trades \

@@ -4,7 +4,7 @@
 // biscuit-relay keeps Biscuit's Trocador partner key on the server and records
 // the connection data Trocador's providers require for each created trade.
 //
-//	biscuit-relay serve   -domain relay.example.org -key-file ... -recipient age1...
+//	biscuit-relay serve   -domain relay.example.org -key-file ... -recipient age1... [-site-domain example.org -site-dir /srv/site]
 //	biscuit-relay keygen  -out trades-identity.txt
 //	biscuit-relay decrypt -identity trades-identity.txt logs/*.log
 package main
@@ -57,10 +57,18 @@ func serve(args []string) {
 	certDir := fs.String("cert-dir", "/var/lib/biscuit-relay/certs", "Let's Encrypt certificate cache")
 	upstream := fs.String("upstream", "https://trocador.app/api/", "Trocador API base URL")
 	retentionDays := fs.Int("retention-days", 365, "days a trade record is kept")
+	siteDomain := fs.String("site-domain", "", "also serve the static website on this domain (www. redirects to it)")
+	siteDir := fs.String("site-dir", "", "directory holding the static website")
 	fs.Parse(args)
 
 	if (*domain == "") == (*dev == "") {
 		log.Fatal("give exactly one of -domain or -dev")
+	}
+	if *siteDir != "" && *domain != "" && *siteDomain == "" {
+		log.Fatal("-site-dir needs -site-domain")
+	}
+	if *siteDomain != "" && *siteDir == "" {
+		log.Fatal("-site-domain needs -site-dir")
 	}
 	keyBytes, err := os.ReadFile(*keyFile)
 	if err != nil {
@@ -94,9 +102,11 @@ func serve(args []string) {
 	})
 	go every(time.Minute, func() { limiter.Sweep(time.Now()) })
 
-	mux := http.NewServeMux()
-	mux.Handle("/api/", relay)
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "ok\n") })
+	health := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "ok\n") })
+	var site http.Handler
+	if *siteDir != "" {
+		site = staticSite(*siteDir)
+	}
 
 	// Go's server logs TLS and connection errors with the client's IP: discard
 	// them, the relay keeps no IP outside the encrypted trade log.
@@ -115,26 +125,37 @@ func serve(args []string) {
 	}
 
 	if *dev != "" {
+		// Any host: the relay under /api/ and /health, the site everywhere else.
+		mux := http.NewServeMux()
+		mux.Handle("/api/", relay)
+		mux.Handle("/health", health)
+		if site != nil {
+			mux.Handle("/", site)
+		}
 		log.Printf("dev mode: http://%s", *dev)
 		log.Fatal(newServer(*dev, mux).ListenAndServe())
 	}
 
+	hosts := []string{*domain}
+	if *siteDomain != "" {
+		hosts = append(hosts, *siteDomain, "www."+*siteDomain)
+	}
 	if err := os.MkdirAll(*certDir, 0o700); err != nil {
 		log.Fatal(err)
 	}
 	m := &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(*domain),
+		HostPolicy: autocert.HostWhitelist(hosts...),
 		Cache:      autocert.DirCache(*certDir),
 	}
 	go func() {
 		// Port 80: Let's Encrypt challenges, everything else redirected to HTTPS.
 		log.Fatal(newServer(":80", m.HTTPHandler(nil)).ListenAndServe())
 	}()
-	srv := newServer(":443", mux)
+	srv := newServer(":443", routes(*domain, relay, health, *siteDomain, site))
 	srv.TLSConfig = m.TLSConfig()
 	srv.TLSConfig.MinVersion = tls.VersionTLS12
-	log.Printf("serving https://%s", *domain)
+	log.Printf("serving https://%s", strings.Join(hosts, ", https://"))
 	log.Fatal(srv.ListenAndServeTLS("", ""))
 }
 

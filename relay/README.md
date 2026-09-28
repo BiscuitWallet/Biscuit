@@ -117,8 +117,8 @@ chmod 600 /etc/biscuit-relay/trocador-key
 
 ### 4. Service
 
-Dans `/etc/systemd/system/biscuit-relay.service`, remplacer `relay.example.org` par
-le domaine et `age1REPLACE_WITH_PUBLIC_KEY` par la clé publique, puis :
+Dans `/etc/systemd/system/biscuit-relay.service`, vérifier les domaines et remplacer
+`age1REPLACE_WITH_PUBLIC_KEY` par la clé publique, puis :
 
 ```sh
 systemctl daemon-reload
@@ -127,6 +127,23 @@ journalctl -u biscuit-relay -f        # doit afficher "serving https://..."
 ```
 
 Depuis le Mac : `curl https://DOMAINE/health` doit répondre `ok`.
+
+### Site web (même programme)
+
+Le relais sert aussi le site statique : `-site-domain biscuitwallet.com -site-dir
+/srv/biscuit-site`. Le relais répond seulement sur `relay.` (`/api/`, `/health`), le
+site sur le domaine principal, `www.` redirige vers le domaine principal, tout le
+reste répond 404. Pas de proxy inverse : l'IP réelle arrive directement au relais, et
+le site n'enregistre rien (aucun journal d'accès). Pas de listes de dossiers ni de
+fichiers cachés (`.git`…), GET/HEAD seulement. Enregistrements DNS `A` pour
+`relay`, `@` et `www`. Le certificat de chaque nom est obtenu à la première visite.
+
+Mettre en ligne le site depuis le Mac (fichiers lisibles par tous, le service tourne
+sous un utilisateur dynamique) :
+
+```sh
+rsync -a --delete --chmod=D755,F644 site/ root@SERVEUR:/srv/biscuit-site/
+```
 
 ### 5. Surveillance
 
