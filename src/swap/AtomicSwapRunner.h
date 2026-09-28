@@ -44,6 +44,10 @@ public:
     // Relaunches the next unfinished swap, if any (vault unlocked).
     void resumeNext();
 
+    // Removes finished swaps from the list (see atomic::withoutFinished).
+    // The helper's database and the logs are kept. Returns how many went.
+    int clearFinished();
+
 signals:
     void recordsChanged();
     // Progress text of the running swap ("Syncing the Bitcoin wallet"...).

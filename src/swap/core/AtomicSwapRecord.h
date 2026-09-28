@@ -64,6 +64,10 @@ namespace biscuit::swap::atomic {
         quint64 expectedXmrAtomic() const;
     };
 
+    // The list after "Clear history": finished swaps go; the running swap and
+    // any swap that may still resume or refund stays.
+    QList<AtomicSwapRecord> withoutFinished(const QList<AtomicSwapRecord> &records, const QString &runningId);
+
     // Newest first.
     QList<AtomicSwapRecord> recordsFromJson(const QByteArray &json);
     QByteArray recordsToJson(const QList<AtomicSwapRecord> &records);

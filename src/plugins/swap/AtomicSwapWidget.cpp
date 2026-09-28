@@ -8,6 +8,7 @@
 #include <functional>
 
 #include <QHeaderView>
+#include <QMessageBox>
 #include <QLabel>
 #include <QPainter>
 #include <QPainterPath>
@@ -72,6 +73,7 @@ AtomicSwapWidget::AtomicSwapWidget(Wallet *wallet, QWidget *parent)
     connect(ui->tree_offers, &QTreeWidget::itemSelectionChanged, this, &AtomicSwapWidget::updateSwapButton);
     connect(ui->tree_offers, &QTreeWidget::itemDoubleClicked, this, &AtomicSwapWidget::onSwap);
     connect(m_runner, &AtomicSwapRunner::recordsChanged, this, &AtomicSwapWidget::refreshSwaps);
+    connect(ui->btn_clearSwaps, &QPushButton::clicked, this, &AtomicSwapWidget::onClearSwaps);
     connect(m_runner, &AtomicSwapRunner::activity, this, [this](const QString &, const QString &text) {
         ui->label_swapActivity->setText(text);
     });
@@ -444,5 +446,17 @@ void AtomicSwapWidget::refreshSwaps() {
     }
     ui->label_swapsTitle->setVisible(!records.isEmpty());
     ui->tree_swaps->setVisible(!records.isEmpty());
+    // Only finished swaps can be cleared: nothing to clear, no button.
+    ui->btn_clearSwaps->setVisible(atomic::withoutFinished(records, m_runner->runningSwapId()).size() < records.size());
     updateSwapButton();
+}
+
+// "Clear history": finished swaps leave the list; swaps in progress stay.
+void AtomicSwapWidget::onClearSwaps() {
+    const auto answer = QMessageBox::question(this, "Clear history",
+        "Remove finished atomic swaps from this list?\n\n"
+        "Swaps still in progress stay, and their logs are kept.");
+    if (answer == QMessageBox::Yes) {
+        m_runner->clearFinished();
+    }
 }

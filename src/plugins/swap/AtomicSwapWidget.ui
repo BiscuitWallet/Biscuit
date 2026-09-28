@@ -181,11 +181,32 @@
     </layout>
    </item>
    <item>
-    <widget class="QLabel" name="label_swapsTitle">
-     <property name="text">
-      <string>Your atomic swaps</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="layout_swapsTitle">
+     <item>
+      <widget class="QLabel" name="label_swapsTitle">
+       <property name="text">
+        <string>Your atomic swaps</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer_swapsTitle">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_clearSwaps">
+       <property name="text">
+        <string>Clear history</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QTreeWidget" name="tree_swaps">

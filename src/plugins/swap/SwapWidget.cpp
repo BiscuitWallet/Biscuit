@@ -123,7 +123,6 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     ui->combo_rate->setItemData(0, "You choose the amount you send. The amount you get may vary slightly with the market.", Qt::ToolTipRole);
     ui->combo_rate->setItemData(1, "You choose the exact amount you get. Each exchange says how much to send, usually at a slightly lower rate.", Qt::ToolTipRole);
 
-    ui->label_transparency->setStyleSheet("color: gray;");
     ui->label_historyHint->setStyleSheet("color: gray;");
 
     ui->tree_offers->header()->setSectionResizeMode(OfferExchange, QHeaderView::Stretch);
@@ -469,17 +468,16 @@ void SwapWidget::onGetOffers() {
         ui->label_estimate->setText(best.rateType == RateType::Fixed
                                     ? QString("%1 %2").arg(best.amountFrom, best.from.ticker.toUpper())
                                     : QString("≈ %1 %2").arg(best.amountTo, best.to.ticker.toUpper()));
-        setBusy(false, ranked.size() == 1 ? "1 offer." : QString("%1 offers, best one selected.").arg(ranked.size()));
+        setBusy(false, ranked.size() == 1 ? "1 offer." : QString("%1 offers.").arg(ranked.size()));
     });
 }
 
 // The offers with their value and cost compared with the market (redrawn
 // when prices change, the selected offer is kept).
-// The offers table, the commission note and "Create swap" appear only once
+// The offers table and "Create swap" appear only once
 // there are offers: before that, the form stays short.
 void SwapWidget::showOffersRows(bool visible) {
     ui->formLayout->setRowVisible(ui->tree_offers, visible);
-    ui->formLayout->setRowVisible(ui->label_transparency, visible);
     ui->btn_create->setVisible(visible);
 }
 

@@ -323,22 +323,6 @@
         </widget>
        </item>
        <item row="6" column="1">
-        <widget class="QLabel" name="label_transparency">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Biscuit may earn a commission from swap partners. It never affects the order: offers are ranked only by the amount you get, then by speed. You pay the same price as on the partner's website.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="1">
         <layout class="QHBoxLayout" name="layout_create">
          <item>
           <widget class="QLabel" name="label_status">

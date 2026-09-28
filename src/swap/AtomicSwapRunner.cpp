@@ -355,6 +355,16 @@ void AtomicSwapRunner::update(const QString &id, const std::function<void(Atomic
     }
 }
 
+int AtomicSwapRunner::clearFinished() {
+    const auto kept = withoutFinished(m_records, m_runningId);
+    const int removed = int(m_records.size() - kept.size());
+    if (removed > 0) {
+        m_records = kept;
+        save();
+    }
+    return removed;
+}
+
 void AtomicSwapRunner::save() {
     if (m_wallet) {
         m_wallet->setCacheAttribute(walletAttribute, QString::fromUtf8(recordsToJson(m_records)));

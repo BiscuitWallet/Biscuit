@@ -42,6 +42,7 @@ private:
     void onFinished();
     void onSwap();
     void refreshSwaps();
+    void onClearSwaps();
     void updateSwapButton();
 
     // With Tor enabled in Biscuit, nothing may leave outside Tor.

@@ -48,6 +48,29 @@ private slots:
         }
     }
 
+    void clearHistoryKeepsUnfinishedSwaps() {
+        auto record = [](const QString &id, const QString &stage) {
+            AtomicSwapRecord r;
+            r.id = id;
+            r.stage = stage;
+            return r;
+        };
+        const QList<AtomicSwapRecord> records = {
+            record("done", stage::done), record("refunded", stage::refunded), record("punished", stage::punished),
+            record("cancelled", stage::cancelled), record("setup", stage::setup), record("locked", stage::btcLocked),
+            record("refunding", stage::refunding), record("redeeming", stage::redeeming),
+        };
+        QStringList kept;
+        for (const auto &r : withoutFinished(records, {})) kept << r.id;
+        QCOMPARE(kept, QStringList({"setup", "locked", "refunding", "redeeming"}));
+
+        // The swap the helper is running stays, whatever its last stage.
+        kept.clear();
+        for (const auto &r : withoutFinished(records, "done")) kept << r.id;
+        QVERIFY(kept.contains("done"));
+        QCOMPARE(withoutFinished({}, {}).size(), 0);
+    }
+
     void failureReasons() {
         QCOMPARE(failureReason(""), QString());
         // Real message from a maker whose offer said 0.000001 BTC.

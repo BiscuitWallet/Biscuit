@@ -16,6 +16,16 @@ bool isFinalStage(const QString &s) {
     return s == stage::done || s == stage::refunded || s == stage::punished || s == stage::cancelled;
 }
 
+QList<AtomicSwapRecord> withoutFinished(const QList<AtomicSwapRecord> &records, const QString &runningId) {
+    QList<AtomicSwapRecord> kept;
+    for (const AtomicSwapRecord &r : records) {
+        if (!isFinalStage(r.stage) || r.id == runningId) {
+            kept.append(r);
+        }
+    }
+    return kept;
+}
+
 bool fundsAtStake(const QString &s) {
     return !isFinalStage(s) && s != stage::setup;
 }
