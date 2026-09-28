@@ -31,21 +31,21 @@ namespace {
 
     const char *const modemRows[16] = {
         "................",
-        "...kkkkkkkkkk...",
-        "..kyyyyyyyyyyk..",
-        "..kyykkkkkkyyk..",
-        "..kkk......kkk..",
-        "....kkkkkkkk....",
-        "...kyyyyyyyyk...",
-        "..kyyyykkyyyyk..",
-        "..kyyykwwkyyyk..",
-        "..kyyyykkyyyyk..",
-        ".kyyyyyyyyyyyyk.",
-        ".kkkkkkkkkkkkkk.",
-        ".kggggggggggggk.",
-        ".kg1g2g3g4ggggk.",
-        ".kGGGGGGGGGGGGk.",
-        "..kkkkkkkkkkkk..",
+        "................",
+        "................",
+        ".....kkkkkkkkkk.",
+        "....kcccccccccck",
+        "...kcvvcvvcvvcdk",
+        "..kcccccccccccdk",
+        ".kccccccccccccdk",
+        "kkkkkkkkkkkkkkdk",
+        "kCCCCCCCCCCCCkdk",
+        "kC1C2C3C4CCgCkk.",
+        "kCCCCCCCCCCCCkk.",
+        "kkkkkkkkkkkkkk..",
+        "................",
+        "................",
+        "................",
     };
 
     const char *const computerRows[16] = {
@@ -166,12 +166,12 @@ QPixmap hourglass() {
 }
 
 QPixmap modem(bool connected, int phase) {
-    // A yellow desk phone on a grey modem; the modem's lights run while it
-    // dials and all stay lit once connected.
+    // A beige dial-up modem seen from above, vents on top, lights in front:
+    // they run while it dials and all stay lit once connected. Green: power.
     const QColor off(120, 40, 34), on(236, 58, 40);
     auto led = [&](int index) { return connected || phase % 4 == index ? on : off; };
-    return draw(modemRows, {{'k', outline}, {'y', QColor(242, 211, 60)}, {'w', Qt::white},
-                            {'g', QColor(201, 201, 201)}, {'G', QColor(138, 138, 138)},
+    return draw(modemRows, {{'k', outline}, {'c', QColor(236, 229, 208)}, {'C', QColor(214, 204, 176)},
+                            {'d', QColor(172, 160, 130)}, {'v', QColor(120, 110, 88)}, {'g', QColor(70, 190, 80)},
                             {'1', led(0)}, {'2', led(1)}, {'3', led(2)}, {'4', led(3)}});
 }
 
