@@ -129,7 +129,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::enabledPlugins, {QS("enabledPlugins"), QStringList{"tickers", "news", "crowdfunding", "revuo", "calc", "swap"}}},
         {Config::restartRequired, {QS("restartRequired"), false}},
 
-        {Config::tickers, {QS("tickers"), QStringList{"XMR", "BTC", "XMR/BTC"}}},
+        {Config::tickers, {QS("tickers"), QStringList{"XMR", "BTC", "LTC", "XMR/BTC"}}},
         {Config::tickersShowFiatBalance, {QS("tickersShowFiatBalance"), true}},
 
         // Biscuit: swaps

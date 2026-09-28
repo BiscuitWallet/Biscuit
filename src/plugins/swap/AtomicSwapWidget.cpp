@@ -10,8 +10,6 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QLabel>
-#include <QPainter>
-#include <QPainterPath>
 #include <QTimer>
 #include <QTreeWidgetItem>
 
@@ -39,21 +37,6 @@ namespace {
     bool torEnabledInSettings() {
         return conf()->get(Config::proxy).toInt() != Config::Proxy::None;
     }
-}
-
-namespace {
-    // Small drawn icons (16 px, sharp on Retina), in the text colour or green.
-    QPixmap drawIcon(const std::function<void(QPainter &)> &draw) {
-        const qreal dpr = 2.0;
-        QPixmap pixmap(QSize(18, 18) * dpr);
-        pixmap.setDevicePixelRatio(dpr);
-        pixmap.fill(Qt::transparent);
-        QPainter p(&pixmap);
-        p.setRenderHint(QPainter::Antialiasing);
-        draw(p);
-        return pixmap;
-    }
-
 }
 
 AtomicSwapWidget::AtomicSwapWidget(Wallet *wallet, QWidget *parent)
@@ -293,7 +276,7 @@ void AtomicSwapWidget::onFinished() {
     if (!m_failed) {
         setHeadline("Not searching", false);
     }
-    setPhone(m_summary.offers > 0 && !m_failed ? Phone::Done : Phone::Hidden);
+    setPhone(Phone::Hidden);
     updateTorOption();
 }
 
@@ -320,7 +303,6 @@ void AtomicSwapWidget::setPhone(Phone phone) {
         return;
     }
     m_phoneState = phone;
-    const QColor green(46, 160, 67);
     switch (phone) {
     case Phone::Hidden:
         m_phone->hide();
@@ -336,17 +318,6 @@ void AtomicSwapWidget::setPhone(Phone phone) {
     case Phone::PickedUp:
         m_phone->setPixmap(PixelIcons::phone(true, 0));
         m_phone->setToolTip("A maker answered");
-        break;
-    case Phone::Done:
-        m_phone->setPixmap(drawIcon([green](QPainter &p) {
-            p.setPen(QPen(green, 2.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-            QPainterPath check;
-            check.moveTo(3.5, 9.5);
-            check.lineTo(7.5, 13.5);
-            check.lineTo(14.5, 5.0);
-            p.drawPath(check);
-        }));
-        m_phone->setToolTip("Offers received");
         break;
     }
     m_phone->show();
