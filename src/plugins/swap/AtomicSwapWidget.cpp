@@ -92,7 +92,7 @@ AtomicSwapWidget::AtomicSwapWidget(Wallet *wallet, QWidget *parent)
     ui->progress->hide();
 
     m_phone = new QLabel(this);
-    m_phone->setFixedSize(16, 16);
+    m_phone->setFixedSize(24, 24);
     m_phone->setAlignment(Qt::AlignCenter);
     m_phone->hide();
     ui->layout_headline->insertWidget(0, m_phone);

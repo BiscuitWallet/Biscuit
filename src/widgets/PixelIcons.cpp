@@ -159,8 +159,9 @@ namespace {
         "................",
     };
 
+    // Shown at `points` (default: one drawing pixel per point).
     template <int N>
-    QPixmap draw(const char *const (&rows)[N], const QHash<char, QColor> &colors) {
+    QPixmap draw(const char *const (&rows)[N], const QHash<char, QColor> &colors, int points = N) {
         QImage image(N, N, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
         for (int y = 0; y < N; ++y) {
@@ -168,8 +169,8 @@ namespace {
                 image.setPixelColor(x, y, colors.value(rows[y][x], QColor(Qt::transparent)));
             }
         }
-        // Nearest-neighbour upscale: crisp pixels at 2x.
-        QPixmap pixmap = QPixmap::fromImage(image.scaled(2 * N, 2 * N, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+        // Nearest-neighbour scaling: crisp pixels at 2x.
+        QPixmap pixmap = QPixmap::fromImage(image.scaled(2 * points, 2 * points, Qt::IgnoreAspectRatio, Qt::FastTransformation));
         pixmap.setDevicePixelRatio(2.0);
         return pixmap;
     }
@@ -183,14 +184,11 @@ QPixmap hourglass() {
 }
 
 QPixmap phone(bool connected, int phase) {
-    // A yellow desk phone in 3/4 view, drawn 32x32 and shown at 16 points:
-    // one drawing pixel per screen pixel on Retina, next to the text.
+    // A yellow desk phone in 3/4 view, drawn 32x32 and shown at 24 points.
     Q_UNUSED(connected)
     Q_UNUSED(phase)
-    QPixmap pixmap = draw(phoneRows, {{'k', outline}, {'y', QColor(246, 214, 72)}, {'Y', QColor(212, 170, 40)},
-                                      {'D', QColor(156, 118, 22)}});
-    pixmap.setDevicePixelRatio(4.0);
-    return pixmap;
+    return draw(phoneRows, {{'k', outline}, {'y', QColor(246, 214, 72)}, {'Y', QColor(212, 170, 40)},
+                            {'D', QColor(156, 118, 22)}}, 24);
 }
 
 QIcon computer() {
