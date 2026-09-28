@@ -126,7 +126,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::useLocalTor, {QS("useLocalTor"), false}},
         {Config::initSyncThreshold, {QS("initSyncThreshold"), 360}},
 
-        {Config::enabledPlugins, {QS("enabledPlugins"), QStringList{"tickers", "crowdfunding", "revuo", "calc", "swap"}}},
+        {Config::enabledPlugins, {QS("enabledPlugins"), QStringList{"tickers", "news", "crowdfunding", "revuo", "calc", "swap"}}},
         {Config::restartRequired, {QS("restartRequired"), false}},
 
         {Config::tickers, {QS("tickers"), QStringList{"XMR", "BTC", "XMR/BTC"}}},

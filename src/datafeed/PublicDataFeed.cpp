@@ -19,6 +19,7 @@ PublicDataFeed::PublicDataFeed(QObject *parent)
         {cryptoRatesUrl(), cryptoRatesMessage, 10, new QTimer(this)},
         {fiatRatesUrl(), fiatRatesMessage, 60, new QTimer(this)},
         {crowdfundingUrl(), crowdfundingMessage, 60, new QTimer(this)},
+        {newsUrl(), newsMessage, 360, new QTimer(this)},
     };
     for (qsizetype i = 0; i < m_sources.size(); ++i) {
         m_sources[i].timer->setSingleShot(true);

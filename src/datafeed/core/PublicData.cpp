@@ -8,6 +8,9 @@
 #include <QStringList>
 #include <QUrl>
 #include <QUrlQuery>
+#include <QXmlStreamReader>
+
+#include <algorithm>
 
 namespace biscuit::datafeed {
 
@@ -48,6 +51,10 @@ QString fiatRatesUrl() {
 
 QString crowdfundingUrl() {
     return "https://ccs.getmonero.org/index.php/projects";
+}
+
+QString newsUrl() {
+    return "https://biscuitwallet.com/news/feed.xml";
 }
 
 std::optional<QJsonObject> cryptoRatesMessage(const QByteArray &body) {
@@ -117,6 +124,65 @@ std::optional<QJsonObject> crowdfundingMessage(const QByteArray &body) {
         proposals.append(obj);
     }
     return message("ccs", proposals);
+}
+
+std::optional<QJsonObject> newsMessage(const QByteArray &body) {
+    constexpr int maxItems = 20;
+    constexpr int maxTitle = 120;
+    constexpr int maxSummary = 400;
+
+    struct Item { QString title, url, date, summary; };
+    QList<Item> items;
+    Item current;
+    bool inEntry = false;
+    bool isFeed = false;
+
+    QXmlStreamReader xml(body);
+    while (!xml.atEnd()) {
+        xml.readNext();
+        if (xml.isStartElement()) {
+            const auto name = xml.name();
+            if (name == QLatin1String("feed")) {
+                isFeed = true;
+            } else if (name == QLatin1String("entry")) {
+                inEntry = true;
+                current = {};
+            } else if (inEntry && name == QLatin1String("title")) {
+                current.title = xml.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
+            } else if (inEntry && name == QLatin1String("summary")) {
+                current.summary = xml.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
+            } else if (inEntry && name == QLatin1String("updated")) {
+                current.date = xml.readElementText().left(10);
+            } else if (inEntry && name == QLatin1String("link") && current.url.isEmpty()) {
+                current.url = xml.attributes().value("href").toString();
+            }
+        } else if (xml.isEndElement() && xml.name() == QLatin1String("entry")) {
+            inEntry = false;
+            // Only our own pages: a tampered feed cannot send users elsewhere.
+            const QUrl url(current.url);
+            const bool ours = url.scheme() == QLatin1String("https") && url.host() == QLatin1String("biscuitwallet.com")
+                              && url.userInfo().isEmpty() && url.port() == -1;
+            const bool dated = QDate::fromString(current.date, Qt::ISODate).isValid();
+            if (ours && dated && !current.title.isEmpty()) {
+                items.append(current);
+            }
+        }
+    }
+    if (xml.hasError() || !isFeed) {
+        return std::nullopt;
+    }
+
+    std::stable_sort(items.begin(), items.end(), [](const Item &a, const Item &b) { return a.date > b.date; });
+    QJsonArray news;
+    for (const Item &item : items.mid(0, maxItems)) {
+        news.append(QJsonObject{
+            {"title", item.title.left(maxTitle)},
+            {"url", item.url},
+            {"date", item.date},
+            {"summary", item.summary.left(maxSummary)},
+        });
+    }
+    return message("news", news);
 }
 
 }
