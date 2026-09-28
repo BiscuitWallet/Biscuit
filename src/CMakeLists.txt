@@ -436,4 +436,14 @@ if(APPLE AND BISCUIT_BUNDLE_TOR AND BISCUIT_TOR_BIN)
             VERBATIM)
 endif()
 
+# Biscuit: sign the bundle in build/bin once everything is in it (ad hoc, no
+# Apple account). Bundling Tor and the helper breaks the linker signature, and
+# macOS then takes the running app for another one than the Dock icon.
+if(APPLE)
+    add_custom_command(TARGET feather POST_BUILD
+            COMMAND codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:feather>"
+            COMMENT "Signing the app bundle (ad hoc)"
+            VERBATIM)
+endif()
+
 qt_finalize_executable(feather)
