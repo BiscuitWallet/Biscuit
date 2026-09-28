@@ -10,8 +10,8 @@
 // Biscuit's own pixel-art icons (original drawings, 16x16 unless noted), sharp on Retina.
 namespace PixelIcons {
     QPixmap hourglass();                        // waiting
-    // A desk phone in 3/4 view, 32x32. The same picture while dialing and
-    // once connected (the headline says which).
+    // A desk phone in 3/4 view, drawn 32x32, shown at 16 points. The same
+    // picture while dialing and once connected (the headline says which).
     QPixmap phone(bool connected, int phase);
     QIcon computer();                           // Home tab
     QIcon network();                            // Swap tab: a globe and two arrows

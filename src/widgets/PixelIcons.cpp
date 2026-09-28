@@ -183,11 +183,14 @@ QPixmap hourglass() {
 }
 
 QPixmap phone(bool connected, int phase) {
-    // A yellow desk phone in 3/4 view, 32x32 (shown at 32 points).
+    // A yellow desk phone in 3/4 view, drawn 32x32 and shown at 16 points:
+    // one drawing pixel per screen pixel on Retina, next to the text.
     Q_UNUSED(connected)
     Q_UNUSED(phase)
-    return draw(phoneRows, {{'k', outline}, {'y', QColor(246, 214, 72)}, {'Y', QColor(212, 170, 40)},
-                            {'D', QColor(156, 118, 22)}});
+    QPixmap pixmap = draw(phoneRows, {{'k', outline}, {'y', QColor(246, 214, 72)}, {'Y', QColor(212, 170, 40)},
+                                      {'D', QColor(156, 118, 22)}});
+    pixmap.setDevicePixelRatio(4.0);
+    return pixmap;
 }
 
 QIcon computer() {
