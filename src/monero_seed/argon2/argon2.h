@@ -18,6 +18,8 @@
 #ifndef ARGON2_H
 #define ARGON2_H
 
+#include "biscuit_prefix.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <limits.h>

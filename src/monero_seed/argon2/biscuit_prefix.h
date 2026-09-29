@@ -1,0 +1,53 @@
+/* Biscuit: this Argon2 copy (for monero_seed) shares its symbol names with
+ * the Argon2 inside libsodium, which Biscuit also links for the BTC/LTC
+ * wallet file. Static release builds then fail with multiple definitions.
+ * Give this copy its own prefix; the code itself is unchanged. */
+#ifndef BISCUIT_ARGON2_PREFIX_H
+#define BISCUIT_ARGON2_PREFIX_H
+
+#define allocate_memory monero_seed_allocate_memory
+#define argon2_ctx monero_seed_argon2_ctx
+#define argon2_error_message monero_seed_argon2_error_message
+#define argon2_hash monero_seed_argon2_hash
+#define argon2_verify_ctx monero_seed_argon2_verify_ctx
+#define argon2d_ctx monero_seed_argon2d_ctx
+#define argon2d_hash_encoded monero_seed_argon2d_hash_encoded
+#define argon2d_hash_raw monero_seed_argon2d_hash_raw
+#define argon2d_verify_ctx monero_seed_argon2d_verify_ctx
+#define argon2i_ctx monero_seed_argon2i_ctx
+#define argon2i_hash_encoded monero_seed_argon2i_hash_encoded
+#define argon2i_hash_raw monero_seed_argon2i_hash_raw
+#define argon2i_verify_ctx monero_seed_argon2i_verify_ctx
+#define argon2id_ctx monero_seed_argon2id_ctx
+#define argon2id_hash_encoded monero_seed_argon2id_hash_encoded
+#define argon2id_hash_raw monero_seed_argon2id_hash_raw
+#define argon2id_verify_ctx monero_seed_argon2id_verify_ctx
+#define argon2_verify monero_seed_argon2_verify
+#define argon2i_verify monero_seed_argon2i_verify
+#define argon2d_verify monero_seed_argon2d_verify
+#define argon2id_verify monero_seed_argon2id_verify
+#define argon2_encodedlen monero_seed_argon2_encodedlen
+#define argon2_type2string monero_seed_argon2_type2string
+#define blake2b monero_seed_blake2b
+#define blake2b_final monero_seed_blake2b_final
+#define blake2b_init monero_seed_blake2b_init
+#define blake2b_init_key monero_seed_blake2b_init_key
+#define blake2b_init_param monero_seed_blake2b_init_param
+#define blake2b_long monero_seed_blake2b_long
+#define blake2b_update monero_seed_blake2b_update
+#define clear_internal_memory monero_seed_clear_internal_memory
+#define copy_block monero_seed_copy_block
+#define fill_first_blocks monero_seed_fill_first_blocks
+#define fill_memory_blocks monero_seed_fill_memory_blocks
+#define fill_segment monero_seed_fill_segment
+#define finalize monero_seed_finalize
+#define free_memory monero_seed_free_memory
+#define index_alpha monero_seed_index_alpha
+#define init_block_value monero_seed_init_block_value
+#define initial_hash monero_seed_initial_hash
+#define initialize monero_seed_initialize
+#define secure_wipe_memory monero_seed_secure_wipe_memory
+#define validate_inputs monero_seed_validate_inputs
+#define xor_block monero_seed_xor_block
+
+#endif
