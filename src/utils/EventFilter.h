@@ -18,6 +18,9 @@ protected:
 
 signals:
     void userActivity();
+
+private:
+    bool m_fontResetPending = false;
 };
 
 
