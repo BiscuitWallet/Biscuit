@@ -25,6 +25,8 @@ podman run --rm \
     -e RUST_VERSION="$RUST_VERSION" -e OUT="$OUT" -e SNAPSHOT="$SNAPSHOT" \
     "$IMAGE" bash -euo pipefail -c '
         export DEBIAN_FRONTEND=noninteractive
+        # Rootless podman: tar cannot restore the archive owners.
+        export TAR_OPTIONS=--no-same-owner
         # Debian 11 left the regular mirrors when its support ended: install
         # from the Debian snapshot archive, frozen at a fixed date.
         printf "%s\n" \
