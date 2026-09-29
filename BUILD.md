@@ -101,7 +101,7 @@ Sur une machine Linux x86_64 avec Guix installé (le portable Fedora) :
 
 ```sh
 # 1. biscuit-swapd, hors Guix (conteneur Ubuntu 22.04, podman)
-contrib/biscuit-swapd/build-linux.sh
+contrib/biscuit-swapd/build.sh linux      # ou: build.sh windows
 # vérifier / mettre à jour contrib/biscuit-swapd/SHA256SUMS, committer
 
 # 2. AppImage + binaire + archive des sources, reproductibles

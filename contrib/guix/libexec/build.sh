@@ -295,7 +295,7 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
     CMAKEVARS+=" -DBISCUIT_TROCADOR_RELAY_URL=${BISCUIT_RELAY_URL:-https://relay.biscuitwallet.com/api/}"
 
     # Biscuit: the atomic swap helper, built outside Guix (Rust, see
-    # contrib/biscuit-swapd/README.md) and checked against the SHA-256 sums
+    # contrib/biscuit-swapd/build.sh) and checked against the SHA-256 sums
     # committed in contrib/biscuit-swapd/SHA256SUMS. Required for tagged
     # releases; a test build without it gets an atomic swap tab that says the
     # helper is missing.
