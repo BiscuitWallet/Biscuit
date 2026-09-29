@@ -53,10 +53,12 @@ install -m 0644 "$ROOT/external/biscuit-swapd/LICENSE" "$STAGE/LICENSE.biscuit-s
 } > "$STAGE/copyright"
 find "$STAGE" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 
+# nfpm does not expand variables in file paths: fill in the configuration.
+sed -e "s|\${STAGE}|/stage|g" -e "s|\${VERSION}|$VERSION|g" -e "s|\${PRERELEASE}|$PRERELEASE|g" \
+    "$HERE/nfpm.yaml" > "$WORK/nfpm.yaml"
 for packager in deb rpm archlinux; do
     podman run --rm \
-        -v "$HERE":/cfg:ro,z -v "$STAGE":/stage:ro,z -v "$PKGDIR":/out:z \
-        -e VERSION="$VERSION" -e PRERELEASE="$PRERELEASE" -e STAGE=/stage \
+        -v "$WORK/nfpm.yaml":/cfg/nfpm.yaml:ro,z -v "$STAGE":/stage:ro,z -v "$PKGDIR":/out:z \
         -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
         "$NFPM_IMAGE" package --config /cfg/nfpm.yaml --packager "$packager" --target /out/ < /dev/null
 done
