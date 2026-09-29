@@ -44,6 +44,14 @@ void MacLayoutStyle::polish(QWidget *widget) {
 void MacLayoutStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter,
                                  const QWidget *widget) const {
     QProxyStyle::drawControl(element, option, painter, widget);
+    if (element == CE_MenuBarEmptyArea || element == CE_MenuBarItem) {
+        // Linux / Windows, where the menu bar sits in the window: Fusion
+        // draws a line under it, right above the line of the main tabs.
+        // Paint it over with the window colour.
+        const QRect r = widget ? widget->rect() : option->rect;
+        const int y = qMin(option->rect.bottom(), r.bottom());
+        painter->fillRect(QRect(option->rect.left(), y, option->rect.width(), 1), option->palette.color(QPalette::Window));
+    }
     if (element == CE_TabBarTabShape) {
         // The selected tab: the window colour inside its outline, so it opens
         // onto its page instead of standing out lighter.

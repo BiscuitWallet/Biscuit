@@ -57,8 +57,22 @@ namespace {
 
     bool g_dark = false;
 
+    // The user's choice decides; the system's scheme only counts when
+    // following it. On Linux, the platform theme may not honour
+    // setColorScheme(), so the scheme it reports can stay light.
+    bool wantDark() {
+        const QString choice = conf()->get(Config::appearance).toString();
+        if (choice == "dark") {
+            return true;
+        }
+        if (choice == "light") {
+            return false;
+        }
+        return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+    }
+
     void applyPalette() {
-        g_dark = QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+        g_dark = wantDark();
         const QPalette palette = makePalette(g_dark);
         QApplication::setPalette(palette);
         for (const char *cls : {"QComboBox", "QAbstractItemView", "QListView", "QTreeView", "QTableView", "QHeaderView",
