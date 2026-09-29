@@ -23,6 +23,13 @@ file(READ "${LIBWALLY_SRC}/src/CMakeLists.txt" LIBWALLY_SRC_CMAKE)
 string(REPLACE "\"ccan/ccan/tap/*.[ch]\"" "" LIBWALLY_SRC_CMAKE "${LIBWALLY_SRC_CMAKE}")
 file(WRITE "${LIBWALLY_SRC}/src/CMakeLists.txt" "${LIBWALLY_SRC_CMAKE}")
 
+# Its config.h declares ssize_t for MSVC on Windows; MinGW already has it.
+file(READ "${LIBWALLY_SRC}/cmake/config.h.in" LIBWALLY_CONFIG_H)
+string(REPLACE "#if defined (_WIN32) && !defined(_SSIZE_T_DECLARED)"
+               "#if defined (_WIN32) && !defined(__MINGW32__) && !defined(_SSIZE_T_DECLARED)"
+               LIBWALLY_CONFIG_H "${LIBWALLY_CONFIG_H}")
+file(WRITE "${LIBWALLY_SRC}/cmake/config.h.in" "${LIBWALLY_CONFIG_H}")
+
 # Release builds (depends / Guix) cross-compile with a toolchain file: build
 # libwally with the same one, so it gets the same compiler, sysroot and flags.
 set(LIBWALLY_TOOLCHAIN_ARGS "")
