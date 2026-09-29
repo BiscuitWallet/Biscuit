@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Builds biscuit-swapd for x86_64 Linux in a Debian 11 container (glibc 2.31,
-# the same as the Guix builds), so the helper runs on the same systems as the
-# AppImage. Output: contrib/biscuit-swapd/bin/biscuit-swapd-x86_64-linux-gnu
+# Builds biscuit-swapd for x86_64 Linux in an Ubuntu 22.04 container, the
+# environment eigenwallet uses for its releases. The helper needs glibc 2.35
+# (Ubuntu 22.04, Debian 12, Tails 6 and later); Monero's Boost does not build
+# against older glibc here. Output: contrib/biscuit-swapd/bin/biscuit-swapd-x86_64-linux-gnu
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 SRC="$ROOT/external/biscuit-swapd"
-IMAGE="docker.io/library/debian@sha256:6f519a81440354a85eb592c5f32109ab80605f6b892455983a6f618bf87fabe9"   # debian:bullseye
-SNAPSHOT="20260815T000000Z"   # snapshot.debian.org date for the packages
+IMAGE="docker.io/library/ubuntu@sha256:281c5745f657873d78e5531fc5ba8575f46ab7769b94550ac99543f122679986"   # ubuntu:22.04
 RUST_VERSION="$(sed -n 's/^channel = "\(.*\)"/\1/p' "$SRC/rust-toolchain.toml")"
 OUT="biscuit-swapd-x86_64-linux-gnu"
 
@@ -22,19 +22,12 @@ podman run --rm \
     -v biscuit-swapd-rustup:/root/.rustup \
     -v biscuit-swapd-cargo:/root/.cargo \
     -v biscuit-swapd-target:/build/target \
-    -e RUST_VERSION="$RUST_VERSION" -e OUT="$OUT" -e SNAPSHOT="$SNAPSHOT" \
+    -e RUST_VERSION="$RUST_VERSION" -e OUT="$OUT" \
     "$IMAGE" bash -euo pipefail -c '
         export DEBIAN_FRONTEND=noninteractive
         # Rootless podman: tar cannot restore the archive owners.
         export TAR_OPTIONS=--no-same-owner
-        # Debian 11 left the regular mirrors when its support ended: install
-        # from the Debian snapshot archive, frozen at a fixed date.
-        printf "%s\n" \
-            "deb http://snapshot.debian.org/archive/debian/${SNAPSHOT} bullseye main" \
-            "deb http://snapshot.debian.org/archive/debian/${SNAPSHOT} bullseye-updates main" \
-            "deb http://snapshot.debian.org/archive/debian-security/${SNAPSHOT} bullseye-security main" \
-            > /etc/apt/sources.list
-        apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update -qq
+        apt-get -o Acquire::Retries=5 update -qq
         apt-get -o Acquire::Retries=5 install -y -qq --no-install-recommends build-essential cmake curl ca-certificates git \
             pkg-config autoconf automake libtool patch bison flex gperf python3 perl m4 file \
             xz-utils bzip2 >/dev/null
