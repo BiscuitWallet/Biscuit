@@ -95,7 +95,34 @@ Sans cette option, l'onglet du swap atomique indique que le programme manque.
 
 ## Linux
 
-À documenter (voir `HACKING.md` en attendant).
+### Builds de release (Guix)
+
+Sur une machine Linux x86_64 avec Guix installé (le portable Fedora) :
+
+```sh
+# 1. biscuit-swapd, hors Guix (conteneur Ubuntu 22.04, podman)
+contrib/biscuit-swapd/build-linux.sh
+# vérifier / mettre à jour contrib/biscuit-swapd/SHA256SUMS, committer
+
+# 2. AppImage + binaire + archive des sources, reproductibles
+HOSTS="x86_64-linux-gnu" ./contrib/guix/guix-build
+
+# 3. Paquets .deb, .rpm, Arch et .tar.gz à partir du binaire Guix (podman, nfpm)
+contrib/packaging/build-packages.sh guix/guix-build-<version>/output/x86_64-linux-gnu [VERSION]
+```
+
+La première compilation Guix prend plusieurs heures (chaîne de compilation, Qt…),
+les suivantes réutilisent le cache. L'arbre git doit être propre (sous-modules compris).
+Une release taguée refuse de se construire sans biscuit-swapd. Sans VERSION, les
+paquets s'appellent `0.0.0~git<commit>`.
+
+Les paquets ont été testés dans des conteneurs Debian 12, Ubuntu 22.04, Fedora et
+Arch. biscuit-swapd demande glibc 2.34 ou plus récent.
+
+### Build de développement
+
+Voir `HACKING.md`. Sur Fedora 44 (GCC 16), la compilation de biscuit-swapd a besoin
+d'alias `x86_64-linux-gnu-*` vers les outils du système (gcc avec `-std=gnu17`).
 
 ## Windows
 
