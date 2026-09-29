@@ -228,12 +228,17 @@ else()
     message(STATUS "Trocador: no relay and no key (swaps run in demo mode)")
 endif()
 
-# Atomic swaps: the biscuit-swapd helper (built from the eigenwallet fork, see
-# BUILD.md) is copied next to the Biscuit executable when BISCUIT_SWAPD_BINARY
-# points to it. Without it, the atomic swap tab says the helper is missing.
+# Atomic swaps: the biscuit-swapd helper (external/biscuit-swapd, see BUILD.md)
+# is copied next to the Biscuit executable when BISCUIT_SWAPD_BINARY points to
+# it, or when a release build of it is found in the submodule. Without it, the
+# atomic swap tab says the helper is missing.
+set(BISCUIT_SWAPD_DEFAULT "${CMAKE_SOURCE_DIR}/external/biscuit-swapd/target/release/biscuit-swapd${CMAKE_EXECUTABLE_SUFFIX}")
+if(NOT BISCUIT_SWAPD_BINARY AND EXISTS "${BISCUIT_SWAPD_DEFAULT}")
+    set(BISCUIT_SWAPD_BINARY "${BISCUIT_SWAPD_DEFAULT}")
+endif()
 if(BISCUIT_SWAPD_BINARY)
     add_custom_command(TARGET feather POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BISCUIT_SWAPD_BINARY}" "$<TARGET_FILE_DIR:feather>/biscuit-swapd"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BISCUIT_SWAPD_BINARY}" "$<TARGET_FILE_DIR:feather>/biscuit-swapd${CMAKE_EXECUTABLE_SUFFIX}"
             COMMENT "Bundling biscuit-swapd")
     message(STATUS "Atomic swaps: bundling ${BISCUIT_SWAPD_BINARY}")
 endif()

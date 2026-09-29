@@ -64,13 +64,15 @@ Sans relais ni clé, l'onglet Swap fonctionne en **mode démo** : offres simulé
 
 ## Swaps atomiques : le programme biscuit-swapd
 
-Les swaps atomiques (BTC → XMR) passent par `biscuit-swapd`, compilé depuis le
-fork d'eigenwallet (`~/Developer/_ref/eigenwallet`, branche `biscuit`). Rust est
-installé par le `rustup` de Homebrew, dont `cargo` n'est pas dans le PATH :
+Les swaps atomiques (BTC → XMR) passent par `biscuit-swapd`, dans le sous-module
+`external/biscuit-swapd` (dépôt `BiscuitWallet/biscuit-swapd`, fork d'eigenwallet,
+GPL-3.0). Rust est installé par le `rustup` de Homebrew, dont `cargo` n'est pas
+dans le PATH :
 
 ```sh
 export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
-cd ~/Developer/_ref/eigenwallet
+git submodule update --init external/biscuit-swapd
+cd external/biscuit-swapd
 cargo build --release -p biscuit-swapd      # 10 à 20 min (LTO complète)
 strip target/release/biscuit-swapd          # environ 15 Mo
 ```
@@ -78,11 +80,16 @@ strip target/release/biscuit-swapd          # environ 15 Mo
 Ne pas rediriger la sortie de la compilation (`| tail`…) : une étape peut poser
 une question et rester bloquée sans rien afficher.
 
-Puis l'inclure dans Biscuit (copié à côté de l'exécutable à chaque build) :
+CMake trouve ensuite `external/biscuit-swapd/target/release/biscuit-swapd` tout
+seul et le copie à côté de l'exécutable à chaque build (relancer `cmake ..` après
+la première compilation). Un autre binaire peut être donné explicitement :
 
 ```sh
-cmake .. -DBISCUIT_SWAPD_BINARY=$HOME/Developer/_ref/eigenwallet/target/release/biscuit-swapd
+cmake .. -DBISCUIT_SWAPD_BINARY=/chemin/vers/biscuit-swapd
 ```
+
+Pour modifier biscuit-swapd : travailler dans `external/biscuit-swapd` (branche
+`main`), pousser, puis committer le nouveau commit du sous-module dans Biscuit.
 
 Sans cette option, l'onglet du swap atomique indique que le programme manque.
 

@@ -13,3 +13,7 @@
 [submodule "external/libwally-core"]
 	path = external/libwally-core
 	url = https://github.com/ElementsProject/libwally-core.git
+[submodule "external/biscuit-swapd"]
+	path = external/biscuit-swapd
+	url = https://github.com/BiscuitWallet/biscuit-swapd.git
+	branch = main
