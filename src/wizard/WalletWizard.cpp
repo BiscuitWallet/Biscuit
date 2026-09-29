@@ -66,7 +66,7 @@ WalletWizard::WalletWizard(QWidget *parent)
 
     setButtonText(QWizard::CancelButton, "Close");
     // Side banner: 300 x 1000 px shown at 150 x 500, sharp on Retina.
-    QPixmap banner(":/assets/images/banners/bear.png");
+    QPixmap banner(":/assets/images/banners/biscuits.png");
     banner.setDevicePixelRatio(2.0);
     setPixmap(QWizard::WatermarkPixmap, banner);
     setWizardStyle(WizardStyle::ModernStyle);
