@@ -27,7 +27,7 @@ podman run --rm \
         apt-get update -qq
         apt-get install -y -qq --no-install-recommends build-essential cmake curl ca-certificates git \
             pkg-config autoconf automake libtool patch bison flex gperf python3 perl m4 file \
-            xz-utils bzip2 unzip >/dev/null
+            xz-utils bzip2 >/dev/null
         export PATH="/root/.cargo/bin:$PATH"
         if ! command -v rustup >/dev/null; then
             curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -q --profile minimal --default-toolchain none
