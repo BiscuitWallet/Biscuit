@@ -8,6 +8,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 SRC="$ROOT/external/biscuit-swapd"
 IMAGE="docker.io/library/debian@sha256:6f519a81440354a85eb592c5f32109ab80605f6b892455983a6f618bf87fabe9"   # debian:bullseye
+SNAPSHOT="20260815T000000Z"   # snapshot.debian.org date for the packages
 RUST_VERSION="$(sed -n 's/^channel = "\(.*\)"/\1/p' "$SRC/rust-toolchain.toml")"
 OUT="biscuit-swapd-x86_64-linux-gnu"
 
@@ -21,11 +22,18 @@ podman run --rm \
     -v biscuit-swapd-rustup:/root/.rustup \
     -v biscuit-swapd-cargo:/root/.cargo \
     -v biscuit-swapd-target:/build/target \
-    -e RUST_VERSION="$RUST_VERSION" -e OUT="$OUT" \
+    -e RUST_VERSION="$RUST_VERSION" -e OUT="$OUT" -e SNAPSHOT="$SNAPSHOT" \
     "$IMAGE" bash -euo pipefail -c '
         export DEBIAN_FRONTEND=noninteractive
-        apt-get update -qq
-        apt-get install -y -qq --no-install-recommends build-essential cmake curl ca-certificates git \
+        # Debian 11 left the regular mirrors when its support ended: install
+        # from the Debian snapshot archive, frozen at a fixed date.
+        printf "%s\n" \
+            "deb http://snapshot.debian.org/archive/debian/${SNAPSHOT} bullseye main" \
+            "deb http://snapshot.debian.org/archive/debian/${SNAPSHOT} bullseye-updates main" \
+            "deb http://snapshot.debian.org/archive/debian-security/${SNAPSHOT} bullseye-security main" \
+            > /etc/apt/sources.list
+        apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update -qq
+        apt-get -o Acquire::Retries=5 install -y -qq --no-install-recommends build-essential cmake curl ca-certificates git \
             pkg-config autoconf automake libtool patch bison flex gperf python3 perl m4 file \
             xz-utils bzip2 >/dev/null
         export PATH="/root/.cargo/bin:$PATH"
