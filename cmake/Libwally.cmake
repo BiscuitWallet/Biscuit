@@ -17,6 +17,19 @@ file(RENAME "${LIBWALLY_SRC}/_CMakeLists.txt" "${LIBWALLY_SRC}/CMakeLists.txt")
 file(RENAME "${LIBWALLY_SRC}/_cmake" "${LIBWALLY_SRC}/cmake")
 file(RENAME "${LIBWALLY_SRC}/src/_CMakeLists.txt" "${LIBWALLY_SRC}/src/CMakeLists.txt")
 
+# The library build globs ccan's test harness (tap.c) in with the sources; it
+# is unused and does not compile with GCC 15 (vasprintf without _GNU_SOURCE).
+file(READ "${LIBWALLY_SRC}/src/CMakeLists.txt" LIBWALLY_SRC_CMAKE)
+string(REPLACE "\"ccan/ccan/tap/*.[ch]\"" "" LIBWALLY_SRC_CMAKE "${LIBWALLY_SRC_CMAKE}")
+file(WRITE "${LIBWALLY_SRC}/src/CMakeLists.txt" "${LIBWALLY_SRC_CMAKE}")
+
+# Release builds (depends / Guix) cross-compile with a toolchain file: build
+# libwally with the same one, so it gets the same compiler, sysroot and flags.
+set(LIBWALLY_TOOLCHAIN_ARGS "")
+if (CMAKE_TOOLCHAIN_FILE)
+    set(LIBWALLY_TOOLCHAIN_ARGS "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
+endif()
+
 # libwally's CMake expects to be the top-level project, so it is built on its
 # own (ExternalProject) and its static libraries are imported.
 include(ExternalProject)
@@ -35,6 +48,7 @@ ExternalProject_Add(libwally_build
             -DWALLYCORE_INSTALL=OFF
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON
             -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+            ${LIBWALLY_TOOLCHAIN_ARGS}
             -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
             -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
         INSTALL_COMMAND ""
