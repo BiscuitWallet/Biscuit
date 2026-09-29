@@ -40,7 +40,7 @@ podman run --rm \
         if ! command -v rustup >/dev/null; then
             curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -q --profile minimal --default-toolchain none
         fi
-        rustup toolchain install -q --profile minimal "$RUST_VERSION"
+        rustup toolchain install --profile minimal "$RUST_VERSION"
         # The source is mounted read-only; build from a copy (the monero-sys
         # build script patches files in place).
         rm -rf /build/src && mkdir /build/src
