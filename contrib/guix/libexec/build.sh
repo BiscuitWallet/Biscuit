@@ -289,7 +289,31 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
 
 
     # Set appropriate CMake options for build type
-    CMAKEVARS="-DWITH_SCANNER=On -DCHECK_UPDATES=On -DSELF_CONTAINED=On -DFEATHER_TARGET_TRIPLET=${HOST} -DWITH_PLUGIN_REDDIT=Off"
+    # Biscuit: no update check (Feather's updater asks featherwallet.org),
+    # Trocador swaps through the Biscuit relay.
+    CMAKEVARS="-DWITH_SCANNER=On -DCHECK_UPDATES=Off -DSELF_CONTAINED=On -DFEATHER_TARGET_TRIPLET=${HOST} -DWITH_PLUGIN_REDDIT=Off"
+    CMAKEVARS+=" -DBISCUIT_TROCADOR_RELAY_URL=${BISCUIT_RELAY_URL:-https://relay.biscuitwallet.com/api/}"
+
+    # Biscuit: the atomic swap helper, built outside Guix (Rust, see
+    # contrib/biscuit-swapd/README.md) and checked against the SHA-256 sums
+    # committed in contrib/biscuit-swapd/SHA256SUMS. Required for tagged
+    # releases; a test build without it gets an atomic swap tab that says the
+    # helper is missing.
+    SWAPD_NAME="biscuit-swapd-${HOST%%.*}"
+    case "$HOST" in
+        *mingw32*) SWAPD_NAME+=".exe" ;;
+    esac
+    SWAPD_BIN="/feather/contrib/biscuit-swapd/bin/${SWAPD_NAME}"
+    if [ -f "$SWAPD_BIN" ]; then
+        (cd /feather/contrib/biscuit-swapd && grep " bin/${SWAPD_NAME}\$" SHA256SUMS | sha256sum -c -) \
+            || { echo "biscuit-swapd: ${SWAPD_NAME} does not match contrib/biscuit-swapd/SHA256SUMS" >&2; exit 1; }
+        CMAKEVARS+=" -DBISCUIT_SWAPD_BINARY=${SWAPD_BIN}"
+    elif [[ -n "${TAG}" ]]; then
+        echo "biscuit-swapd: ${SWAPD_BIN} is missing, required for a release" >&2
+        exit 1
+    else
+        echo "biscuit-swapd: ${SWAPD_NAME} not found, building without the atomic swap helper" >&2
+    fi
 
     if [[ -n "${TAG}" ]]; then
         CMAKEVARS+=" -DOFFICIAL_BUILD=On"
@@ -362,7 +386,7 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
             if [ "$OPTIONS" != "pack" ]; then
                 bash contrib/AppImage/build-appimage.sh
                 APPIMAGENAME=${DISTNAME}${ANONDIST}${LINUX_ARCH}.AppImage
-                mv feather.AppImage "${APPIMAGENAME}"
+                mv biscuit.AppImage "${APPIMAGENAME}"
                 cp "${APPIMAGENAME}" "${INSTALLPATH}/"
                 cp "${APPIMAGENAME}" "${OUTDIR}/"
             fi
@@ -395,7 +419,7 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
         *)
             case "$OPTIONS" in
                 installer)
-                    # do nothing, we don't want feather.exe in the final .zip
+                    # do nothing, we don't want biscuit.exe in the final .zip
                     ;;
                 *)
                     make -C build install ${V:+V=1}
@@ -408,11 +432,11 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
 
         case "$HOST" in
             *darwin*)
-                mv "feather.app" "Feather.app"
-                mkdir -p Feather.app/Contents/bin
-                cp -a /feather/contrib/depends/${HOST}/Tor/libevent-2.1.7.dylib Feather.app/Contents/bin
-                cp -a /feather/contrib/depends/${HOST}/Tor/tor Feather.app/Contents/bin
-                chmod +x Feather.app/Contents/bin/tor
+                mv "biscuit.app" "Biscuit.app"
+                mkdir -p Biscuit.app/Contents/bin
+                cp -a /feather/contrib/depends/${HOST}/Tor/libevent-2.1.7.dylib Biscuit.app/Contents/bin
+                cp -a /feather/contrib/depends/${HOST}/Tor/tor Biscuit.app/Contents/bin
+                chmod +x Biscuit.app/Contents/bin/tor
                 ;;
         esac
 
@@ -430,7 +454,7 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
                             || ( rm -f "${OUTDIR}/${DISTNAME}-win-installer.zip" && exit 1 )
                         ;;
                     "")
-                        mv feather.exe ${DISTNAME}.exe && \
+                        mv biscuit.exe ${DISTNAME}.exe && \
                         find . -print0 \
                             | xargs -0r touch --no-dereference --date="@${SOURCE_DATE_EPOCH}"
                         find . \
@@ -442,7 +466,7 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
                 ;;
             *linux*)
                 if [ "$OPTIONS" != "pack" ]; then
-                    mv feather "${DISTNAME}"
+                    mv biscuit "${DISTNAME}"
                     case "$OPTIONS" in
                         "")
                             find . -not -name "*.AppImage" -print0 \
@@ -462,7 +486,7 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
                 else
                     find . -print0 \
                         | xargs -0r touch --no-dereference --date="@${SOURCE_DATE_EPOCH}"
-                    cp feather "${OUTDIR}"
+                    cp biscuit "${OUTDIR}"
                 fi
                 ;;
             *darwin*)

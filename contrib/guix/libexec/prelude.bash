@@ -75,7 +75,7 @@ else
 fi
 
 VERSION="${FORCE_VERSION:-${VERSION}}"
-DISTNAME="${DISTNAME:-feather-${VERSION}}"
+DISTNAME="${DISTNAME:-biscuit-${VERSION}}"
 
 VERSION_BASE_DIR="${VERSION_BASE_DIR:-${PWD}}"
 version_base_prefix="${VERSION_BASE_DIR}/guix/guix-build-"

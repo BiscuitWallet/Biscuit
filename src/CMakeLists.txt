@@ -240,6 +240,13 @@ if(BISCUIT_SWAPD_BINARY)
     add_custom_command(TARGET feather POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BISCUIT_SWAPD_BINARY}" "$<TARGET_FILE_DIR:feather>/biscuit-swapd${CMAKE_EXECUTABLE_SUFFIX}"
             COMMENT "Bundling biscuit-swapd")
+    if(DEPENDS)
+        install(PROGRAMS "${BISCUIT_SWAPD_BINARY}" DESTINATION ${CMAKE_INSTALL_PREFIX}
+                RENAME "biscuit-swapd${CMAKE_EXECUTABLE_SUFFIX}")
+    else()
+        install(PROGRAMS "${BISCUIT_SWAPD_BINARY}" DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+                RENAME "biscuit-swapd${CMAKE_EXECUTABLE_SUFFIX}")
+    endif()
     message(STATUS "Atomic swaps: bundling ${BISCUIT_SWAPD_BINARY}")
 endif()
 

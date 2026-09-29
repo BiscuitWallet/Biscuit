@@ -30,7 +30,11 @@ QString AtomicSwapDaemon::helperPath() {
     if (!fromEnv.isEmpty()) {
         return QFileInfo(fromEnv).isExecutable() ? fromEnv : QString();
     }
+#ifdef Q_OS_WIN
+    const QString bundled = QDir(QCoreApplication::applicationDirPath()).filePath("biscuit-swapd.exe");
+#else
     const QString bundled = QDir(QCoreApplication::applicationDirPath()).filePath("biscuit-swapd");
+#endif
     return QFileInfo(bundled).isExecutable() ? bundled : QString();
 }
 
