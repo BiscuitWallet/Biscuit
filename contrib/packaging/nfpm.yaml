@@ -1,0 +1,70 @@
+# Biscuit Linux packages (.deb, .rpm, Arch) from the Guix-built binaries.
+# Used by contrib/packaging/build-packages.sh, which fills in the variables.
+name: biscuit
+arch: amd64
+platform: linux
+version: ${VERSION}
+prerelease: ${PRERELEASE}
+version_schema: none
+release: "1"
+section: net
+priority: optional
+maintainer: "BiscuitWallet <333366932+BiscuitWallet@users.noreply.github.com>"
+vendor: Biscuit
+homepage: https://biscuitwallet.com
+license: BSD-3-Clause and GPL-3.0-only
+description: |-
+  Light multi-coin desktop wallet
+  Biscuit is a light desktop wallet for Monero, Bitcoin and Litecoin, based
+  on Feather Wallet. Keys stay on your computer. Includes swaps and atomic
+  swaps (biscuit-swapd, GPL-3.0).
+
+contents:
+  - src: ${STAGE}/biscuit
+    dst: /usr/lib/biscuit/biscuit
+    file_info: {mode: 0755}
+  - src: ${STAGE}/biscuit-swapd
+    dst: /usr/lib/biscuit/biscuit-swapd
+    file_info: {mode: 0755}
+  - src: /usr/lib/biscuit/biscuit
+    dst: /usr/bin/biscuit
+    type: symlink
+  - src: ${STAGE}/biscuit.desktop
+    dst: /usr/share/applications/biscuit.desktop
+  - src: ${STAGE}/icons/32x32.png
+    dst: /usr/share/icons/hicolor/32x32/apps/biscuit.png
+  - src: ${STAGE}/icons/48x48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/biscuit.png
+  - src: ${STAGE}/icons/64x64.png
+    dst: /usr/share/icons/hicolor/64x64/apps/biscuit.png
+  - src: ${STAGE}/icons/96x96.png
+    dst: /usr/share/icons/hicolor/96x96/apps/biscuit.png
+  - src: ${STAGE}/icons/128x128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/biscuit.png
+  - src: ${STAGE}/icons/256x256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/biscuit.png
+  - src: ${STAGE}/icons/512x512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/biscuit.png
+  - src: ${STAGE}/LICENSE
+    dst: /usr/share/licenses/biscuit/LICENSE
+  - src: ${STAGE}/LICENSE.biscuit-swapd
+    dst: /usr/share/licenses/biscuit/LICENSE.biscuit-swapd
+  - src: ${STAGE}/copyright
+    dst: /usr/share/doc/biscuit/copyright
+    packager: deb
+
+# Qt and the rest are built into the binary: only glibc (2.34 for
+# biscuit-swapd), fontconfig and the C++ runtime come from the system.
+overrides:
+  deb:
+    depends: ["libc6 (>= 2.34)", "libfontconfig1", "libstdc++6", "libgcc-s1"]
+  rpm:
+    depends: ["glibc >= 2.34", "fontconfig", "libstdc++", "libgcc"]
+  archlinux:
+    depends: ["glibc", "fontconfig", "gcc-libs"]
+
+rpm:
+  group: Applications/Internet
+  summary: Light multi-coin desktop wallet
+archlinux:
+  packager: "BiscuitWallet <333366932+BiscuitWallet@users.noreply.github.com>"
