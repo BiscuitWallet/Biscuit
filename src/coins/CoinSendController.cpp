@@ -46,11 +46,17 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
     return std::nullopt;
 }
 
-QList<FeeLevel> feeLevels() {
+QList<FeeLevel> feeLevels(const CoinParams &params) {
+    const double blockMinutes = params == litecoin() ? 2.5 : 10.0;
+    auto duration = [blockMinutes](int blocks) {
+        const int minutes = int(blocks * blockMinutes + 0.5);
+        return minutes < 60 ? QString("~%1 min").arg(minutes)
+                            : minutes == 60 ? QString("~1 hour") : QString("~%1 hours").arg(minutes / 60);
+    };
     return {
-        {"Fast (~20 min)", 2},
-        {"Normal (~1 hour)", 6},
-        {"Slow (~4 hours)", 24},
+        {QString("Fast (%1)").arg(duration(2)), 2},
+        {QString("Normal (%1)").arg(duration(6)), 6},
+        {QString("Slow (%1)").arg(duration(24)), 24},
     };
 }
 

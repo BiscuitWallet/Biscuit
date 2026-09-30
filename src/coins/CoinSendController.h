@@ -31,10 +31,11 @@ struct CoinDestination {
 std::optional<CoinDestination> detectCoinDestination(const QString &text);
 
 struct FeeLevel {
-    const char *label;
+    QString label;
     int targetBlocks;
 };
-QList<FeeLevel> feeLevels();
+// Labels follow the coin's block time (Bitcoin 10 min, Litecoin 2.5 min).
+QList<FeeLevel> feeLevels(const CoinParams &params);
 
 // Sends Bitcoin/Litecoin from the unified Send tab: checks the setup,
 // plans the transaction, asks for explicit confirmation, broadcasts.

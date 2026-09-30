@@ -147,7 +147,7 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
 
     m_coinFeeTitle = new QLabel("Network fee", this);
     m_coinFee = new QComboBox(this);
-    for (const auto &level : biscuit::coins::feeLevels()) {
+    for (const auto &level : biscuit::coins::feeLevels(biscuit::coins::bitcoin())) {
         m_coinFee->addItem(level.label, level.targetBlocks);
     }
     m_coinFee->setCurrentIndex(1);
@@ -213,6 +213,11 @@ void SendWidget::updateCoinMode() {
         m_coinHint->setText(vault->isUnlocked() ? QString("Sent from your %1 wallet \"%2\"").arg(m_coin->ticker, vault->selectedName(*m_coin))
                                                 : QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name));
         m_coinUnit->setText(m_coin->ticker);
+        // Times follow the coin's blocks.
+        const auto levels = biscuit::coins::feeLevels(*m_coin);
+        for (int i = 0; i < levels.size() && i < m_coinFee->count(); ++i) {
+            m_coinFee->setItemText(i, levels[i].label);
+        }
         if (destination && !destination->amount.isEmpty() && ui->lineAmount->text().isEmpty()) {
             ui->lineAmount->setText(destination->amount);
         }
@@ -237,7 +242,15 @@ void SendWidget::updateCoinFeeLabel() {
         return;
     }
     const auto rate = m_coinSend->feeRate(*m_coin, m_coinFee->currentData().toInt());
-    m_coinFeeRate->setText(rate ? QString("%1 sat/vB").arg(*rate, 0, 'f', 1) : QString());
+    QString text = rate ? QString("%1 sat/vB").arg(*rate, 0, 'f', 1) : QString();
+    // When the next blocks have room, every speed costs the same (common on
+    // Litecoin): say so, it is not a fault.
+    const auto fastest = m_coinSend->feeRate(*m_coin, 2);
+    const auto slowest = m_coinSend->feeRate(*m_coin, 24);
+    if (rate && fastest && slowest && qFuzzyCompare(*fastest, *slowest)) {
+        text += QString(" · same for every speed right now: the %1 blocks are not full").arg(m_coin->name);
+    }
+    m_coinFeeRate->setText(text);
 }
 
 void SendWidget::currencyComboChanged(int index) {
