@@ -12,6 +12,7 @@ add_library(biscuit_coins_core STATIC
         WalletFile.cpp
         Transactions.cpp
         SilentPayments.cpp
+        MessageSigning.cpp
         Electrum.cpp
         ElectrumServers.cpp
 )

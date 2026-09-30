@@ -11,6 +11,7 @@
 
 #include "Addresses.h"
 #include "ElectrumServers.h"
+#include "MessageSigning.h"
 #include "SilentPayments.h"
 
 namespace biscuit::coins {
@@ -343,6 +344,18 @@ void CoinWallet::recompute() {
     m_utxos = electrum::computeUtxos(txs, m_heights, m_scripts);
     emit updated();
     emit cacheChanged();
+}
+
+QString CoinWallet::signMessage(const QString &address, const QString &message, QString *error) const {
+    const auto script = addressToScriptPubKey(address, params());
+    const auto ref = script ? m_scripts.constFind(*script) : m_scripts.cend();
+    if (ref == m_scripts.cend()) {
+        if (error) *error = QString("This address is not one of the %1 wallet's addresses.").arg(params().name);
+        return {};
+    }
+    const QString signature = message::sign(m_account.privateKey(ref->chain, ref->index), message, params());
+    if (signature.isEmpty() && error) *error = "Unable to sign the message.";
+    return signature;
 }
 
 std::optional<quint64> CoinWallet::transactionFee(const QString &txid) const {

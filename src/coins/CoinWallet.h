@@ -80,6 +80,9 @@ public:
     static QString coinKey(const Utxo &utxo) { return QString("%1:%2").arg(utxo.txid).arg(utxo.vout); }
     bool isFrozen(const Utxo &utxo) const { return m_frozen.contains(coinKey(utxo)); }
     void setFrozen(const QStringList &coinKeys, bool frozen);
+    // Signed message with the key of one of this wallet's addresses.
+    QString signMessage(const QString &address, const QString &message, QString *error) const;
+
     // Replace-by-fee for one of our unconfirmed transactions: same payment,
     // higher fee (see planFeeBump). Refused when a later transaction spends
     // its outputs, which the replacement would cancel.

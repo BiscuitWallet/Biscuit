@@ -9,6 +9,9 @@
 #include "components.h"
 #include "libwalletqt/Wallet.h"
 
+class QComboBox;
+namespace biscuit::coins { struct CoinParams; }
+
 namespace Ui {
     class SignVerifyDialog;
 }
@@ -27,8 +30,12 @@ private slots:
     void copyToClipboard();
 
 private:
+    // Biscuit: Bitcoin / Litecoin messages too (the coin of the address).
+    const biscuit::coins::CoinParams *coinOf(const QString &address) const;
+
     QScopedPointer<Ui::SignVerifyDialog> ui;
     Wallet *m_wallet;
+    QComboBox *m_coin;
 };
 
 

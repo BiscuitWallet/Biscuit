@@ -36,6 +36,8 @@ biscuit_add_test(test_electrum_server test_electrum_server.cpp ${CMAKE_SOURCE_DI
 find_package(Qt6 REQUIRED COMPONENTS Network)
 target_include_directories(test_electrum_server PRIVATE ${CMAKE_SOURCE_DIR}/src/coins)
 target_link_libraries(test_electrum_server PRIVATE biscuit_coins_core Qt6::Network)
+biscuit_add_test(test_message_signing test_message_signing.cpp)
+target_link_libraries(test_message_signing PRIVATE biscuit_coins_core wallycore)
 biscuit_add_test(test_silent_payments test_silent_payments.cpp)
 target_link_libraries(test_silent_payments PRIVATE biscuit_coins_core wallycore)
 target_compile_definitions(test_silent_payments PRIVATE BISCUIT_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
