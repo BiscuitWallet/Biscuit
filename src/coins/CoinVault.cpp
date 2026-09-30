@@ -184,6 +184,14 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
         walletfile::wipe(extraBytes);
     }
 
+    m_contacts.clear();
+    const QJsonObject contacts = obj.value("contacts").toObject();
+    for (auto it = contacts.begin(); it != contacts.end(); ++it) {
+        for (const QJsonValue &c : it.value().toArray()) {
+            m_contacts[it.key()].append({c.toObject().value("name").toString(), c.toObject().value("address").toString()});
+        }
+    }
+
     const QJsonObject selected = obj.value("selected").toObject();
     for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
         const QString id = selected.value(params->ticker).toString();
@@ -216,6 +224,8 @@ void CoinVault::clearWallets() {
     }
     m_entries.clear();
     m_selected.clear();
+    m_contacts.clear();   // they live in the encrypted file only
+    m_coinSelection.clear();
 }
 
 void CoinVault::lock() {
@@ -570,6 +580,23 @@ QStringList CoinVault::coinSelection(const CoinParams &params) const {
         return {};   // chosen in another wallet of the coin
     }
     return it->coinKeys;
+}
+
+bool CoinVault::setContacts(const CoinParams &params, const QList<Contact> &contacts, QString *error) {
+    const bool saved = rewrite([&params, &contacts](QJsonObject &obj) {
+        QJsonArray list;
+        for (const Contact &c : contacts) {
+            list.append(QJsonObject{{"name", c.name}, {"address", c.address}});
+        }
+        QJsonObject all = obj.value("contacts").toObject();
+        all[params.ticker] = list;
+        obj["contacts"] = all;
+    }, error);
+    if (saved) {
+        m_contacts[params.ticker] = contacts;
+        emit contactsChanged();
+    }
+    return saved;
 }
 
 }

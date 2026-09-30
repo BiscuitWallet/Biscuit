@@ -11,6 +11,7 @@
 #include "utils/Appearance.h"
 #include "widgets/PixelIcons.h"
 #include "coins/CoinCoinsSwitcher.h"
+#include "coins/CoinContactsSwitcher.h"
 #include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinSetupDialog.h"
@@ -283,7 +284,13 @@ void MainWindow::initWidgets() {
 
     // [Contacts]
     m_contactsWidget = new ContactsWidget(m_wallet, this);
-    ui->contactsWidgetLayout->addWidget(m_contactsWidget);
+    // Biscuit: Monero, Bitcoin and Litecoin contacts.
+    auto *contactsSwitcher = new biscuit::coins::CoinContactsSwitcher(m_wallet, m_contactsWidget, this);
+    ui->contactsWidgetLayout->addWidget(contactsSwitcher);
+    connect(contactsSwitcher, &biscuit::coins::CoinContactsSwitcher::payTo, this, [this](const QString &address, const QString &name) {
+        m_sendWidget->fill(address, name, 0, true);
+        ui->tabWidget->setCurrentIndex(this->findTab("Send"));
+    });
     connect(m_contactsWidget, &ContactsWidget::fill, [this](const QString &address, const QString &description){
         m_sendWidget->fill(address, description, 0, true);
         ui->tabWidget->setCurrentIndex(this->findTab("Send"));

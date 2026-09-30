@@ -88,6 +88,15 @@ public:
     // the file: the user needs their own backup to add it again.
     bool removeWallet(const QString &id, QString *error);
 
+    // Address book for Bitcoin and Litecoin (Monero keeps Feather's), stored
+    // in the encrypted file. Needs the vault unlocked.
+    struct Contact {
+        QString name;
+        QString address;
+    };
+    QList<Contact> contacts(const CoinParams &params) const { return m_contacts.value(params.ticker); }
+    bool setContacts(const CoinParams &params, const QList<Contact> &contacts, QString *error);
+
     // Coin control: the coins chosen in the Coins tab for the next send of
     // a coin (keys from CoinWallet::coinKey), for its selected wallet.
     // Cleared when another wallet is selected or the send is done.
@@ -103,6 +112,7 @@ signals:
     void walletsChanged();    // added, removed or selection changed
     void walletUpdated();     // balance, history or height of any wallet
     void coinSelectionChanged();
+    void contactsChanged();
 
 private:
     explicit CoinVault(Wallet *wallet);
@@ -121,6 +131,7 @@ private:
     QHash<QString, QString> m_selected;   // ticker -> entry id
     struct CoinSelection { QString walletId; QStringList coinKeys; };
     QHash<QString, CoinSelection> m_coinSelection;   // ticker -> chosen coins
+    QHash<QString, QList<Contact>> m_contacts;       // ticker -> address book
     QString m_created;
     QTimer m_saveTimer;
 };
