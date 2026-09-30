@@ -79,6 +79,9 @@ if [ "$DRY_RUN" = "--dry-run" ]; then
 fi
 # Files first, updates.json last: the app never sees a version whose files
 # are not online yet. Existing releases are kept.
-rsync -rlt --chmod=D755,F644 "$STAGE/files/" "$HOST:$SITE/files/"
-rsync -t --chmod=F644 "$STAGE/updates.json" "$HOST:$SITE/updates.json"
+# (macOS ships openrsync, which has no --chmod: permissions are set after.)
+rsync -rlt "$STAGE/files/" "$HOST:$SITE/files/"
+ssh "$HOST" "chmod -R u=rwX,go=rX '$SITE/files'"
+rsync -t "$STAGE/updates.json" "$HOST:$SITE/updates.json"
+ssh "$HOST" "chmod 644 '$SITE/updates.json'"
 echo "Published: https://biscuitwallet.com/updates.json"
