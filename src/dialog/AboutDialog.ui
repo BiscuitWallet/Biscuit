@@ -79,14 +79,14 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
-          <string>Git:</string>
+          <string>Website:</string>
          </property>
         </widget>
        </item>
        <item row="0" column="1">
         <widget class="QLabel" name="label_8">
          <property name="text">
-          <string>github.com/BiscuitWallet/biscuit</string>
+          <string>biscuitwallet.com</string>
          </property>
          <property name="textInteractionFlags">
           <set>Qt::TextInteractionFlag::LinksAccessibleByMouse|Qt::TextInteractionFlag::TextSelectableByMouse</set>

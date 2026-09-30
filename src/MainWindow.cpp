@@ -476,7 +476,7 @@ void MainWindow::initMenu() {
     ui->actionCheckForUpdates->setVisible(false);
 #endif
 
-    connect(ui->actionOfficialWebsite,   &QAction::triggered, [this](){Utils::externalLinkWarning(this, "https://github.com/BiscuitWallet/biscuit");});
+    connect(ui->actionOfficialWebsite,   &QAction::triggered, [this](){Utils::externalLinkWarning(this, "https://biscuitwallet.com");});
     connect(ui->actionDocumentation,     &QAction::triggered, this, &MainWindow::onShowDocumentation);
     connect(ui->actionReport_bug,        &QAction::triggered, this, &MainWindow::onReportBug);
     connect(ui->actionShow_debug_info,   &QAction::triggered, this, &MainWindow::showDebugInfo);
@@ -1860,7 +1860,8 @@ void MainWindow::onShowDocumentation() {
 }
 
 void MainWindow::onReportBug() {
-    m_windowManager->showDocs(this, "report_an_issue");
+    // Biscuit: Feather's page is about reporting to Feather.
+    Utils::externalLinkWarning(this, "https://biscuitwallet.com/contact/");
 }
 
 QString MainWindow::getHardwareDevice() {
