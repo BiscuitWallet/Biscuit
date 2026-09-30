@@ -81,9 +81,12 @@ podman run --rm \
             export CXX_x86_64_pc_windows_gnu="$MINGW/x86_64-w64-mingw32-g++"
             export AR_x86_64_pc_windows_gnu="$MINGW/x86_64-w64-mingw32-ar"
             # Link the MinGW runtimes (libstdc++, winpthread) statically, so
-            # the helper needs no DLL beyond those of Windows. Joined with the
-            # rustflags of the cargo config of the workspace.
-            export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-static"
+            # the helper needs no DLL beyond those of Windows. rustc puts
+            # -Bdynamic before the -lstdc++ that the cc crate asks for: drop
+            # that one (empty CXXSTDLIB) and add -lstdc++ at the end of the
+            # link, static. Joined with the rustflags of the workspace config.
+            export CXXSTDLIB_x86_64_pc_windows_gnu=""
+            export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-static -C link-arg=-Wl,-Bstatic -C link-arg=-lstdc++ -C link-arg=-lpthread"
             rustup target add --toolchain "$RUST_VERSION" "$TARGET"
             cargo +"$RUST_VERSION" build --release --locked -p biscuit-swapd --target "$TARGET"
             x86_64-w64-mingw32-strip -o "/out/$OUT" "target/$TARGET/release/biscuit-swapd.exe"
