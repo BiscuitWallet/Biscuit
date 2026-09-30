@@ -5,6 +5,7 @@
 #include "ui_UpdateDialog.h"
 
 #include <QFileDialog>
+#include <QFileInfo>
 
 #include "constants.h"
 #include "utils/AsyncTask.h"
@@ -74,6 +75,12 @@ void UpdateDialog::updateAvailable() {
     ui->btn_restart->hide();
     ui->progressBar->hide();
     ui->label_header->setText(QString("New Biscuit version %1 is available").arg(m_updater->version));
+    if (Updater::isPackaged()) {
+        ui->btn_download->hide();
+        ui->label_body->setText("Biscuit was installed from a package: update it with your package manager "
+                                "(or download the new version from biscuitwallet.com).");
+        return;
+    }
     ui->label_body->setText("Do you want to download and verify the new version?");
 }
 
@@ -181,66 +188,63 @@ void UpdateDialog::onInstallUpdate() {
         return;
     }
 
-    // We only expect the archive to contain 1 file
-    std::string fname = zip_get_name(zip_archive, 0, 0);
-    if (fname.empty()) {
-        this->onInstallError("Error in libzip: Invalid filename in archive");
-        return;
-    }
-
-    struct zip_stat sb;
-    if (zip_stat_index(zip_archive, 0, 0, &sb) != 0) {
-        this->onInstallError("Error in libzip: Entry index not found");
-        return;
-    }
-
-    QString name = QString::fromStdString(sb.name);
-    qDebug() << "File found in archive: " << name << ", with size: " << QString::number(sb.size);
-
-    struct zip_file *zf;
-    zf = zip_fopen_index(zip_archive, 0, 0);
-    if (!zf) {
-        this->onInstallError("Error in libzip: Unable to open entry");
-        return;
-    }
-
-    std::unique_ptr<char[]> contents{new char[sb.size]};
-
-    auto bytes_read = zip_fread(zf, contents.get(), sb.size);
-    if (bytes_read != sb.size){
-        this->onInstallError("Error in libzip: File size inconsistent");
-        return;
-    }
-
-    zip_fclose(zf);
-    zip_close(zip_archive);
-
+    // Biscuit: the archive holds the app, and (plain Linux build, Windows)
+    // the swap helper next to it. The app is written under its new name and
+    // started from there; the helper goes to "biscuit-swapd….new", which
+    // replaces the old one at the next start (it may be running now, and a
+    // running program cannot be overwritten on Windows).
     QDir applicationDir(Utils::applicationPath());
-    QString filePath = applicationDir.filePath(name);
-    if (m_updater->platformTag == "win-installer") {
-        filePath = QString("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::DownloadLocation), name);
-    }
+    for (zip_int64_t index = 0; index < num_entries; ++index) {
+        struct zip_stat sb;
+        if (zip_stat_index(zip_archive, index, 0, &sb) != 0) {
+            this->onInstallError("Error in libzip: Entry index not found");
+            return;
+        }
+        const QString name = QFileInfo(QString::fromStdString(sb.name)).fileName();
+        if (name.isEmpty() || QString::fromStdString(sb.name).endsWith('/')) {
+            continue;   // a directory entry
+        }
+        qDebug() << "File found in archive: " << name << ", with size: " << QString::number(sb.size);
 
-    m_updatePath = filePath;
+        zip_file *zf = zip_fopen_index(zip_archive, index, 0);
+        if (!zf) {
+            this->onInstallError("Error in libzip: Unable to open entry");
+            return;
+        }
+        std::unique_ptr<char[]> contents{new char[sb.size]};
+        const auto bytes_read = zip_fread(zf, contents.get(), sb.size);
+        zip_fclose(zf);
+        if (bytes_read < 0 || static_cast<zip_uint64_t>(bytes_read) != sb.size) {
+            this->onInstallError("Error in libzip: File size inconsistent");
+            return;
+        }
 
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly))
-    {
-        this->onInstallError(QString("Error: Could not write to application path: %1").arg(filePath));
-        return;
-    }
+        const bool helper = name.startsWith("biscuit-swapd");
+        QString filePath = applicationDir.filePath(helper ? name + ".new" : name);
+        if (!helper && m_updater->platformTag == "win-installer") {
+            filePath = QString("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::DownloadLocation), name);
+        }
+        if (!helper) {
+            m_updatePath = filePath;
+        }
 
-    if (static_cast<size_t>(file.write(&contents[0], sb.size)) != sb.size) {
-        this->onInstallError("Error: Unable to write file");
-        return;
+        QFile file(filePath);
+        if (!file.open(QIODevice::WriteOnly)) {
+            this->onInstallError(QString("Error: Could not write to application path: %1").arg(filePath));
+            return;
+        }
+        if (static_cast<size_t>(file.write(&contents[0], sb.size)) != sb.size) {
+            this->onInstallError("Error: Unable to write file");
+            return;
+        }
+        if (!file.setPermissions(QFile::ExeUser | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther
+                                 | QFile::ReadUser | QFile::ReadOwner
+                                 | QFile::WriteUser | QFile::WriteOwner)) {
+            this->onInstallError("Error: Unable to set executable flags");
+            return;
+        }
     }
-
-    if (!file.setPermissions(QFile::ExeUser | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther
-                             | QFile::ReadUser | QFile::ReadOwner
-                             | QFile::WriteUser | QFile::WriteOwner)) {
-        this->onInstallError("Error: Unable to set executable flags");
-        return;
-    }
+    zip_close(zip_archive);
 
     if (m_updater->platformTag == "win-installer") {
         this->setStatus("Installer written. Click 'Restart Biscuit' to close Biscuit and start the installer.");
@@ -268,7 +272,7 @@ void UpdateDialog::installUpdateMac() {
         return;
     }
 
-    QString appName = QString("feather-%1").arg(m_updater->version);
+    QString appName = QString("biscuit-%1").arg(m_updater->version);
     QString zipName = QString("%1.zip").arg(appName);
 
     QString downloadsPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
@@ -299,7 +303,8 @@ void UpdateDialog::installUpdateMac() {
         return;
     }
 
-    m_updatePath = QString("%1/Contents/MacOS/feather").arg(appDir.absolutePath());
+    // The archive holds Biscuit.app, unzipped over the current one.
+    m_updatePath = QString("%1/Biscuit.app/Contents/MacOS/biscuit").arg(appDir.absolutePath());
     qDebug() << "Update path: " << m_updatePath;
 
     file.remove();

@@ -289,9 +289,9 @@ export PATH="${BASEPREFIX}/${HOST}/native/bin:${PATH}"
 
 
     # Set appropriate CMake options for build type
-    # Biscuit: no update check (Feather's updater asks featherwallet.org),
-    # Trocador swaps through the Biscuit relay.
-    CMAKEVARS="-DWITH_SCANNER=On -DCHECK_UPDATES=Off -DSELF_CONTAINED=On -DFEATHER_TARGET_TRIPLET=${HOST} -DWITH_PLUGIN_REDDIT=Off"
+    # Biscuit: updates checked on biscuitwallet.com against the Biscuit
+    # release signing key; Trocador swaps through the Biscuit relay.
+    CMAKEVARS="-DWITH_SCANNER=On -DCHECK_UPDATES=On -DSELF_CONTAINED=On -DFEATHER_TARGET_TRIPLET=${HOST} -DWITH_PLUGIN_REDDIT=Off"
     CMAKEVARS+=" -DBISCUIT_TROCADOR_RELAY_URL=${BISCUIT_RELAY_URL:-https://relay.biscuitwallet.com/api/}"
 
     # Biscuit: the atomic swap helper, built outside Guix (Rust, see

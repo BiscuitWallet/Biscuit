@@ -24,6 +24,9 @@ PublicDataFeed::PublicDataFeed(QObject *parent)
         {crowdfundingUrl(), crowdfundingMessage, 60, new QTimer(this)},
         {newsUrl(), newsMessage, 360, new QTimer(this)},
     };
+#if defined(CHECK_UPDATES)
+    m_sources.append({updatesUrl(), updatesMessage, 360, new QTimer(this)});
+#endif
     for (qsizetype i = 0; i < m_sources.size(); ++i) {
         m_sources[i].timer->setSingleShot(true);
         connect(m_sources[i].timer, &QTimer::timeout, this, [this, i] {

@@ -43,6 +43,18 @@ QString crowdfundingUrl() {
     return "https://biscuitwallet.com/data/ccs.json";
 }
 
+QString updatesUrl() {
+    return "https://biscuitwallet.com/updates.json";
+}
+
+std::optional<QJsonObject> updatesMessage(const QByteArray &body) {
+    const auto value = parse(body);
+    if (!value || !value->isObject() || !value->toObject().value("platform").isObject()) {
+        return std::nullopt;
+    }
+    return message("updates", value->toObject());
+}
+
 QString newsUrl() {
     return "https://biscuitwallet.com/news/feed.xml";
 }

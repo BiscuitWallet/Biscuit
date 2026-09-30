@@ -5,6 +5,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QTimer>
 
@@ -36,6 +37,12 @@ QString AtomicSwapDaemon::helperPath() {
 #else
     const QString bundled = QDir(QCoreApplication::applicationDirPath()).filePath("biscuit-swapd");
 #endif
+    // An update left the new helper next to the old one (it may have been
+    // running): put it in place before it is used.
+    if (QFileInfo::exists(bundled + ".new")) {
+        QFile::remove(bundled);
+        QFile::rename(bundled + ".new", bundled);
+    }
     return QFileInfo(bundled).isExecutable() ? bundled : QString();
 }
 

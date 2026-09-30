@@ -32,6 +32,7 @@ namespace biscuit::datafeed {
     QString crowdfundingUrl();
     // Biscuit news, Atom feed from biscuitwallet.com.
     QString newsUrl();
+    QString updatesUrl();
 
     std::optional<QJsonObject> cryptoRatesMessage(const QByteArray &body);
     std::optional<QJsonObject> fiatRatesMessage(const QByteArray &body);
@@ -39,6 +40,10 @@ namespace biscuit::datafeed {
     // {"cmd": "news", "data": [{"title", "url", "date": "yyyy-MM-dd", "summary"}]},
     // newest first, plain text only, links limited to biscuitwallet.com.
     std::optional<QJsonObject> newsMessage(const QByteArray &body);
+    // biscuitwallet.com/updates.json: {"platform": {"<tag>": {"version": "x.y.z"}}}.
+    // Only says which version exists: the files and their hashes are checked
+    // against the release signing key before anything is offered.
+    std::optional<QJsonObject> updatesMessage(const QByteArray &body);
 }
 
 #endif // BISCUIT_PUBLICDATA_H

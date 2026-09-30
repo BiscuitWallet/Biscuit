@@ -37,6 +37,9 @@ public:
     QString signer;
     QString platformTag;
 
+    // Biscuit: installed by a Linux package, updated by the package manager.
+    static bool isPackaged();
+
 signals:
     void updateCheckFailed(const QString &error);
     void noUpdateAvailable();

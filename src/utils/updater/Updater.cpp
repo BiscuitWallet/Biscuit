@@ -16,13 +16,22 @@
 Updater::Updater(QObject *parent) :
     QObject(parent)
 {
-    std::string featherWallet = Utils::fileOpen(":/assets/gpg_keys/featherwallet.asc").toStdString();
-    m_maintainers.emplace_back(featherWallet);
+    // Biscuit: only the Biscuit release signing key is trusted. Without it the
+    // updater stays off (a build cannot offer unverifiable updates).
+    try {
+        m_maintainers.emplace_back(Utils::fileOpen(":/assets/gpg_keys/biscuit.asc").toStdString());
+    } catch (const std::exception &e) {
+        qWarning() << "Updater disabled, no release signing key:" << e.what();
+    }
 
     qDebug() << "Platform tag: " << this->getPlatformTag();
 }
 
 void Updater::checkForUpdates() {
+    if (m_maintainers.empty() || this->getWebsiteUrl().isEmpty()) {
+        emit updateCheckFailed("Updates cannot be checked in this build or network mode");
+        return;
+    }
     Networking network{this};
     QNetworkReply *reply = network.getJson(this, QString("%1/updates.json").arg(this->getWebsiteUrl()));
     if (!reply) {
@@ -54,6 +63,9 @@ void Updater::onUpdateCheckResponse(QNetworkReply *reply) {
 }
 
 void Updater::wsUpdatesReceived(const QJsonObject &updates) {
+    if (m_maintainers.empty()) {
+        return;
+    }
     QString featherVersionStr{FEATHER_VERSION};
 
     auto featherVersion = SemanticVersion::fromString(featherVersionStr);
@@ -102,7 +114,7 @@ void Updater::onSignedHashesReceived(QNetworkReply *reply, const QString &platfo
     QByteArray armoredSignedHashes = reply->readAll();
     reply->deleteLater();
 
-    const QString binaryFilename = QString("feather-%1-%2.zip").arg(version, platformTag);
+    const QString binaryFilename = QString("biscuit-%1-%2.zip").arg(version, platformTag);
     QByteArray signedHash{};
     QString signer;
     try {
@@ -171,15 +183,21 @@ QString Updater::getPlatformTag() {
 }
 
 QString Updater::getWebsiteUrl() {
-        if (conf()->get(Config::proxy).toInt() == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool()) {
-            return "http://featherdvtpi7ckdbkb2yxjfwx3oyvr3xjz3oo4rszylfzjdg6pbm3id.onion";
-        }
-        else if (conf()->get(Config::proxy).toInt() == Config::Proxy::i2p) {
-            return "http://rwzulgcql2y3n6os2jhmhg6un2m33rylazfnzhf56likav47aylq.b32.i2p";
-        }
-        else {
-            return "https://featherwallet.org";
-        }
+    // Biscuit has no onion or i2p address yet: no update check in those modes.
+    const int proxy = conf()->get(Config::proxy).toInt();
+    if ((proxy == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool()) || proxy == Config::Proxy::i2p) {
+        return {};
+    }
+    return "https://biscuitwallet.com";
+}
+
+bool Updater::isPackaged() {
+#ifdef Q_OS_LINUX
+    // Installed from the .deb / .rpm / Arch package: the package manager updates it.
+    return qEnvironmentVariableIsEmpty("APPIMAGE") && Utils::applicationPath().startsWith("/usr/");
+#else
+    return false;
+#endif
 }
 
 QByteArray Updater::verifyParseSignedHashes(

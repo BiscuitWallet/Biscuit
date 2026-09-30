@@ -54,6 +54,12 @@ QNetworkAccessManager* getNetworkClearnet()
 
 QNetworkAccessManager* getNetwork(const QString &address)
 {
+    // Biscuit: in "Tor only" mode, whatever comes from biscuitwallet.com
+    // (data, news, updates and their downloads) goes through Tor.
+    if (dataThroughTor() && QUrl(address).host().endsWith(QLatin1String("biscuitwallet.com"))) {
+        return getNetworkDataTor();
+    }
+
     if (conf()->get(Config::proxy).toInt() == Config::Proxy::None) {
         return getNetworkClearnet();
     }
