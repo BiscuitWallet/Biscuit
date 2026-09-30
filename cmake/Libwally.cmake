@@ -68,6 +68,9 @@ set_target_properties(wallycore PROPERTIES
         # secp256k1's public headers too (silent payments use its scalar and
         # point operations that libwally does not wrap).
         INTERFACE_INCLUDE_DIRECTORIES "${LIBWALLY_SRC}/include;${LIBWALLY_SRC}/src/secp256k1/include"
+        # secp256k1 is linked statically: on Windows its header would
+        # otherwise declare its functions as DLL imports.
+        INTERFACE_COMPILE_DEFINITIONS "SECP256K1_STATIC"
         INTERFACE_LINK_LIBRARIES "${LIBWALLY_SECP_LIB}"
 )
 add_dependencies(wallycore libwally_build)
