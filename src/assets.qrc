@@ -7,7 +7,7 @@
     <file>assets/nodes.json</file>
     <file>assets/certs/isrg-root-x1.pem</file>
     <file>assets/certs/isrg-root-x2.pem</file>
-    <file>assets/gpg_keys/featherwallet.asc</file>
+    <file>assets/gpg_keys/biscuit.asc</file>
     <file>assets/images/appicons/32x32.png</file>
     <file>assets/images/appicons/monero.png</file>
     <file>assets/images/appicons/48x48.png</file>

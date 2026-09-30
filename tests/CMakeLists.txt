@@ -41,3 +41,13 @@ target_link_libraries(test_message_signing PRIVATE biscuit_coins_core wallycore)
 biscuit_add_test(test_silent_payments test_silent_payments.cpp)
 target_link_libraries(test_silent_payments PRIVATE biscuit_coins_core wallycore)
 target_compile_definitions(test_silent_payments PRIVATE BISCUIT_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+
+# The release key and the updater's OpenPGP code (only built with CHECK_UPDATES).
+if(TARGET openpgp)
+    biscuit_add_test(test_release_signature test_release_signature.cpp)
+    target_link_libraries(test_release_signature PRIVATE openpgp)
+    target_include_directories(test_release_signature PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    target_compile_definitions(test_release_signature PRIVATE
+            BISCUIT_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+            BISCUIT_KEY_FILE="${CMAKE_SOURCE_DIR}/src/assets/gpg_keys/biscuit.asc")
+endif()
