@@ -74,18 +74,25 @@ AtomicSwapWidget::AtomicSwapWidget(Wallet *wallet, QWidget *parent)
     ui->layout_discovery->replaceWidget(ui->progress, m_busyBar);
     ui->progress->hide();
 
-    m_server = new QLabel(this);
-    m_server->setFixedSize(16, 16);
-    m_server->hide();
-    ui->layout_headline->insertWidget(0, m_server);
+    m_modem = new QLabel(this);
+    m_modem->setFixedSize(16, 16);
+    m_modem->hide();
+    ui->layout_headline->insertWidget(0, m_modem);
+    // The status line keeps its height when the window is made small: the
+    // list below gives up the space, the text is never cut.
+    const int headlineHeight = std::max(16, ui->label_headline->fontMetrics().height()) + 4;
+    for (QLabel *label : {ui->label_headline, ui->label_peers}) {
+        label->setMinimumHeight(headlineHeight);
+        label->setSizePolicy(label->sizePolicy().horizontalPolicy(), QSizePolicy::Fixed);
+    }
     m_dialTimer = new QTimer(this);
     m_dialTimer->setInterval(400);
     connect(m_dialTimer, &QTimer::timeout, this, [this] {
         m_dots = (m_dots + 1) % 4;
         ui->label_headline->setText(m_headlineBase + QString(m_dots, '.'));
         if (m_phoneState == Phone::Dialing) {
-            // The server's lights run while it dials.
-            m_server->setPixmap(PixelIcons::server(false, ++m_serverPhase));
+            // The modem's lights run while it dials.
+            m_modem->setPixmap(PixelIcons::modem(false, ++m_modemPhase));
         }
     });
     ui->check_tor->setChecked(conf()->get(Config::atomicSwapTor).toBool());
@@ -190,7 +197,7 @@ void AtomicSwapWidget::onSummary(const atomic::DiscoverySummary &summary) {
         headline = "Dialing makers...";
     }
     setHeadline(headline, active);
-    // Server dialing, then connected while offers come in; hourglass when
+    // Modem dialing, then connected while offers come in; hourglass when
     // waiting. The check mark only when the search is over (onFinished).
     if (summary.dialing > 0 && summary.connected == 0) {
         setPhone(Phone::Dialing);
@@ -304,22 +311,22 @@ void AtomicSwapWidget::setPhone(Phone phone) {
     m_phoneState = phone;
     switch (phone) {
     case Phone::Hidden:
-        m_server->hide();
+        m_modem->hide();
         return;
     case Phone::Waiting:
-        m_server->setPixmap(PixelIcons::hourglass());
-        m_server->setToolTip("Waiting");
+        m_modem->setPixmap(PixelIcons::hourglass());
+        m_modem->setToolTip("Waiting");
         break;
     case Phone::Dialing:
-        m_server->setPixmap(PixelIcons::server(false, m_serverPhase));
-        m_server->setToolTip("Dialing makers");
+        m_modem->setPixmap(PixelIcons::modem(false, m_modemPhase));
+        m_modem->setToolTip("Dialing makers");
         break;
     case Phone::PickedUp:
-        m_server->setPixmap(PixelIcons::server(true, 0));
-        m_server->setToolTip("A maker answered");
+        m_modem->setPixmap(PixelIcons::modem(true, 0));
+        m_modem->setToolTip("A maker answered");
         break;
     }
-    m_server->show();
+    m_modem->show();
 }
 
 void AtomicSwapWidget::setBusy(bool busy) {

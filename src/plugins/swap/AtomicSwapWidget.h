@@ -53,10 +53,10 @@ private:
     // appear one by one, like a modem; the handset picks up once a maker
     // answers, and a check mark shows when offers are in.
     enum class Phone { Hidden, Waiting, Dialing, PickedUp };
-    int m_serverPhase = 0;
+    int m_modemPhase = 0;
     void setHeadline(const QString &text, bool dialing);
     void setPhone(Phone phone);
-    QLabel *m_server = nullptr;
+    QLabel *m_modem = nullptr;
     RetroBusyBar *m_busyBar = nullptr;
     QTimer *m_dialTimer = nullptr;
     QString m_headlineBase;

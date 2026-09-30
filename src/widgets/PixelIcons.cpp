@@ -29,23 +29,23 @@ namespace {
         "..kkkkkkkkkkkk..",
     };
 
-    const char *const serverRows[16] = {
+    const char *const modemRows[16] = {
+        "................",
         "...kkkkkkkkkk...",
-        "...kcccccccck...",
-        "...kcddddddck...",
-        "...kckkkkkkck...",
-        "...kcddddddck...",
-        "...kckkkkkkck...",
-        "...kcccccccck...",
-        "...kcddddddck...",
-        "...kcdkkkkdck...",
-        "...kcddddddck...",
-        "...kcccccccck...",
-        "...kcc1234cck...",
-        "...kcccccccck...",
-        "...kcccccwcck...",
-        "...kkkkkkkkkk...",
-        "....kk....kk....",
+        "..kyyyyyyyyyyk..",
+        "..kyykkkkkkyyk..",
+        "..kkk......kkk..",
+        "....kkkkkkkk....",
+        "...kyyyyyyyyk...",
+        "..kyyyykkyyyyk..",
+        "..kyyykwwkyyyk..",
+        "..kyyyykkyyyyk..",
+        ".kyyyyyyyyyyyyk.",
+        ".kkkkkkkkkkkkkk.",
+        ".kggggggggggggk.",
+        ".kg1g2g3g4ggggk.",
+        ".kGGGGGGGGGGGGk.",
+        "..kkkkkkkkkkkk..",
     };
 
     const char *const computerRows[16] = {
@@ -165,15 +165,14 @@ QPixmap hourglass() {
                                 {'s', QColor(135, 135, 135)}});
 }
 
-QPixmap server(bool connected, int phase) {
-    // A beige tower seen from the front, as tall as the hourglass: drive bays,
-    // a floppy slot, and four lights that run while it dials and all stay lit
-    // once connected.
+QPixmap modem(bool connected, int phase) {
+    // A yellow desk phone on a grey modem, seen from the front; the modem's
+    // lights run while it dials and all stay lit once connected.
     const QColor off(120, 40, 34), on(236, 58, 40);
     auto led = [&](int index) { return connected || phase % 4 == index ? on : off; };
-    return draw(serverRows, {{'k', outline}, {'c', QColor(222, 216, 200)}, {'d', QColor(190, 182, 162)},
-                             {'w', Qt::white},
-                             {'1', led(0)}, {'2', led(1)}, {'3', led(2)}, {'4', led(3)}});
+    return draw(modemRows, {{'k', outline}, {'y', QColor(242, 211, 60)}, {'w', Qt::white},
+                            {'g', QColor(201, 201, 201)}, {'G', QColor(138, 138, 138)},
+                            {'1', led(0)}, {'2', led(1)}, {'3', led(2)}, {'4', led(3)}});
 }
 
 QIcon computer() {
