@@ -275,7 +275,7 @@ std::optional<QList<QByteArray>> outputKeys(const QList<Input> &inputs, const QL
         const qsizetype g = scanKeys.indexOf(recipients[i].scanKey);
         if (g < 0) {
             scanKeys.append(recipients[i].scanKey);
-            groups.append({i});
+            groups.append(QList<int>{i});
         } else {
             groups[g].append(i);
         }
