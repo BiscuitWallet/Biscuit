@@ -7,7 +7,6 @@
 #include <QJsonDocument>
 #include <QStringList>
 #include <QUrl>
-#include <QUrlQuery>
 #include <QXmlStreamReader>
 
 #include <algorithm>
@@ -15,12 +14,6 @@
 namespace biscuit::datafeed {
 
 namespace {
-    // Same list for everyone: never derived from the user's settings.
-    const QStringList coins = {
-        "monero", "bitcoin", "litecoin", "ethereum", "tether", "usd-coin", "bitcoin-cash",
-        "dash", "zcash", "dogecoin", "solana", "ripple", "cardano", "tron", "wownero",
-    };
-
     std::optional<QJsonValue> parse(const QByteArray &body) {
         QJsonParseError error;
         const QJsonDocument doc = QJsonDocument::fromJson(body, &error);
@@ -35,22 +28,19 @@ namespace {
     }
 }
 
+// Biscuit's own service (biscuitwallet.com) fetches CoinGecko, the ECB rates
+// and the Monero CCS list and serves them unchanged: the app only talks to
+// that host, and the sources never see users' IP addresses.
 QString cryptoRatesUrl() {
-    QUrl url("https://api.coingecko.com/api/v3/coins/markets");
-    QUrlQuery q;
-    q.addQueryItem("vs_currency", "usd");
-    q.addQueryItem("ids", coins.join(','));
-    q.addQueryItem("price_change_percentage", "24h");
-    url.setQuery(q);
-    return url.toString();
+    return "https://biscuitwallet.com/data/crypto.json";
 }
 
 QString fiatRatesUrl() {
-    return "https://api.frankfurter.dev/v1/latest?base=USD";
+    return "https://biscuitwallet.com/data/fiat.json";
 }
 
 QString crowdfundingUrl() {
-    return "https://ccs.getmonero.org/index.php/projects";
+    return "https://biscuitwallet.com/data/ccs.json";
 }
 
 QString newsUrl() {

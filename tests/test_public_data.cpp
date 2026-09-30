@@ -20,10 +20,12 @@ private slots:
             QVERIFY(url.startsWith("https://"));
             QVERIFY(!url.contains("key", Qt::CaseInsensitive));
         }
-        QCOMPARE(cryptoRatesUrl(), cryptoRatesUrl());
-        const QUrlQuery q(QUrl(cryptoRatesUrl()).query());
-        QCOMPARE(q.queryItemValue("vs_currency"), QString("usd"));
-        QVERIFY(q.queryItemValue("ids").split(',').contains("monero"));
+        // Everything comes from Biscuit's own service: the sources never
+        // see users' IP addresses.
+        for (const QString &url : {cryptoRatesUrl(), fiatRatesUrl(), crowdfundingUrl(), newsUrl()}) {
+            QCOMPARE(QUrl(url).host(), QString("biscuitwallet.com"));
+            QVERIFY(QUrl(url).query().isEmpty());
+        }
     }
 
     void cryptoRates() {

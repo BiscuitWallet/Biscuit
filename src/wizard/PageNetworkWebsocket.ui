@@ -23,14 +23,14 @@
       </font>
      </property>
      <property name="text">
-      <string>Fetch prices and news from public sources?</string>
+      <string>Do you want to obtain third-party data?</string>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Biscuit can fetch prices (CoinGecko), fiat exchange rates (European Central Bank), Monero crowdfunding proposals (getmonero.org) and Biscuit news (biscuitwallet.com, which keeps no logs) directly from these sources.&lt;/p&gt;&lt;p&gt;Every Biscuit sends exactly the same requests: nothing about your wallet, balance, transactions or settings is sent. These services can see your IP address unless Tor is enabled.&lt;/p&gt;&lt;p&gt;If you disable this, fiat conversion, Tickers, Calc and the Home tab are unavailable. You can change this at any time in the settings.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Biscuit can connect to a service hosted by the developers to obtain pricing information, Home feeds and more.&lt;/p&gt;&lt;p&gt;This service is only used to fetch information. The wallet does not send information about its state or your transactions to the server. It is not used for any telemetry or crash reports.&lt;/p&gt;&lt;p&gt;If you disable this connection some wallet functionality will be unavailable. You can re-enable it at any time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
