@@ -8,6 +8,7 @@
 #include <QFileInfo>
 #include <QTimer>
 
+#include "utils/ChildProcess.h"
 #include "utils/config.h"
 
 namespace biscuit::swap {
@@ -65,6 +66,7 @@ void AtomicSwapDaemon::start(bool tor) {
     m_process->setArguments({"discover", tor ? "--tor" : "--clearnet", "--data-dir", dataDir});
     // Logs are not needed here, and an unread pipe would eventually block the helper.
     m_process->setStandardErrorFile(QProcess::nullDevice());
+    ChildProcess::endWithBiscuit(m_process);
 
     connect(m_process, &QProcess::readyReadStandardOutput, this, &AtomicSwapDaemon::onReadyRead);
     connect(m_process, &QProcess::finished, this, &AtomicSwapDaemon::onFinished);

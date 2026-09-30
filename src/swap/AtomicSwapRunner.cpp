@@ -15,6 +15,7 @@
 #include "AtomicSwapDaemon.h"
 #include "coins/CoinVault.h"
 #include "coins/CoinWallet.h"
+#include "utils/ChildProcess.h"
 #include "coins/core/WalletFile.h"
 #include "libwalletqt/Subaddress.h"
 #include "libwalletqt/rows/SubaddressRow.h"
@@ -245,6 +246,7 @@ bool AtomicSwapRunner::launch(const AtomicSwapRecord &record, bool resume, QStri
     m_process->setProcessEnvironment(env);
     // A log per swap, kept for troubleshooting (no secret in it).
     m_process->setStandardErrorFile(logPath(record.id), QIODevice::Append);
+    ChildProcess::endWithBiscuit(m_process);
 
     connect(m_process, &QProcess::readyReadStandardOutput, this, &AtomicSwapRunner::onReadyRead);
     connect(m_process, &QProcess::finished, this, &AtomicSwapRunner::onFinished);

@@ -6,6 +6,7 @@
 #include <QCoreApplication>
 #include <QDirIterator>
 
+#include "utils/ChildProcess.h"
 #include "utils/config.h"
 #include "utils/NetworkManager.h"
 #include "utils/Utils.h"
@@ -18,6 +19,7 @@ TorManager::TorManager(QObject *parent)
     , m_process(new QProcess(this))
 {
     connect(m_checkConnectionTimer, &QTimer::timeout, this, &TorManager::checkConnection);
+    ChildProcess::endWithBiscuit(m_process);
 
     this->torDir = Config::defaultConfigDir().filePath("tor");
 #if defined(TOR_INSTALLED)
@@ -103,6 +105,8 @@ void TorManager::start() {
     arguments << "--DataDirectory" << this->torDataPath;
     arguments << "--Log" << "notice";
     arguments << "--pidfile" << QDir(this->torDataPath).filePath("tor.pid");
+    // Biscuit: Tor exits by itself when Biscuit is gone (killed or crashed).
+    arguments << "--__OwningControllerProcess" << QString::number(QCoreApplication::applicationPid());
 
     qDebug() << QString("%1 %2").arg(this->torPath, arguments.join(" "));
 
