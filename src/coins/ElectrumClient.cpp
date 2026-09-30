@@ -4,6 +4,8 @@
 #include "ElectrumClient.h"
 
 #include <QCryptographicHash>
+#include <QNetworkProxy>
+#include <QRegularExpression>
 #include <QSslCertificate>
 
 namespace biscuit::coins {
@@ -42,6 +44,41 @@ ElectrumClient::~ElectrumClient() {
     m_socket->abort();
 }
 
+bool ElectrumServer::isLocal() const {
+    static const QRegularExpression localNetwork(R"(^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.))");
+    return host == QLatin1String("localhost") || host.endsWith(QLatin1String(".local")) || localNetwork.match(host).hasMatch();
+}
+
+std::optional<ElectrumServer> ElectrumServer::parse(const QString &text, QString *error) {
+    auto fail = [error](const QString &message) -> std::optional<ElectrumServer> {
+        if (error) *error = message;
+        return std::nullopt;
+    };
+    QString s = text.trimmed();
+    ElectrumServer server;
+    if (s.startsWith("tcp://", Qt::CaseInsensitive)) {
+        server.tls = false;
+        s = s.mid(6);
+    } else if (s.startsWith("tls://", Qt::CaseInsensitive) || s.startsWith("ssl://", Qt::CaseInsensitive)) {
+        s = s.mid(6);
+    }
+    QStringList parts = s.split(':');
+    if (parts.size() == 3 && (parts.last() == "s" || parts.last() == "t")) {
+        server.tls = parts.takeLast() == "s";
+    }
+    bool ok = false;
+    const int port = parts.size() == 2 ? parts.last().toInt(&ok) : 0;
+    server.host = parts.value(0).trimmed().toLower();
+    if (parts.size() != 2 || server.host.isEmpty() || server.host.contains('/') || !ok || port < 1 || port > 65535) {
+        return fail("Enter the server as host:port, for example electrum.example.org:50002.");
+    }
+    server.port = quint16(port);
+    if (!server.tls && !server.isOnion() && !server.isLocal()) {
+        return fail("An unencrypted connection (tcp://) is only allowed to an .onion address or a server on your local network.");
+    }
+    return server;
+}
+
 void ElectrumClient::connectToServer(const ElectrumServer &server) {
     disconnectFromServer();
     m_server = server;
@@ -49,12 +86,14 @@ void ElectrumClient::connectToServer(const ElectrumServer &server) {
     m_ready = false;
     m_buffer.clear();
 
-    if (!server.tls && !server.isOnion()) {
+    if (!server.tls && !server.isOnion() && !server.isLocal()) {
         fail("Refusing an unencrypted connection to a clearnet server");
         return;
     }
 
-    m_socket->setProxy(m_proxy);
+    // A server on this computer or the local network is reached directly
+    // (Tor cannot reach it), as for local Monero nodes.
+    m_socket->setProxy(server.isLocal() ? QNetworkProxy(QNetworkProxy::NoProxy) : m_proxy);
     QTimer::singleShot(connectTimeoutMs, this, [this, host = server.host] {
         if (!m_ready && !m_failed && m_server.host == host) fail("Connection timed out");
     });

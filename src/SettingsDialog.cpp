@@ -10,8 +10,13 @@
 #include <QCloseEvent>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QLabel>
+#include <QLineEdit>
 #include <QMessageBox>
+#include <QVBoxLayout>
 
+#include "coins/ElectrumClient.h"
 #include "libwalletqt/WalletManager.h"
 #include "utils/AppData.h"
 #include "utils/Icons.h"
@@ -197,6 +202,45 @@ void Settings::setupNetworkTab() {
 
     // Proxy
     connect(ui->proxyWidget, &NetworkProxyWidget::proxySettingsChanged, this, &Settings::onProxySettingsChanged);
+
+    // Biscuit: the user's own Bitcoin / Litecoin (Electrum) servers.
+    auto *coinServers = new QWidget(this);
+    auto *coinLayout = new QVBoxLayout(coinServers);
+    auto *intro = new QLabel("By default Biscuit uses public Electrum servers. Set your own server "
+                             "(Electrs, Fulcrum, Electrum Personal Server… on Umbrel, Start9 or a node of yours) "
+                             "and Biscuit connects only to it: no public server sees your addresses.", coinServers);
+    intro->setWordWrap(true);
+    coinLayout->addWidget(intro);
+    auto *form = new QFormLayout;
+    for (auto [key, label, example] : {std::tuple{Config::electrumServerBTC, "Bitcoin server:", "e.g. umbrel.local:50002"},
+                                       std::tuple{Config::electrumServerLTC, "Litecoin server:", "e.g. 192.168.1.20:50001"}}) {
+        auto *edit = new QLineEdit(conf()->get(key).toString(), coinServers);
+        edit->setPlaceholderText(QString("Public servers (%1)").arg(example));
+        edit->setClearButtonEnabled(true);
+        form->addRow(label, edit);
+        const auto configKey = key;
+        connect(edit, &QLineEdit::editingFinished, this, [this, edit, configKey] {
+            const QString text = edit->text().trimmed();
+            QString error;
+            if (!text.isEmpty() && !biscuit::coins::ElectrumServer::parse(text, &error)) {
+                Utils::showError(this, "Invalid server", error);
+                return;
+            }
+            if (conf()->get(configKey).toString() != text) {
+                conf()->set(configKey, text);
+                emit coinServersChanged();
+            }
+        });
+    }
+    coinLayout->addLayout(form);
+    auto *help = new QLabel("Format: host:port (encrypted, TLS). A self-signed certificate is accepted and remembered "
+                            "on first connection. Unencrypted (tcp://host:port) only for an .onion address or a "
+                            "server on your local network. Leave empty to use the public servers.", coinServers);
+    help->setWordWrap(true);
+    help->setStyleSheet("color: gray;");
+    coinLayout->addWidget(help);
+    coinLayout->addStretch();
+    ui->tabWidget_network->addTab(coinServers, "Bitcoin && Litecoin");
 
     // Websocket
     // [Obtain third-party data]

@@ -80,6 +80,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::minimizeToTray, {QS("minimizeToTray"), false}},
         {Config::disableWebsocket, {QS("disableWebsocket"), false}},
         {Config::dataTorOnly, {QS("dataTorOnly"), false}},
+        {Config::electrumServerBTC, {QS("electrumServerBTC"), ""}},
+        {Config::electrumServerLTC, {QS("electrumServerLTC"), ""}},
         {Config::offlineMode, {QS("offlineMode"), false}},
 
         // Transactions

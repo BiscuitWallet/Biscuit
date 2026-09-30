@@ -90,6 +90,8 @@ public:
         // Network -> Websocket
         disableWebsocket,
         dataTorOnly,        // Biscuit: third-party data through Tor even outside Tor mode
+        electrumServerBTC,  // Biscuit: own Electrum server ("host:port", tcp:// for .onion or local), empty = public servers
+        electrumServerLTC,
 
         // Network -> Offline
         offlineMode,

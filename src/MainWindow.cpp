@@ -767,6 +767,15 @@ void MainWindow::onWebsocketStatusChanged(bool enabled) {
 void MainWindow::onProxySettingsChangedConnect() {
     m_nodes->connectToNode();
     this->onProxySettingsChanged();
+    // Bitcoin / Litecoin follow the new proxy (Tor on or off) right away.
+    this->onCoinServersChanged();
+}
+
+void MainWindow::onCoinServersChanged() {
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    if (vault->isUnlocked()) {
+        vault->applyNetworkSettings();
+    }
 }
 
 void MainWindow::onProxySettingsChanged() {

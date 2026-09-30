@@ -202,6 +202,11 @@ void WindowManager::showSettings(Nodes *nodes, QWidget *parent, bool showProxyTa
     connect(&settings, &Settings::skinChanged, this, &WindowManager::onChangeTheme);
     connect(&settings, &Settings::updateBalance, this, &WindowManager::updateBalance);
     connect(&settings, &Settings::proxySettingsChanged, this, &WindowManager::onProxySettingsChanged);
+    connect(&settings, &Settings::coinServersChanged, [this] {
+        for (const auto &window : m_windows) {
+            window->onCoinServersChanged();
+        }
+    });
     connect(&settings, &Settings::websocketStatusChanged, this, &WindowManager::onWebsocketStatusChanged);
     connect(&settings, &Settings::offlineMode, this, &WindowManager::offlineMode);
     connect(&settings, &Settings::manualFeeSelectionEnabled, this, &WindowManager::manualFeeSelectionEnabled);

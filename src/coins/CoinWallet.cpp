@@ -90,6 +90,16 @@ void CoinWallet::setProxy(const QNetworkProxy &proxy) {
     }
 }
 
+void CoinWallet::setConnection(const QNetworkProxy &proxy, const ElectrumServer &server) {
+    const bool changed = proxy != m_proxy || server.host != m_customServer.host
+                         || server.port != m_customServer.port || server.tls != m_customServer.tls;
+    m_proxy = proxy;
+    m_customServer = server;
+    if (m_running && changed) {
+        connectToServer();
+    }
+}
+
 void CoinWallet::setCustomServer(const ElectrumServer &server) {
     m_customServer = server;
     if (m_running) {

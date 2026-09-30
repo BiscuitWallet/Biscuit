@@ -49,6 +49,8 @@ public:
     void setProxy(const QNetworkProxy &proxy);
     // Empty host = pick a random built-in server.
     void setCustomServer(const ElectrumServer &server);
+    // Proxy and server together, reconnecting once if anything changed.
+    void setConnection(const QNetworkProxy &proxy, const ElectrumServer &server);
     // Servers this wallet connects to, as "ssl://host:port" (or "tcp://" for
     // an onion server): the custom one, or all the built-in ones.
     QStringList electrumUrls() const;

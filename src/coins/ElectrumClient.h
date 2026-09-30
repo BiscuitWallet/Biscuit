@@ -6,6 +6,8 @@
 
 #include <functional>
 
+#include <optional>
+
 #include <QHash>
 #include <QNetworkProxy>
 #include <QObject>
@@ -20,10 +22,16 @@ namespace biscuit::coins {
 struct ElectrumServer {
     QString host;
     quint16 port = 0;
-    bool tls = true;          // plain TCP only for .onion servers (Tor encrypts)
+    bool tls = true;          // plain TCP only for .onion (Tor encrypts) and local network servers
 
     bool isOnion() const { return host.endsWith(".onion"); }
+    // This computer or the local network (a home node: Umbrel, Start9…).
+    bool isLocal() const;
     QString toString() const { return QString("%1:%2").arg(host).arg(port); }
+
+    // "host:port" (TLS), "tls://host:port" or "ssl://host:port", "tcp://host:port"
+    // (plain: only .onion and local network), or Electrum's "host:port:s" / ":t".
+    static std::optional<ElectrumServer> parse(const QString &text, QString *error = nullptr);
 };
 
 // One connection to an Electrum server (JSON-RPC over TLS, one line per message).

@@ -39,6 +39,7 @@ signals:
     void showTrayIcon(bool visible);
     void websocketStatusChanged(bool enabled);
     void proxySettingsChanged();
+    void coinServersChanged();   // Biscuit: own Bitcoin / Litecoin servers
     void updateBalance();
     void offlineMode(bool offline);
     void pluginConfigured(const QString &id);

@@ -88,6 +88,7 @@ public:
 public slots:
     void onPreferredFiatCurrencyChanged();
     void onHideUpdateNotifications(bool hidden);
+    void onCoinServersChanged();   // Biscuit: reconnects Bitcoin / Litecoin
 
 signals:
     void updateIcons();

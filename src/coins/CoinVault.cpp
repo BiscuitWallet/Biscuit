@@ -498,13 +498,16 @@ void CoinVault::applyNetworkSettings() {
     }
     const bool onionOnly = proxy == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool();
     for (CoinWallet *w : allWallets()) {
+        // The user's own server, if set: then only that one is used.
+        const auto key = w->params() == coins::bitcoin() ? Config::electrumServerBTC : Config::electrumServerLTC;
+        const auto server = ElectrumServer::parse(conf()->get(key).toString()).value_or(ElectrumServer{{}, 0, true});
         // No onion Electrum server is built in yet: in onion-only mode the
-        // wallets stay offline rather than contacting clearnet servers.
-        if (onionOnly) {
+        // wallets stay offline unless the user's server is an onion one.
+        if (onionOnly && !server.isOnion()) {
             w->stop();
             continue;
         }
-        w->setProxy(networkProxy);   // reconnects if running
+        w->setConnection(networkProxy, server);   // reconnects if anything changed
         if (!w->isRunning()) w->start();
     }
 }
