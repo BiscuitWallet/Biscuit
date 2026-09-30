@@ -1,6 +1,6 @@
-Name "Feather Wallet"
+Name "Biscuit"
 
-OutFile "${CUR_PATH}\contrib\installers\windows\FeatherWalletSetup-@PROJECT_VERSION@.exe"
+OutFile "${CUR_PATH}\contrib\installers\windows\BiscuitSetup-@PROJECT_VERSION@.exe"
 RequestExecutionLevel highest
 SetCompressor /SOLID lzma
 SetDateSave off
@@ -15,7 +15,7 @@ Unicode true
 !define MUI_FINISHPAGE_NOAUTOCLOSE
 !define MUI_STARTMENUPAGE_DEFAULTFOLDER "$(^Name)"
 !define MUI_FINISHPAGE_RUN "$WINDIR\explorer.exe"
-!define MUI_FINISHPAGE_RUN_PARAMETERS $INSTDIR\feather.exe
+!define MUI_FINISHPAGE_RUN_PARAMETERS $INSTDIR\biscuit.exe
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
@@ -40,18 +40,18 @@ Var StartMenuGroup
 !insertmacro MUI_LANGUAGE English
 
 # Installer attributes
-InstallDir "$PROGRAMFILES64\Feather Wallet"
+InstallDir "$PROGRAMFILES64\Biscuit"
 CRCCheck force
 XPStyle on
 BrandingText " "
 ShowInstDetails show
 VIProductVersion @PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@.0
-VIAddVersionKey ProductName "Feather Wallet"
+VIAddVersionKey ProductName "Biscuit"
 VIAddVersionKey ProductVersion "@PROJECT_VERSION@"
-VIAddVersionKey CompanyName "Feather Wallet"
-VIAddVersionKey CompanyWebsite "https://featherwallet.org"
+VIAddVersionKey CompanyName "Biscuit Wallet"
+VIAddVersionKey CompanyWebsite "https://biscuitwallet.com"
 VIAddVersionKey FileVersion "@PROJECT_VERSION@"
-VIAddVersionKey FileDescription "Installer for Feather Wallet"
+VIAddVersionKey FileDescription "Installer for Biscuit"
 VIAddVersionKey LegalCopyright "Copyright (C) 2020-@COPYRIGHT_YEAR@ @COPYRIGHT_HOLDERS@"
 ShowUninstDetails show
 
@@ -59,8 +59,11 @@ ShowUninstDetails show
 Section -Main SEC0000
     SetOutPath $INSTDIR
     SetOverwrite on
-    File "${CUR_PATH}\build\bin\feather.exe"
+    File "${CUR_PATH}\build\bin\biscuit.exe"
+    ; The atomic swap helper (GPL-3.0), next to the app.
+    File "${CUR_PATH}\build\bin\biscuit-swapd.exe"
     File /oname=LICENSE.txt "${CUR_PATH}\LICENSE"
+    File /oname=LICENSE.biscuit-swapd.txt "${CUR_PATH}\external\biscuit-swapd\LICENSE"
     SetOutPath $INSTDIR\tor
     File /r \feather\contrib\depends\x86_64-w64-mingw32\Tor\*.*
     SetOutPath $INSTDIR
@@ -72,20 +75,22 @@ Section -post SEC0001
     Delete /REBOOTOK "$INSTDIR\unins000.dat"
     WriteUninstaller "$INSTDIR\uninstall.exe"
     SetShellVarContext all
-    Delete /REBOOTOK "$SMPROGRAMS\Feather Wallet.lnk"
     SetShellVarContext current
     !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     CreateDirectory $SMPROGRAMS\$StartMenuGroup
-    CreateShortcut "$SMPROGRAMS\$StartMenuGroup\$(^Name).lnk" $INSTDIR\feather.exe
+    CreateShortcut "$SMPROGRAMS\$StartMenuGroup\$(^Name).lnk" $INSTDIR\biscuit.exe
     CreateShortcut "$SMPROGRAMS\$StartMenuGroup\Uninstall $(^Name).lnk" $INSTDIR\uninstall.exe
-    CreateShortcut "$Desktop\$(^Name).lnk" "$InstDir\feather.exe"
+    CreateShortcut "$Desktop\$(^Name).lnk" "$InstDir\biscuit.exe"
     !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
 # Uninstaller sections
 Section /o -un.Main UNSEC0000
-    Delete /REBOOTOK $INSTDIR\feather.exe
+    Delete /REBOOTOK $INSTDIR\biscuit.exe
+    Delete /REBOOTOK $INSTDIR\biscuit-swapd.exe
+    Delete /REBOOTOK $INSTDIR\biscuit-swapd.exe.new
     Delete /REBOOTOK $INSTDIR\LICENSE.txt
+    Delete /REBOOTOK $INSTDIR\LICENSE.biscuit-swapd.txt
     RMDir /r /REBOOTOK $INSTDIR\tor
 SectionEnd
 
