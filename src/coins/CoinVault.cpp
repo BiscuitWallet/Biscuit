@@ -552,4 +552,21 @@ void CoinVault::save() {
     }
 }
 
+void CoinVault::setCoinSelection(const CoinParams &params, const QStringList &coinKeys) {
+    if (coinKeys.isEmpty()) {
+        m_coinSelection.remove(params.ticker);
+    } else {
+        m_coinSelection.insert(params.ticker, {selectedId(params), coinKeys});
+    }
+    emit coinSelectionChanged();
+}
+
+QStringList CoinVault::coinSelection(const CoinParams &params) const {
+    const auto it = m_coinSelection.constFind(params.ticker);
+    if (it == m_coinSelection.cend() || it->walletId != selectedId(params)) {
+        return {};   // chosen in another wallet of the coin
+    }
+    return it->coinKeys;
+}
+
 }

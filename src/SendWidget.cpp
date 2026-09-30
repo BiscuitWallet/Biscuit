@@ -7,6 +7,7 @@
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 
 #include "coins/CoinPicker.h"
 #include "coins/CoinSendController.h"
@@ -123,6 +124,24 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     ui->formLayout->getWidgetPosition(ui->label_PayTo, &row, &role);
     ui->formLayout->insertRow(row + 1, QString(), m_coinHint);
 
+    // Coin control: the coins chosen in the Coins tab, until sent or cleared.
+    m_coinSelectionRow = new QWidget(this);
+    auto *selectionLayout = new QHBoxLayout(m_coinSelectionRow);
+    selectionLayout->setContentsMargins(0, 0, 0, 0);
+    m_coinSelection = new QLabel(m_coinSelectionRow);
+    auto *clearSelection = new QPushButton("Use any coins", m_coinSelectionRow);
+    clearSelection->setAutoDefault(false);
+    connect(clearSelection, &QPushButton::clicked, this, [this] {
+        if (m_coin) {
+            biscuit::coins::CoinVault::forWallet(m_wallet)->setCoinSelection(*m_coin, {});
+        }
+    });
+    selectionLayout->addWidget(m_coinSelection);
+    selectionLayout->addWidget(clearSelection);
+    selectionLayout->addStretch();
+    ui->formLayout->insertRow(row + 2, QString(), m_coinSelectionRow);
+    connect(vault, &biscuit::coins::CoinVault::coinSelectionChanged, this, &SendWidget::updateCoinMode);
+
     m_coinUnit = new QLabel(this);
     ui->horizontalLayout_2->addWidget(m_coinUnit);
 
@@ -142,6 +161,11 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     ui->formLayout->insertRow(row + 1, m_coinFeeTitle, feeRow);
     connect(m_coinFee, &QComboBox::currentIndexChanged, this, &SendWidget::updateCoinFeeLabel);
 
+    this->updateCoinMode();
+}
+
+void SendWidget::showCoin(int coinIndex) {
+    m_coinPicker->setCurrentIndex(coinIndex);
     this->updateCoinMode();
 }
 
@@ -171,6 +195,9 @@ void SendWidget::updateCoinMode() {
     ui->formLayout->setRowVisible(m_xmrBalanceRow, !coinMode);
 
     ui->formLayout->setRowVisible(m_coinHint, coinMode);
+    const QStringList chosen = coinMode ? biscuit::coins::CoinVault::forWallet(m_wallet)->coinSelection(*m_coin) : QStringList();
+    m_coinSelection->setText(QString("Coin control: only the %1 coin(s) selected in the Coins tab").arg(chosen.size()));
+    ui->formLayout->setRowVisible(m_coinSelectionRow, !chosen.isEmpty());
     ui->formLayout->setRowVisible(m_coinFeeTitle, coinMode);
     m_coinUnit->setVisible(coinMode);
     ui->comboCurrencySelection->setVisible(!coinMode);

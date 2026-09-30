@@ -10,6 +10,7 @@
 #include "Amount.h"
 #include "utils/Appearance.h"
 #include "widgets/PixelIcons.h"
+#include "coins/CoinCoinsSwitcher.h"
 #include "coins/CoinHistorySwitcher.h"
 #include "coins/CoinReceiveSwitcher.h"
 #include "coins/CoinSetupDialog.h"
@@ -272,7 +273,13 @@ void MainWindow::initWidgets() {
 
     // [Coins]
     m_coinsWidget = new CoinsWidget(m_wallet, this);
-    ui->coinsWidgetLayout->addWidget(m_coinsWidget);
+    // Biscuit: Monero, Bitcoin and Litecoin coin control.
+    auto *coinsSwitcher = new biscuit::coins::CoinCoinsSwitcher(m_wallet, m_coinsWidget, this);
+    ui->coinsWidgetLayout->addWidget(coinsSwitcher);
+    connect(coinsSwitcher, &biscuit::coins::CoinCoinsSwitcher::sendCoins, this, [this](int coinIndex) {
+        m_sendWidget->showCoin(coinIndex);
+        ui->tabWidget->setCurrentIndex(this->findTab("Send"));
+    });
 
     // [Contacts]
     m_contactsWidget = new ContactsWidget(m_wallet, this);

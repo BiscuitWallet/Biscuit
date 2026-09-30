@@ -88,6 +88,12 @@ public:
     // the file: the user needs their own backup to add it again.
     bool removeWallet(const QString &id, QString *error);
 
+    // Coin control: the coins chosen in the Coins tab for the next send of
+    // a coin (keys from CoinWallet::coinKey), for its selected wallet.
+    // Cleared when another wallet is selected or the send is done.
+    void setCoinSelection(const CoinParams &params, const QStringList &coinKeys);
+    QStringList coinSelection(const CoinParams &params) const;
+
     // Applies the current proxy settings (Tor) to the Electrum connections.
     void applyNetworkSettings();
 
@@ -96,6 +102,7 @@ signals:
     void locked();
     void walletsChanged();    // added, removed or selection changed
     void walletUpdated();     // balance, history or height of any wallet
+    void coinSelectionChanged();
 
 private:
     explicit CoinVault(Wallet *wallet);
@@ -112,6 +119,8 @@ private:
     std::optional<walletfile::Session> m_session;
     QList<Entry> m_entries;
     QHash<QString, QString> m_selected;   // ticker -> entry id
+    struct CoinSelection { QString walletId; QStringList coinKeys; };
+    QHash<QString, CoinSelection> m_coinSelection;   // ticker -> chosen coins
     QString m_created;
     QTimer m_saveTimer;
 };

@@ -9,6 +9,7 @@
 #include <QMap>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 
 #include "Electrum.h"
 #include "ElectrumClient.h"
@@ -67,8 +68,16 @@ public:
 
     double feeRate(int targetBlocks) const;   // sat/vB
 
+    // Coin control: `onlyCoins` (coinKey values) restricts the spend to those
+    // coins, frozen or not; without it, frozen coins are never spent.
     std::optional<TxPlan> planSend(const QString &address, quint64 amount, double feeRate, bool sendAll,
-                                   QString *error) const;
+                                   QString *error, const QStringList &onlyCoins = {}) const;
+
+    // The wallet's unspent coins, and freezing (kept in the encrypted file).
+    QList<electrum::WalletUtxo> coins() const { return m_utxos; }
+    static QString coinKey(const Utxo &utxo) { return QString("%1:%2").arg(utxo.txid).arg(utxo.vout); }
+    bool isFrozen(const Utxo &utxo) const { return m_frozen.contains(coinKey(utxo)); }
+    void setFrozen(const QStringList &coinKeys, bool frozen);
     // Signs and broadcasts a plan the user has confirmed.
     void broadcast(const TxPlan &plan, std::function<void(const QString &txid, const QString &error)> callback);
 
@@ -115,6 +124,7 @@ private:
     QMap<QString, qint64> m_firstSeen;                      // txid -> unix time (cache)
     QList<electrum::HistoryEntry> m_history;
     QList<electrum::WalletUtxo> m_utxos;
+    QSet<QString> m_frozen;   // coinKey values
     int m_height = 0;
 };
 

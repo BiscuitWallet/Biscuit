@@ -25,6 +25,7 @@ public:
     void fill(const QString &address, const QString &description, double amount = 0, bool overrideDescription = true);
     void fill(double amount);
     void clearFields();
+    void showCoin(int coinIndex);   // 0 Monero, 1 Bitcoin, 2 Litecoin
     void payToMany();
     ~SendWidget() override;
 
@@ -69,6 +70,8 @@ private:
     QLabel *m_xmrBalance = nullptr;
     void updateXmrBalance();
     QLabel *m_coinHint = nullptr;
+    QWidget *m_coinSelectionRow = nullptr;
+    QLabel *m_coinSelection = nullptr;
     QLabel *m_coinUnit = nullptr;
     QLabel *m_coinFeeTitle = nullptr;
     QComboBox *m_coinFee = nullptr;

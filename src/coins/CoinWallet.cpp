@@ -44,6 +44,9 @@ CoinWallet::CoinWallet(HdAccount account, const QJsonObject &cache, QObject *par
         for (auto it = heights.begin(); it != heights.end(); ++it) {
             if (m_rawTxs.contains(it.key())) m_heights.insert(it.key(), it.value().toInt());
         }
+        for (const QJsonValue &key : cache.value("frozen").toArray()) {
+            m_frozen.insert(key.toString());
+        }
         const QJsonObject pins = cache.value("pins").toObject();
         for (auto it = pins.begin(); it != pins.end(); ++it) {
             m_pins.insert(it.key(), it.value().toString());
@@ -332,6 +335,14 @@ void CoinWallet::recompute() {
     emit cacheChanged();
 }
 
+void CoinWallet::setFrozen(const QStringList &coinKeys, bool frozen) {
+    for (const QString &key : coinKeys) {
+        if (frozen) m_frozen.insert(key); else m_frozen.remove(key);
+    }
+    emit updated();
+    emit cacheChanged();
+}
+
 CoinWallet::Balance CoinWallet::balance() const {
     Balance b;
     for (const auto &u : m_utxos) {
@@ -353,7 +364,7 @@ double CoinWallet::feeRate(int targetBlocks) const {
 }
 
 std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amount, double feeRate, bool sendAll,
-                                           QString *error) const {
+                                           QString *error, const QStringList &onlyCoins) const {
     // Silent payment: plan with a Taproot output of the right size, then
     // derive the real one from the coins the plan spends.
     const auto silent = sp::addressFor(address, params());
@@ -370,7 +381,12 @@ std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amoun
     }
     QList<Utxo> spendable;
     for (const auto &u : m_utxos) {
-        if (u.utxo.height > 0 || ownTxs.contains(u.utxo.txid)) spendable.append(u.utxo);
+        const bool chosen = onlyCoins.isEmpty() ? !isFrozen(u.utxo) : onlyCoins.contains(coinKey(u.utxo));
+        if (chosen && (u.utxo.height > 0 || ownTxs.contains(u.utxo.txid))) spendable.append(u.utxo);
+    }
+    if (spendable.isEmpty() && !onlyCoins.isEmpty()) {
+        if (error) *error = "The selected coins are no longer available, or not confirmed yet.";
+        return std::nullopt;
     }
     const QByteArray change = m_account.scriptPubKey(HdAccount::Change, m_scanner.firstUnused(HdAccount::Change));
     auto plan = planTransaction(spendable, *destination, amount, feeRate, change, sendAll, error);
@@ -437,6 +453,13 @@ QJsonObject CoinWallet::cache() const {
         {"txs", txs},
         {"heights", heights},
         {"pins", pins},
+        {"frozen", [this] {
+            QJsonArray a;
+            for (const auto &u : m_utxos) {
+                if (isFrozen(u.utxo)) a.append(coinKey(u.utxo));   // spent coins drop out
+            }
+            return a;
+        }()},
         {"receiveNext", int(m_scanner.firstUnused(HdAccount::Receive))},
         {"changeNext", int(m_scanner.firstUnused(HdAccount::Change))},
         {"height", m_height},

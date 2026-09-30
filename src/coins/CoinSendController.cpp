@@ -134,7 +134,8 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
 
     const double rate = coin->feeRate(targetBlocks);
     QString error;
-    const auto plan = coin->planSend(address, amount, rate, sendAll, &error);
+    const QStringList onlyCoins = m_vault->coinSelection(params);
+    const auto plan = coin->planSend(address, amount, rate, sendAll, &error, onlyCoins);
     if (!plan) {
         Utils::showError(parent, "Unable to send", error);
         return;
@@ -156,7 +157,9 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
     const QString to = plan->silentPaymentAddress.isEmpty() ? address
         : QString("%1\n(silent payment: a new address only the recipient can recognize, %2)")
               .arg(address, segwitAddress(plan->outputs.at(plan->changeOutput == 0 ? 1 : 0).scriptPubKey, params));
-    box.setInformativeText(QString("%1To: %2\nNetwork fee: %3 (%4 sat/vB)\nTotal: %5")
+    const QString coinsLine = onlyCoins.isEmpty() ? QString()
+        : QString("Coins: %1 selected in the Coins tab\n").arg(plan->inputs.size());
+    box.setInformativeText(coinsLine + QString("%1To: %2\nNetwork fee: %3 (%4 sat/vB)\nTotal: %5")
                            .arg(from, to, format(plan->fee))
                            .arg(rate, 0, 'f', 1)
                            .arg(format(plan->amount + plan->fee)));
@@ -167,11 +170,13 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
     }
 
     QPointer<QWidget> guard(parent);
-    coin->broadcast(*plan, [this, guard](const QString &txid, const QString &error) {
+    const CoinParams *sentParams = &params;
+    coin->broadcast(*plan, [this, guard, sentParams](const QString &txid, const QString &error) {
         if (!error.isEmpty()) {
             Utils::showError(guard, "Transaction not sent", error);
             return;
         }
+        m_vault->setCoinSelection(*sentParams, {});   // those coins are spent
         Utils::showInfo(guard, "Transaction sent", QString("Transaction ID: %1").arg(txid));
         emit sent(txid);
     });
