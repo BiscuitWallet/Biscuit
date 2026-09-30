@@ -80,8 +80,8 @@ podman run --rm \
             export CC_x86_64_pc_windows_gnu="$MINGW/x86_64-w64-mingw32-gcc"
             export CXX_x86_64_pc_windows_gnu="$MINGW/x86_64-w64-mingw32-g++"
             export AR_x86_64_pc_windows_gnu="$MINGW/x86_64-w64-mingw32-ar"
-            # C++ runtime linked statically (-static-libstdc++ in the
-            # workspace's cargo config): the cc crate must not add -lstdc++,
+            # C++ runtime linked statically (-static-libstdc++ in the cargo
+            # config of the workspace): the cc crate must not add -lstdc++,
             # which would make the helper need libstdc++-6.dll.
             export CXXSTDLIB_x86_64_pc_windows_gnu=""
             rustup target add --toolchain "$RUST_VERSION" "$TARGET"
