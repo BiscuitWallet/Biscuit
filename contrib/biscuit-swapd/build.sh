@@ -86,7 +86,7 @@ podman run --rm \
             # that one (empty CXXSTDLIB) and add -lstdc++ at the end of the
             # link, static. Joined with the rustflags of the workspace config.
             export CXXSTDLIB_x86_64_pc_windows_gnu=""
-            export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-static -C link-arg=-Wl,-Bstatic -C link-arg=-lstdc++ -C link-arg=-lpthread"
+            export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-static -C link-arg=-Wl,-Bstatic -C link-arg=-lstdc++ -C link-arg=-lpthread -C link-arg=-lmingwex -C link-arg=-Wl,-Bdynamic -C link-arg=-lucrt -C link-arg=-lkernel32"
             rustup target add --toolchain "$RUST_VERSION" "$TARGET"
             cargo +"$RUST_VERSION" build --release --locked -p biscuit-swapd --target "$TARGET"
             x86_64-w64-mingw32-strip -o "/out/$OUT" "target/$TARGET/release/biscuit-swapd.exe"
