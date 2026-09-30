@@ -11,6 +11,7 @@
 
 #include "Addresses.h"
 #include "ElectrumServers.h"
+#include "SilentPayments.h"
 
 namespace biscuit::coins {
 
@@ -353,7 +354,11 @@ double CoinWallet::feeRate(int targetBlocks) const {
 
 std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amount, double feeRate, bool sendAll,
                                            QString *error) const {
-    const auto destination = addressToScriptPubKey(address, params());
+    // Silent payment: plan with a Taproot output of the right size, then
+    // derive the real one from the coins the plan spends.
+    const auto silent = sp::addressFor(address, params());
+    const auto destination = silent ? std::optional<QByteArray>(sp::taprootScript(QByteArray(32, '\0')))
+                                    : addressToScriptPubKey(address, params());
     if (!destination) {
         if (error) *error = QString("This is not a valid %1 address.").arg(params().name);
         return std::nullopt;
@@ -368,7 +373,27 @@ std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amoun
         if (u.utxo.height > 0 || ownTxs.contains(u.utxo.txid)) spendable.append(u.utxo);
     }
     const QByteArray change = m_account.scriptPubKey(HdAccount::Change, m_scanner.firstUnused(HdAccount::Change));
-    return planTransaction(spendable, *destination, amount, feeRate, change, sendAll, error);
+    auto plan = planTransaction(spendable, *destination, amount, feeRate, change, sendAll, error);
+    if (!plan || !silent) {
+        return plan;
+    }
+
+    // Our coins are all P2WPKH: every input counts toward the shared secret.
+    QList<sp::Input> inputs;
+    for (const Utxo &u : plan->inputs) {
+        inputs.append({u.txid, u.vout, m_account.privateKey(u.chain, u.index), false, true});
+    }
+    const auto keys = sp::outputKeys(inputs, {*silent}, error);
+    if (!keys) {
+        return std::nullopt;
+    }
+    for (int i = 0; i < plan->outputs.size(); ++i) {
+        if (i != plan->changeOutput) {
+            plan->outputs[i].scriptPubKey = sp::taprootScript(keys->first());
+        }
+    }
+    plan->silentPaymentAddress = address.trimmed();
+    return plan;
 }
 
 void CoinWallet::broadcast(const TxPlan &plan, std::function<void(const QString &, const QString &)> callback) {

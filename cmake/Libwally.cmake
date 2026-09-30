@@ -65,7 +65,9 @@ ExternalProject_Add(libwally_build
 add_library(wallycore STATIC IMPORTED GLOBAL)
 set_target_properties(wallycore PROPERTIES
         IMPORTED_LOCATION "${LIBWALLY_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${LIBWALLY_SRC}/include"
+        # secp256k1's public headers too (silent payments use its scalar and
+        # point operations that libwally does not wrap).
+        INTERFACE_INCLUDE_DIRECTORIES "${LIBWALLY_SRC}/include;${LIBWALLY_SRC}/src/secp256k1/include"
         INTERFACE_LINK_LIBRARIES "${LIBWALLY_SECP_LIB}"
 )
 add_dependencies(wallycore libwally_build)

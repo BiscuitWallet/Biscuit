@@ -37,7 +37,7 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
             }
             return std::nullopt;
         }
-        if (isValidAddress(trimmed, *params)) {
+        if (isValidSendDestination(trimmed, *params)) {
             return CoinDestination{params, trimmed, {}};
         }
     }
@@ -106,7 +106,7 @@ bool CoinSendController::ensureReady(QWidget *parent) {
 
 void CoinSendController::send(QWidget *parent, const CoinParams &params, const QString &address,
                               const QString &amountText, int targetBlocks) {
-    if (!isValidAddress(address, params)) {
+    if (!isValidSendDestination(address, params)) {
         Utils::showError(parent, "Invalid address", QString("This is not a valid %1 address.").arg(params.name));
         return;
     }
@@ -152,8 +152,12 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
     // With several wallets of this coin, say which one pays.
     const QString from = m_vault->wallets(params).size() > 1
                          ? QString("From: %1 wallet \"%2\"\n").arg(params.ticker, m_vault->selectedName(params)) : QString();
+    // A silent payment goes to a one-time address only the recipient can find.
+    const QString to = plan->silentPaymentAddress.isEmpty() ? address
+        : QString("%1\n(silent payment: a new address only the recipient can recognize, %2)")
+              .arg(address, segwitAddress(plan->outputs.at(plan->changeOutput == 0 ? 1 : 0).scriptPubKey, params));
     box.setInformativeText(QString("%1To: %2\nNetwork fee: %3 (%4 sat/vB)\nTotal: %5")
-                           .arg(from, address, format(plan->fee))
+                           .arg(from, to, format(plan->fee))
                            .arg(rate, 0, 'f', 1)
                            .arg(format(plan->amount + plan->fee)));
     box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);

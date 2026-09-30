@@ -10,6 +10,7 @@
 #include <wally_crypto.h>
 #include <wally_script.h>
 
+#include "SilentPayments.h"
 #include "WallyInit.h"
 
 namespace biscuit::coins {
@@ -35,7 +36,11 @@ QByteArray p2wpkhScriptPubKey(const QByteArray &publicKey) {
 }
 
 QString p2wpkhAddress(const QByteArray &publicKey, const CoinParams &params) {
-    const QByteArray script = p2wpkhScriptPubKey(publicKey);
+    return segwitAddress(p2wpkhScriptPubKey(publicKey), params);
+}
+
+QString segwitAddress(const QByteArray &script, const CoinParams &params) {
+    ensureWallyInit();
     if (script.isEmpty()) {
         return {};
     }
@@ -96,6 +101,10 @@ QString electrumScriptHash(const QByteArray &scriptPubKey) {
     }
     std::reverse(std::begin(hash), std::end(hash));
     return QString::fromLatin1(QByteArray(reinterpret_cast<const char *>(hash), sizeof(hash)).toHex());
+}
+
+bool isValidSendDestination(const QString &address, const CoinParams &params) {
+    return isValidAddress(address, params) || sp::addressFor(address, params).has_value();
 }
 
 }

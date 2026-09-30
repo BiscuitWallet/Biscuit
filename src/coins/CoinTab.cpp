@@ -204,7 +204,7 @@ void CoinTab::send() {
         return;
     }
     const QString address = ui->line_payTo->text().trimmed();
-    if (!isValidAddress(address, m_params)) {
+    if (!isValidSendDestination(address, m_params)) {
         Utils::showError(this, "Invalid address", QString("This is not a valid %1 address.").arg(m_params.name));
         return;
     }

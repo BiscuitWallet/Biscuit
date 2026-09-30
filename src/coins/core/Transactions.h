@@ -38,6 +38,9 @@ struct TxPlan {
     quint64 amount = 0;        // sent to the destination
     quint64 fee = 0;
     int estimatedVsize = 0;
+    // Paying a silent payment address (sp1…): the output is a one-time
+    // Taproot key derived from the chosen inputs (BIP-352).
+    QString silentPaymentAddress;
 };
 
 struct SignedTx {
