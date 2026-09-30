@@ -4,9 +4,9 @@
 #include "PageWalletSeed.h"
 #include "ui_PageWalletSeed.h"
 
-#include <QMessageBox>
 #include <QCheckBox>
 #include <QDialogButtonBox>
+#include <QLabel>
 #include <QPushButton>
 #include <QShortcut>
 #include <QTimer>
@@ -25,12 +25,18 @@ PageWalletSeed::PageWalletSeed(WizardFields *fields, QWidget *parent)
     ui->setupUi(this);
 
     ui->frame_notice->setInfo(icons()->icon("seed"), "The following **16** words can be used to recover access to your wallet.\n\n"
-                                                   "Write them down and store them somewhere safe and secure.\n\n"
                                                    "Biscuit uses **Polyseed**. For more information click **Help**.");
 
     ui->frame_invalidSeed->setInfo(icons()->icon("warning"), "Biscuit was unable to generate a valid seed.\n"
                                                              "This should never happen.\n"
                                                              "Please contact the developers immediately.");
+
+    // Biscuit: the backup advice sits right under the words (no pop-up).
+    m_seedAdvice = new QLabel("Write these words on paper, in order, and keep them offline. Never share them "
+                              "and never type them on a website: anyone who has them can take your funds. "
+                              "If you lose them, you lose access to your wallet.", this);
+    m_seedAdvice->setWordWrap(true);
+    ui->verticalLayout->insertWidget(ui->verticalLayout->indexOf(ui->frame_seedDisplay) + 1, m_seedAdvice);
 
     QShortcut *shortcut = new QShortcut(QKeySequence("Ctrl+K"), this);
     QObject::connect(shortcut, &QShortcut::activated, [&](){
@@ -61,6 +67,7 @@ PageWalletSeed::PageWalletSeed(WizardFields *fields, QWidget *parent)
 void PageWalletSeed::initializePage() {
     ui->frame_invalidSeed->hide();
     ui->frame_seedDisplay->show();
+    m_seedAdvice->show();
 
     this->generateSeed();
     this->setTitle(m_fields->modeText);
@@ -134,6 +141,7 @@ void PageWalletSeed::onOptionsClicked() {
 void PageWalletSeed::onError() {
     ui->frame_invalidSeed->show();
     ui->frame_seedDisplay->hide();
+    m_seedAdvice->hide();
     m_seedError = true;
     this->completeChanged();
 }
@@ -148,20 +156,6 @@ bool PageWalletSeed::validatePage() {
         return false;
     }
     if (!m_restoreHeight) {
-        return false;
-    }
-
-    QMessageBox seedWarning(this);
-    seedWarning.setWindowTitle("Warning!");
-    seedWarning.setText("• Never disclose your seed\n"
-                        "• Never type it on a website\n"
-                        "• Store it safely (offline)\n"
-                        "• Do not lose your seed!");
-    auto btn_goBack = seedWarning.addButton("Go back", QMessageBox::RejectRole);
-    seedWarning.addButton("I understand", QMessageBox::AcceptRole);
-
-    seedWarning.exec();
-    if (seedWarning.clickedButton() == btn_goBack) {
         return false;
     }
 

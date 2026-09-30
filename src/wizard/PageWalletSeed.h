@@ -6,6 +6,8 @@
 
 #include <QWizardPage>
 
+class QLabel;
+
 #include "utils/Seed.h"
 
 class WizardFields;
@@ -48,6 +50,7 @@ private:
     bool m_roulette = false;
     int m_rouletteSpin = 15;
     Seed m_seed;
+    QLabel *m_seedAdvice = nullptr;
 };
 
 #endif //FEATHER_CREATEWALLETSEED_H
