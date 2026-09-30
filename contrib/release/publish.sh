@@ -4,7 +4,9 @@
 #
 #   files/releases/<platform>/biscuit-<version>-<platform>.zip   (Guix builds)
 #   files/releases/packages/<version>/…                          (.deb, .rpm, Arch, .tar.gz)
+#   files/releases/source/biscuit-<version>.tar.gz               (source archive)
 #   files/releases/hashes-<version>-plain.txt                    (SHA-256 list, clearsigned)
+#   files/releases/biscuit-release-key.asc                       (public release key)
 #   updates.json                                                  (latest version per platform)
 #
 #   contrib/release/publish.sh <version> <guix output dir> [--dry-run]
@@ -49,11 +51,23 @@ if [ -d "$OUTPUT/x86_64-linux-gnu/packages" ]; then
         -exec cp {} "$STAGE/files/releases/packages/$VERSION/" \;
 fi
 
+# The source archive of the release (git ls-files, submodules included).
+if [ -f "$OUTPUT/dist-archive/biscuit-$VERSION.tar.gz" ]; then
+    mkdir -p "$STAGE/files/releases/source"
+    cp "$OUTPUT/dist-archive/biscuit-$VERSION.tar.gz" "$STAGE/files/releases/source/"
+else
+    echo "source archive dist-archive/biscuit-$VERSION.tar.gz missing" >&2
+    exit 1
+fi
+
+# The release key, next to the files it signs.
+gpg --export --armor "$KEY" > "$STAGE/files/releases/biscuit-release-key.asc"
+
 # SHA-256 of everything, by file name, signed (the updater checks the
 # signature against the key built into the app, then the archive's hash).
 (
     cd "$STAGE/files/releases"
-    find . -type f ! -name "hashes-*" -print0 | sort -z | xargs -0 shasum -a 256 \
+    find . -type f ! -name "hashes-*" ! -name "*.asc" -print0 | sort -z | xargs -0 shasum -a 256 \
         | sed -E 's#  \./([^/]+/)*#  #' > "hashes-$VERSION.txt"
 )
 gpg --local-user "$KEY" --digest-algo SHA256 --clearsign \
