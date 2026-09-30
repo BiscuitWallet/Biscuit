@@ -20,13 +20,11 @@
 
 namespace {
     constexpr int UrlRole = Qt::UserRole;
-    constexpr int SummaryRole = Qt::UserRole + 1;
 }
 
 NewsWidget::NewsWidget(QWidget *parent)
         : QWidget(parent)
         , m_list(new QTreeWidget(this))
-        , m_summary(new QLabel(this))
         , m_open(new QPushButton("Read on biscuitwallet.com", this))
         , m_empty(new QLabel("No news yet.", this))
 {
@@ -37,17 +35,15 @@ NewsWidget::NewsWidget(QWidget *parent)
     m_list->header()->setStretchLastSection(true);
     m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    m_summary->setTextFormat(Qt::PlainText);   // never render feed content as HTML
-    m_summary->setWordWrap(true);
-    m_summary->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
     m_open->setIcon(icons()->icon("external-link.svg"));
     m_open->setAutoDefault(false);
     m_empty->setStyleSheet("color: gray;");
 
     auto *bottom = new QHBoxLayout;
-    bottom->addWidget(m_summary, 1);
-    bottom->addWidget(m_open, 0, Qt::AlignTop);
+    // The summary is a tooltip on the title: the list keeps the space.
+    bottom->addStretch(1);
+    bottom->addWidget(m_open);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -78,7 +74,7 @@ void NewsWidget::update(const QJsonArray &news) {
         item->setText(0, QLocale().toString(date, QLocale::ShortFormat));
         item->setText(1, obj.value("title").toString());
         item->setData(0, UrlRole, obj.value("url").toString());
-        item->setData(0, SummaryRole, obj.value("summary").toString());
+        item->setToolTip(1, obj.value("summary").toString().toHtmlEscaped());
         if (item->data(0, UrlRole).toString() == selectedUrl) {
             m_list->setCurrentItem(item);
         }
@@ -95,8 +91,6 @@ void NewsWidget::update(const QJsonArray &news) {
 
 void NewsWidget::showSelected() {
     const QTreeWidgetItem *item = m_list->currentItem();
-    m_summary->setText(item ? item->data(0, SummaryRole).toString() : QString());
-    m_summary->setVisible(item);
     m_open->setVisible(item);
 }
 

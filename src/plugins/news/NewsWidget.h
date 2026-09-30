@@ -25,7 +25,6 @@ private:
     void openSelected();
 
     QTreeWidget *m_list;
-    QLabel *m_summary;
     QPushButton *m_open;
     QLabel *m_empty;
 };
