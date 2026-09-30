@@ -7,6 +7,7 @@
 #include <QDirIterator>
 
 #include "utils/config.h"
+#include "utils/NetworkManager.h"
 #include "utils/Utils.h"
 #include "utils/os/tails.h"
 #include "utils/os/whonix.h"
@@ -126,7 +127,7 @@ void TorManager::checkConnection() {
         this->setConnectionState(code == 0);
     }
 
-    else if (conf()->get(Config::proxy).toInt() != Config::Proxy::Tor) {
+    else if (conf()->get(Config::proxy).toInt() != Config::Proxy::Tor && !dataThroughTor()) {
         this->setConnectionState(false);
     }
 
@@ -275,8 +276,9 @@ bool TorManager::shouldStartTorDaemon() {
     return false;
 #endif
 
-    // Don't start a Tor daemon if our proxy config isn't set to Tor
-    if (conf()->get(Config::proxy).toInt() != Config::Proxy::Tor) {
+    // Don't start a Tor daemon if our proxy config isn't set to Tor, unless
+    // third-party data is set to go through Tor only (Biscuit).
+    if (conf()->get(Config::proxy).toInt() != Config::Proxy::Tor && !dataThroughTor()) {
         return false;
     }
 

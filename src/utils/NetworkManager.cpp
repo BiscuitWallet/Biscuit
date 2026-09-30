@@ -26,6 +26,23 @@ QNetworkAccessManager* getNetworkSocks5()
     return g_networkManagerSocks5;
 }
 
+QNetworkAccessManager *g_networkManagerDataTor = nullptr;
+
+QNetworkAccessManager* getNetworkDataTor()
+{
+    if (!g_networkManagerDataTor) {
+        g_networkManagerDataTor = new QNetworkAccessManager(QCoreApplication::instance());
+        // No route until WindowManager sets the Tor proxy: never clearnet.
+        g_networkManagerDataTor->setProxy(QNetworkProxy(QNetworkProxy::Socks5Proxy, "127.0.0.1", 1));
+    }
+    return g_networkManagerDataTor;
+}
+
+bool dataThroughTor()
+{
+    return conf()->get(Config::dataTorOnly).toBool() && conf()->get(Config::proxy).toInt() != Config::Proxy::Tor;
+}
+
 QNetworkAccessManager* getNetworkClearnet()
 {
     if (!g_networkManagerClearnet) {

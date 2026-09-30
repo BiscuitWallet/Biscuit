@@ -20,6 +20,7 @@ public:
     QNetworkReply* getJson(QObject *parent, const QString &url, const QList<QPair<QByteArray, QByteArray>> &headers = {});
     QNetworkReply* postJson(QObject *parent, const QString &url, const QJsonObject &data);
     void setUserAgent(const QString &userAgent);
+    QString userAgent() const { return m_userAgent; }
 
 private:
     QString m_userAgent = "Mozilla/5.0 (Windows NT 10.0; rv:102.0) Gecko/20100101 Firefox/102.0";

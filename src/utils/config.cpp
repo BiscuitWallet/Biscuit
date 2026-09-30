@@ -79,6 +79,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::showTrayIcon, {QS("showTrayIcon"), true}},
         {Config::minimizeToTray, {QS("minimizeToTray"), false}},
         {Config::disableWebsocket, {QS("disableWebsocket"), false}},
+        {Config::dataTorOnly, {QS("dataTorOnly"), false}},
         {Config::offlineMode, {QS("offlineMode"), false}},
 
         // Transactions

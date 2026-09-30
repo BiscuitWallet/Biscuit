@@ -15,6 +15,7 @@
 #include "libwalletqt/WalletManager.h"
 #include "utils/AppData.h"
 #include "utils/Icons.h"
+#include "utils/NetworkManager.h"
 #include "utils/nodes.h"
 #include "utils/WebsocketNotifier.h"
 #include "widgets/NetworkProxyWidget.h"
@@ -199,10 +200,22 @@ void Settings::setupNetworkTab() {
 
     // Websocket
     // [Obtain third-party data]
-    ui->checkBox_enableWebsocket->setChecked(!conf()->get(Config::disableWebsocket).toBool());
-    connect(ui->checkBox_enableWebsocket, &QCheckBox::toggled, [this](bool checked){
-        conf()->set(Config::disableWebsocket, !checked);
-        this->enableWebsocket(checked);
+    // Biscuit: Enabled, Tor only (through Tor even outside Tor mode, like
+    // Cake Wallet's Fiat API setting) or Disabled.
+    enum { DataEnabled, DataTorOnly, DataDisabled };
+    const int dataMode = conf()->get(Config::disableWebsocket).toBool() ? DataDisabled
+                       : conf()->get(Config::dataTorOnly).toBool() ? DataTorOnly : DataEnabled;
+    ui->combo_thirdPartyData->setCurrentIndex(dataMode);
+    ui->combo_thirdPartyData->setToolTip("Tor only: fetched through Tor even when Tor mode is off. "
+                                         "Disabled: balances are shown in crypto only.");
+    connect(ui->combo_thirdPartyData, &QComboBox::currentIndexChanged, [this](int index){
+        const bool torBefore = dataThroughTor();
+        conf()->set(Config::disableWebsocket, index == DataDisabled);
+        conf()->set(Config::dataTorOnly, index == DataTorOnly);
+        if (dataThroughTor() != torBefore) {
+            emit proxySettingsChanged();   // starts or stops our Tor, reroutes the data
+        }
+        this->enableWebsocket(index != DataDisabled);
     });
 
     // Overview

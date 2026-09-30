@@ -89,6 +89,7 @@ public:
 
         // Network -> Websocket
         disableWebsocket,
+        dataTorOnly,        // Biscuit: third-party data through Tor even outside Tor mode
 
         // Network -> Offline
         offlineMode,

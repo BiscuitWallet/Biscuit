@@ -735,6 +735,18 @@ void WindowManager::onProxySettingsChanged() {
         getNetworkSocks5()->setProxy(proxy);
     }
 
+    // Biscuit: "Tor only" third-party data outside Tor mode goes through our
+    // Tor daemon (or the system Tor it found), never clearnet.
+    if (dataThroughTor()) {
+        QString host = conf()->get(Config::socks5Host).toString();
+        quint16 port = conf()->get(Config::socks5Port).toString().toUShort();
+        if (!torManager()->isLocalTor() || torManager()->isAlreadyRunning()) {
+            host = torManager()->featherTorHost;
+            port = torManager()->featherTorPort;
+        }
+        getNetworkDataTor()->setProxy(QNetworkProxy{QNetworkProxy::Socks5Proxy, host, port});
+    }
+
     qWarning() << "Proxy: " << proxy.hostName() << " " << proxy.port();
 
     // Switch websocket to new proxy and update URL

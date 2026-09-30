@@ -42,7 +42,7 @@ private:
         QTimer *timer;
     };
 
-    void fetch(const Source &source);
+    bool fetch(const Source &source);   // false: waiting for Tor
     void schedule(Source &source, int baseMs);
 
     QList<Source> m_sources;

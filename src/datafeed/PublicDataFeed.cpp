@@ -4,11 +4,14 @@
 #include "PublicDataFeed.h"
 
 #include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QRandomGenerator>
 
 #include "PublicData.h"
 #include "utils/config.h"
+#include "utils/NetworkManager.h"
 #include "utils/Networking.h"
+#include "utils/TorManager.h"
 
 namespace biscuit::datafeed {
 
@@ -25,8 +28,9 @@ PublicDataFeed::PublicDataFeed(QObject *parent)
         m_sources[i].timer->setSingleShot(true);
         connect(m_sources[i].timer, &QTimer::timeout, this, [this, i] {
             Source &source = m_sources[i];
-            fetch(source);
-            schedule(source, source.intervalMinutes * 60 * 1000);
+            // Waiting for Tor ("Tor only"): try again soon, not at the next interval.
+            const bool sent = fetch(source);
+            schedule(source, sent ? source.intervalMinutes * 60 * 1000 : 20 * 1000);
         });
     }
 }
@@ -68,15 +72,31 @@ void PublicDataFeed::schedule(Source &source, int baseMs) {
     source.timer->start(baseMs + jitterMs);
 }
 
-void PublicDataFeed::fetch(const Source &source) {
+bool PublicDataFeed::fetch(const Source &source) {
     if (!m_running || !allowedByProxySettings()) {
-        return;
+        return true;   // not waiting for anything: back at the usual interval
     }
 
-    Networking network{this};
-    QNetworkReply *reply = network.getJson(this, source.url);
+    QNetworkReply *reply = nullptr;
+    if (dataThroughTor()) {
+        // "Tor only": through Tor or not at all, retried at the next interval
+        // while Tor is still connecting.
+        if (conf()->get(Config::offlineMode).toBool()) {
+            return true;
+        }
+        if (!torManager()->torConnected) {
+            return false;
+        }
+        QNetworkRequest request{QUrl(source.url)};
+        request.setRawHeader("User-Agent", Networking(this).userAgent().toUtf8());
+        reply = getNetworkDataTor()->get(request);
+        reply->setParent(this);
+    } else {
+        Networking network{this};
+        reply = network.getJson(this, source.url);
+    }
     if (!reply) {
-        return;  // offline mode
+        return true;  // offline mode
     }
 
     const Converter convert = source.convert;
@@ -89,6 +109,7 @@ void PublicDataFeed::fetch(const Source &source) {
             emit message(*msg);
         }
     });
+    return true;
 }
 
 }
