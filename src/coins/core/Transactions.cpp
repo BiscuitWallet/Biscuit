@@ -156,6 +156,84 @@ std::optional<TxPlan> planTransaction(const QList<Utxo> &utxos, const QByteArray
     return plan;
 }
 
+std::optional<TxPlan> planFeeBump(const QList<Utxo> &inputs, const QList<TxOutput> &outputs, int changeOutput,
+                                  quint64 originalFee, double feeRate, QList<Utxo> extraCoins,
+                                  const QByteArray &changeScript, QString *error) {
+    if (inputs.isEmpty() || outputs.isEmpty() || changeOutput >= outputs.size()) {
+        setError(error, "This transaction cannot be replaced");
+        return std::nullopt;
+    }
+    if (!(feeRate >= 1.0) || feeRate > 10000.0) {
+        setError(error, "Invalid fee rate");
+        return std::nullopt;
+    }
+
+    TxPlan plan;
+    plan.inputs = inputs;
+    quint64 paid = 0;   // what the payment itself needs (every output but the change)
+    for (int i = 0; i < outputs.size(); ++i) {
+        if (i != changeOutput) {
+            plan.outputs.append(outputs[i]);
+            paid += outputs[i].value;
+        }
+    }
+    const QByteArray change = changeOutput >= 0 ? outputs[changeOutput].scriptPubKey : changeScript;
+    std::sort(extraCoins.begin(), extraCoins.end(), [](const Utxo &a, const Utxo &b) { return a.value > b.value; });
+
+    for (;;) {
+        quint64 total = 0;
+        for (const Utxo &u : plan.inputs) total += u.value;
+        QList<int> sizes;
+        for (const TxOutput &o : plan.outputs) sizes.append(o.scriptPubKey.size());
+
+        // With change first; without it when the change would be dust.
+        for (const bool withChange : {true, false}) {
+            QList<int> s = sizes;
+            if (withChange) s.append(change.size());
+            const int vsize = estimateVsize(plan.inputs.size(), s);
+            const quint64 fee = std::max(feeFor(vsize, feeRate), originalFee + quint64(vsize));
+            if (total < paid + fee) {
+                continue;
+            }
+            const quint64 rest = total - paid - fee;
+            if (withChange && rest < dustLimit) {
+                continue;
+            }
+            TxPlan result = plan;
+            result.fee = fee + (withChange ? 0 : rest);
+            result.estimatedVsize = vsize;
+            result.amount = paid;
+            if (withChange) {
+                // Keep the change where it was (or at the end when new).
+                const int at = changeOutput >= 0 ? std::min<int>(changeOutput, result.outputs.size()) : result.outputs.size();
+                result.outputs.insert(at, {change, rest});
+                result.changeOutput = at;
+            }
+            return result;
+        }
+        if (extraCoins.isEmpty()) {
+            setError(error, "Not enough funds to raise the fee: the change is too small and no other coin is available");
+            return std::nullopt;
+        }
+        plan.inputs.append(extraCoins.takeFirst());
+        if (change.isEmpty()) {
+            setError(error, "Invalid change address");
+            return std::nullopt;
+        }
+    }
+}
+
+int transactionVsize(const QString &hex) {
+    ensureWallyInit();
+    wally_tx *raw = nullptr;
+    if (wally_tx_from_hex(hex.toLatin1().constData(), WALLY_TX_FLAG_USE_WITNESS, &raw) != WALLY_OK) {
+        return 0;
+    }
+    std::unique_ptr<wally_tx, TxDeleter> tx(raw);
+    size_t vsize = 0;
+    return wally_tx_get_vsize(tx.get(), &vsize) == WALLY_OK ? int(vsize) : 0;
+}
+
 std::optional<SignedTx> signTransaction(const TxPlan &plan, const HdAccount &account, quint32 lockTime, QString *error) {
     ensureWallyInit();
     if (plan.inputs.isEmpty() || plan.outputs.isEmpty()) {

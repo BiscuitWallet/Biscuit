@@ -335,6 +335,82 @@ void CoinWallet::recompute() {
     emit cacheChanged();
 }
 
+std::optional<quint64> CoinWallet::transactionFee(const QString &txid) const {
+    for (const auto &e : m_history) {
+        if (e.txid == txid) return e.fee;
+    }
+    return std::nullopt;
+}
+
+double CoinWallet::transactionFeeRate(const QString &txid) const {
+    const auto fee = transactionFee(txid);
+    const int vsize = transactionVsize(m_rawTxs.value(txid));
+    return fee && vsize > 0 ? double(*fee) / vsize : 0.0;
+}
+
+std::optional<TxPlan> CoinWallet::planBump(const QString &txid, double feeRate, QString *error) const {
+    auto fail = [error](const QString &message) -> std::optional<TxPlan> {
+        if (error) *error = message;
+        return std::nullopt;
+    };
+    const auto fee = transactionFee(txid);
+    if (!m_parsed.contains(txid) || m_heights.value(txid, 1) > 0 || !fee) {
+        return fail("Only an unconfirmed transaction sent from this wallet can be sped up.");
+    }
+    const electrum::ParsedTx &tx = m_parsed.value(txid);
+
+    // A later transaction of ours spending its outputs would be cancelled.
+    for (auto it = m_parsed.constBegin(); it != m_parsed.constEnd(); ++it) {
+        if (it.key() == txid || !m_heights.contains(it.key())) continue;
+        for (const auto &in : it.value().inputs) {
+            if (in.prevTxid == txid) {
+                return fail("Another transaction already spends this one's change: wait for it to confirm.");
+            }
+        }
+    }
+
+    // The original inputs, as our coins (all of them are ours: the fee is known).
+    QList<Utxo> inputs;
+    for (const auto &in : tx.inputs) {
+        const auto parent = m_parsed.constFind(in.prevTxid);
+        if (parent == m_parsed.cend() || int(in.prevVout) >= parent->outputs.size()) {
+            return fail("The coins this transaction spends are not known.");
+        }
+        const auto &out = parent->outputs.at(in.prevVout);
+        const auto ref = m_scripts.constFind(out.scriptPubKey);
+        if (ref == m_scripts.cend()) {
+            return fail("This transaction spends coins of another wallet.");
+        }
+        Utxo u;
+        u.txid = in.prevTxid;
+        u.vout = in.prevVout;
+        u.value = out.value;
+        u.chain = ref->chain;
+        u.index = ref->index;
+        u.height = m_heights.value(in.prevTxid);
+        inputs.append(u);
+    }
+    // Its outputs; the first one to our change chain is the change.
+    QList<TxOutput> outputs;
+    int changeOutput = -1;
+    for (int i = 0; i < tx.outputs.size(); ++i) {
+        const auto &out = tx.outputs.at(i);
+        outputs.append({out.scriptPubKey, out.value});
+        const auto ref = m_scripts.constFind(out.scriptPubKey);
+        if (changeOutput < 0 && ref != m_scripts.cend() && ref->chain == HdAccount::Change) {
+            changeOutput = i;
+        }
+    }
+    // Extra coins if the change is not enough: confirmed, not frozen, and
+    // not created by the transaction being replaced.
+    QList<Utxo> extra;
+    for (const auto &u : m_utxos) {
+        if (u.utxo.height > 0 && u.utxo.txid != txid && !isFrozen(u.utxo)) extra.append(u.utxo);
+    }
+    const QByteArray change = m_account.scriptPubKey(HdAccount::Change, m_scanner.firstUnused(HdAccount::Change));
+    return planFeeBump(inputs, outputs, changeOutput, *fee, feeRate, extra, change, error);
+}
+
 void CoinWallet::setFrozen(const QStringList &coinKeys, bool frozen) {
     for (const QString &key : coinKeys) {
         if (frozen) m_frozen.insert(key); else m_frozen.remove(key);

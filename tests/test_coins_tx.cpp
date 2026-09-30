@@ -142,6 +142,64 @@ private slots:
         QCOMPARE(signTransaction(plan, acc, 850000)->hex, tx->hex);
     }
 
+    void feeBump() {
+        const QList<Utxo> inputs = {utxo(150000)};
+        const QList<TxOutput> outputs = {{dest, 100000}, {change, 48500}};   // fee 1500
+        const quint64 originalFee = 1500;
+
+        // The change pays the extra fee; inputs and payment are unchanged.
+        auto plan = planFeeBump(inputs, outputs, 1, originalFee, 20, {}, change);
+        QVERIFY(plan.has_value());
+        QCOMPARE(plan->inputs.size(), 1);
+        QCOMPARE(plan->outputs.size(), 2);
+        QCOMPARE(plan->outputs[0].scriptPubKey, dest);
+        QCOMPARE(plan->outputs[0].value, quint64(100000));
+        QCOMPARE(plan->changeOutput, 1);
+        QVERIFY(plan->fee >= quint64(20 * plan->estimatedVsize));
+        QCOMPARE(sum(plan->inputs), sum(plan->outputs) + plan->fee);
+
+        // Relay rule: at least the old fee + 1 sat/vB, even at a low rate.
+        plan = planFeeBump(inputs, outputs, 1, originalFee, 1, {}, change);
+        QVERIFY(plan.has_value());
+        QCOMPARE(plan->fee, originalFee + quint64(plan->estimatedVsize));
+
+        // Change a bit short: it goes to the fee rather than adding a coin
+        // (cheaper, and no new link between coins).
+        const QList<TxOutput> tight = {{dest, 100000}, {change, 49000}};   // fee 1000
+        plan = planFeeBump({utxo(150000)}, tight, 1, 1000, 400, {utxo(90000, 2, "33")}, change);
+        QVERIFY(plan.has_value());
+        QCOMPARE(plan->inputs.size(), 1);
+        QCOMPARE(plan->outputs.size(), 1);
+        QCOMPARE(plan->fee, quint64(50000));
+
+        // Far too small: another coin comes in, with change.
+        plan = planFeeBump({utxo(150000)}, tight, 1, 1000, 500, {utxo(30000, 1, "22"), utxo(90000, 2, "33")}, change);
+        QVERIFY(plan.has_value());
+        QCOMPARE(plan->inputs.size(), 2);
+        QCOMPARE(plan->inputs[1].value, quint64(90000));   // the largest first
+        QCOMPARE(plan->outputs[0].value, quint64(100000));
+        QCOMPARE(sum(plan->inputs), sum(plan->outputs) + plan->fee);
+
+        // ...and without another coin, it says so.
+        QString error;
+        QVERIFY(!planFeeBump({utxo(150000)}, tight, 1, 1000, 500, {}, change, &error));
+        QVERIFY(error.contains("Not enough"));
+
+        // No change output: a coin is added, with new change.
+        plan = planFeeBump({utxo(101500)}, {{dest, 100000}}, -1, 1500, 10, {utxo(50000, 1, "44")}, change);
+        QVERIFY(plan.has_value());
+        QCOMPARE(plan->inputs.size(), 2);
+        QCOMPARE(plan->outputs.size(), 2);
+        QCOMPARE(plan->outputs[plan->changeOutput].scriptPubKey, change);
+        QCOMPARE(sum(plan->inputs), sum(plan->outputs) + plan->fee);
+
+        // The size of a real signed transaction reads back.
+        const HdAccount acc = account();
+        const auto tx = signTransaction(*planFeeBump(inputs, outputs, 1, originalFee, 20, {}, change), acc, 850000);
+        QVERIFY(tx.has_value());
+        QCOMPARE(transactionVsize(tx->hex), tx->vsize);
+    }
+
     void refusesToSignForeignOrBrokenInput() {
         const HdAccount acc = account();
         TxPlan plan;

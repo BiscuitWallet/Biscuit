@@ -17,6 +17,8 @@ class Wallet;
 
 namespace biscuit::coins {
 
+class CoinWallet;
+
 class CoinVault;
 
 // A destination typed or pasted in the Send tab, if it is Bitcoin or Litecoin:
@@ -48,6 +50,10 @@ public:
     // `amountText` is a decimal amount or "all".
     void send(QWidget *parent, const CoinParams &params, const QString &address, const QString &amountText,
               int targetBlocks);
+
+    // Replace-by-fee: asks for a higher fee rate, shows the new fee, and
+    // replaces the unconfirmed transaction after confirmation.
+    void bumpFee(QWidget *parent, const CoinParams &params, CoinWallet *coin, const QString &txid);
 
     // Makes sure Bitcoin/Litecoin are set up and unlocked, asking the user if needed.
     // Also used by Swap to receive into this wallet.

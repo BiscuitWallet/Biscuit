@@ -78,6 +78,14 @@ public:
     static QString coinKey(const Utxo &utxo) { return QString("%1:%2").arg(utxo.txid).arg(utxo.vout); }
     bool isFrozen(const Utxo &utxo) const { return m_frozen.contains(coinKey(utxo)); }
     void setFrozen(const QStringList &coinKeys, bool frozen);
+    // Replace-by-fee for one of our unconfirmed transactions: same payment,
+    // higher fee (see planFeeBump). Refused when a later transaction spends
+    // its outputs, which the replacement would cancel.
+    std::optional<TxPlan> planBump(const QString &txid, double feeRate, QString *error) const;
+    // Fee and fee rate (sat/vB) of one of our transactions, if known.
+    std::optional<quint64> transactionFee(const QString &txid) const;
+    double transactionFeeRate(const QString &txid) const;
+
     // Signs and broadcasts a plan the user has confirmed.
     void broadcast(const TxPlan &plan, std::function<void(const QString &txid, const QString &error)> callback);
 

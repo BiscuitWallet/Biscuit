@@ -3,6 +3,8 @@
 
 #include "CoinSendController.h"
 
+#include <cmath>
+
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPushButton>
@@ -179,6 +181,65 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
         m_vault->setCoinSelection(*sentParams, {});   // those coins are spent
         Utils::showInfo(guard, "Transaction sent", QString("Transaction ID: %1").arg(txid));
         emit sent(txid);
+    });
+}
+
+void CoinSendController::bumpFee(QWidget *parent, const CoinParams &params, CoinWallet *coin, const QString &txid) {
+    if (!coin || !ensureReady(parent)) {
+        return;
+    }
+    if (coin->status() != CoinWallet::Status::Synchronized) {
+        Utils::showError(parent, "Not synchronized", QString("Wait until %1 is synchronized, then try again.").arg(params.name));
+        return;
+    }
+    auto format = [&params](quint64 sats) {
+        return QString("%1 %2").arg(biscuit::swap::amount::fromAtomic(sats, params.decimals), params.ticker);
+    };
+    const double current = coin->transactionFeeRate(txid);
+    const double fast = coin->feeRate(2);
+    const double minimum = std::ceil(current + 1.0);
+    bool ok = false;
+    const double rate = QInputDialog::getDouble(parent, "Speed up the transaction",
+            QString("Current fee: %1 sat/vB. Fast confirmation now: about %2 sat/vB.\n\nNew fee rate (sat/vB):")
+                .arg(current, 0, 'f', 1).arg(fast, 0, 'f', 1),
+            std::max(minimum, std::ceil(fast)), minimum, 10000.0, 1, &ok);
+    if (!ok) {
+        return;
+    }
+    QString error;
+    const auto plan = coin->planBump(txid, rate, &error);
+    if (!plan) {
+        Utils::showError(parent, "Unable to speed up", error);
+        return;
+    }
+
+    QMessageBox box(parent);
+    box.setWindowTitle("Speed up the transaction");
+    box.setIcon(QMessageBox::Question);
+    box.setText("Replace the transaction with a higher fee?");
+    const auto oldFee = coin->transactionFee(txid);
+    QString details = QString("Network fee: %1 → %2 (%3 sat/vB)\nThe payment itself does not change.")
+                          .arg(oldFee ? format(*oldFee) : QString("?"), format(plan->fee))
+                          .arg(double(plan->fee) / std::max(1, plan->estimatedVsize), 0, 'f', 1);
+    if (plan->changeOutput < 0) {
+        details += "\nThe change is used up by the fee.";
+    }
+    box.setInformativeText(details);
+    box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    if (box.exec() != QMessageBox::Yes) {
+        return;
+    }
+    // The answer comes later; this controller may be gone by then.
+    QPointer<QWidget> guard(parent);
+    QPointer<CoinSendController> self(this);
+    coin->broadcast(*plan, [self, guard](const QString &newTxid, const QString &error) {
+        if (!error.isEmpty()) {
+            Utils::showError(guard, "Transaction not replaced", error);
+            return;
+        }
+        Utils::showInfo(guard, "Transaction replaced", QString("New transaction ID: %1").arg(newTxid));
+        if (self) emit self->sent(newTxid);
     });
 }
 

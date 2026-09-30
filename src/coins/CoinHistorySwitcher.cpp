@@ -13,6 +13,7 @@
 
 #include "Amount.h"
 #include "CoinPicker.h"
+#include "CoinSendController.h"
 #include "CoinWalletBar.h"
 #include "CoinVault.h"
 #include "CoinWallet.h"
@@ -29,6 +30,8 @@ namespace {
     enum Page { PageAll = 0, PageMonero, PageBitcoin, PageLitecoin };
     constexpr int TickerRole = Qt::UserRole;
     constexpr int SortRole = Qt::UserRole + 1;
+    constexpr int WalletIdRole = Qt::UserRole + 2;   // Bitcoin/Litecoin rows: which wallet
+    constexpr int BumpableRole = Qt::UserRole + 3;   // our unconfirmed payment: can be sped up
 
     QString explorerUrl(const QString &ticker, const QString &txid) {
         if (ticker == QLatin1String("BTC")) return QString("https://mempool.space/tx/%1").arg(txid);
@@ -108,6 +111,18 @@ QTreeWidget *CoinHistorySwitcher::makeTree(bool withCoinColumn) {
         const QString txid = item->text(ColTx);
         const QString ticker = item->data(ColDate, TickerRole).toString();
         QMenu menu(this);
+        if (item->data(ColDate, BumpableRole).toBool()) {
+            const QString walletId = item->data(ColDate, WalletIdRole).toString();
+            const CoinParams *params = ticker == bitcoin().ticker ? &bitcoin() : &litecoin();
+            menu.addAction("Speed up (raise the fee)…", [this, params, walletId, txid] {
+                for (const auto &entry : m_vault->wallets(*params)) {
+                    if (entry.id == walletId) {
+                        CoinSendController(m_wallet).bumpFee(this, *params, entry.wallet, txid);
+                    }
+                }
+            });
+            menu.addSeparator();
+        }
         menu.addAction("Copy transaction ID", [txid] { Utils::copyToClipboard(txid); });
         menu.addAction("View on block explorer", [this, ticker, txid] {
             Utils::externalLinkWarning(this, explorerUrl(ticker, txid));
@@ -147,6 +162,8 @@ void CoinHistorySwitcher::fillCoinTree(QTreeWidget *tree, const CoinParams &para
                 item->setTextAlignment(ColAmount, Qt::AlignRight | Qt::AlignVCenter);
                 item->setText(ColStatus, statusText(e.height <= 0, false, confirmations, 6));
                 item->setText(ColTx, e.txid);
+                item->setData(ColDate, WalletIdRole, entry.id);
+                item->setData(ColDate, BumpableRole, e.height <= 0 && e.fee.has_value() && e.delta < 0);
             }
         }
     }

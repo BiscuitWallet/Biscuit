@@ -67,6 +67,19 @@ std::optional<TxPlan> planTransaction(const QList<Utxo> &utxos, const QByteArray
                                       double feeRate, const QByteArray &changeScript, bool sendAll,
                                       QString *error = nullptr);
 
+// Replace-by-fee (BIP-125): the same payment again with a higher fee. Keeps
+// every input and every output of the original except the change
+// (`changeOutput`, -1 if none), which pays the extra fee; when it cannot,
+// adds coins from `extraCoins` (largest first) with change to `changeScript`.
+// The new fee is at least `feeRate` × size and exceeds the original fee by at
+// least 1 sat/vB of the new size (relay rule).
+std::optional<TxPlan> planFeeBump(const QList<Utxo> &inputs, const QList<TxOutput> &outputs, int changeOutput,
+                                  quint64 originalFee, double feeRate, QList<Utxo> extraCoins,
+                                  const QByteArray &changeScript, QString *error = nullptr);
+
+// Virtual size of a serialized transaction (hex), 0 if it cannot be parsed.
+int transactionVsize(const QString &hex);
+
 // Signs every input with the account keys (BIP143, SIGHASH_ALL, low-R) and
 // verifies each signature before returning. `lockTime` should be the current
 // block height (anti fee-sniping). Inputs signal replace-by-fee.
