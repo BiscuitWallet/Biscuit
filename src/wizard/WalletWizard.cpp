@@ -96,9 +96,6 @@ WalletWizard::WalletWizard(QWidget *parent)
     });
     connect(settingsButton, &QPushButton::clicked, this, &WalletWizard::showSettings);
 
-    connect(networkProxyPage, &PageNetworkProxy::initialNetworkConfigured, [this](){
-        emit initialNetworkConfigured();
-    });
     connect(networkWebsocketPage, &PageNetworkWebsocket::initialNetworkConfigured, [this](){
         emit initialNetworkConfigured();
     });
