@@ -15,6 +15,11 @@ PageNetworkProxy::PageNetworkProxy(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Biscuit: last page of the first-run network setup (prices and news
+    // are on by default, and can be turned off in the settings).
+    this->setCommitPage(true);
+    this->setButtonText(QWizard::CommitButton, "Next");
+
     connect(ui->radio_configureManually, &QRadioButton::toggled, [this](bool checked){
         ui->frame_privacyLevel->setVisible(checked);
         this->adjustSize();
@@ -32,7 +37,7 @@ void PageNetworkProxy::initializePage() {
 }
 
 int PageNetworkProxy::nextId() const {
-    return WalletWizard::Page_NetworkWebsocket;
+    return WalletWizard::Page_Menu;
 }
 
 bool PageNetworkProxy::validatePage() {
