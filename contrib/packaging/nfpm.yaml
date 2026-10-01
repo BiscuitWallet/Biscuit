@@ -61,7 +61,7 @@ overrides:
   rpm:
     depends: ["glibc >= 2.34", "fontconfig", "libstdc++", "libgcc"]
   archlinux:
-    depends: ["glibc", "fontconfig", "gcc-libs"]
+    depends: ["glibc", "fontconfig", "gcc-libs", "ttf-font"]   # ttf-font: a minimal Arch has no fonts at all
 
 rpm:
   group: Applications/Internet
