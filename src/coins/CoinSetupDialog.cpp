@@ -7,6 +7,7 @@
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
+#include <QFontDatabase>
 #include <QFormLayout>
 #include <QInputDialog>
 #include <QLabel>
@@ -17,6 +18,7 @@
 #include <QRandomGenerator>
 #include <QStackedWidget>
 #include <QVBoxLayout>
+#include <QtMath>
 
 #include "Bip39.h"
 #include "CoinParams.h"
@@ -41,11 +43,20 @@ namespace {
 }
 
 QPlainTextEdit *seedWordsView(const QString &mnemonic, QWidget *parent) {
-    auto *view = new QPlainTextEdit(numberedWords(mnemonic), parent);
+    const QString words = numberedWords(mnemonic);
+    auto *view = new QPlainTextEdit(words, parent);
     view->setReadOnly(true);
-    QFont mono("Menlo");
-    mono.setStyleHint(QFont::Monospace);
-    view->setFont(mono);
+    // The system's fixed-width font (Menlo is macOS only), and never wrapped:
+    // the view is as wide as the longest row, so every row keeps its 4 words.
+    view->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    view->setLineWrapMode(QPlainTextEdit::NoWrap);
+    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    int widest = 0;
+    for (const QString &row : words.split('\n')) {
+        widest = std::max(widest, view->fontMetrics().horizontalAdvance(row));
+    }
+    const int margins = 2 * (view->frameWidth() + qCeil(view->document()->documentMargin())) + 4;
+    view->setMinimumWidth(widest + margins);
     view->setMaximumHeight(view->fontMetrics().lineSpacing() * 7);
     return view;
 }
