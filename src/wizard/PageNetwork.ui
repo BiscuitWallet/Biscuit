@@ -61,7 +61,7 @@
      <item>
       <widget class="QLabel" name="label_6">
        <property name="text">
-        <string>However if you run you own node or prefer to configure manually feel free to do so.</string>
+        <string>However, if you run your own node or prefer to configure manually, feel free to do so.</string>
        </property>
        <property name="wordWrap">
         <bool>true</bool>
