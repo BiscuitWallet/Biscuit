@@ -13,6 +13,7 @@
 #include <QTabWidget>
 #include <QtMath>
 
+#include "utils/MacLayoutStyle.h"
 #include "utils/config.h"
 
 namespace Appearance {
@@ -21,6 +22,7 @@ void styleTabs(QTabWidget *tabs, bool centered) {
     Q_UNUSED(centered)   // centering: MacLayoutStyle, by tab bar name
     // Fusion draws flat, square tabs that match the rest of the interface.
     tabs->setDocumentMode(true);
+    MacLayoutStyle::drawFullTabBase(tabs);
 }
 
 namespace {

@@ -6,12 +6,45 @@
 #include <QAbstractButton>
 #include <QAbstractSpinBox>
 #include <QComboBox>
+#include <QEvent>
 #include <QLineEdit>
 #include <QPainter>
 #include <QStyleOption>
+#include <QTabBar>
 #include <QTabWidget>
 
 namespace {
+    // Paints the tab widget's base line itself, in place of Qt's document-mode
+    // paint event (which only draws it under the corner widgets). The tab bar
+    // paints on top: the selected tab opens onto its page.
+    class FullTabBase : public QObject {
+    public:
+        using QObject::QObject;
+
+    protected:
+        bool eventFilter(QObject *watched, QEvent *event) override {
+            if (event->type() != QEvent::Paint) {
+                return false;
+            }
+            auto *tabs = static_cast<QTabWidget *>(watched);
+            const QTabBar *bar = tabs->tabBar();
+            if (!bar->isVisible()) {
+                return true;
+            }
+            // Colours from the tab bar: it always follows the current palette.
+            QStyleOptionTabBarBase base;
+            base.initFrom(bar);
+            base.shape = bar->shape();
+            const int overlap = tabs->style()->pixelMetric(QStyle::PM_TabBarBaseOverlap, nullptr, bar);
+            base.rect = QRect(0, bar->geometry().bottom() - overlap + 1, tabs->width(), overlap);
+            base.tabBarRect = bar->geometry();
+            base.selectedTabRect = bar->tabRect(bar->currentIndex()).translated(bar->pos());
+            QPainter painter(tabs);
+            tabs->style()->drawPrimitive(QStyle::PE_FrameTabBarBase, &base, &painter, bar);
+            return true;
+        }
+    };
+
     bool isCenteredTabBar(const QWidget *bar) {
         return bar->objectName() == QLatin1String("mainTabBar") || bar->objectName() == QLatin1String("centeredTabBar");
     }
@@ -69,14 +102,12 @@ void MacLayoutStyle::drawPrimitive(PrimitiveElement element, const QStyleOption 
         QProxyStyle::drawPrimitive(PE_FrameLineEdit, option, painter, widget);
         return;
     }
-    if (element == PE_FrameTabBarBase && widget && isCenteredTabBar(widget) && painter->device() != widget) {
-        // Document-mode tab widget: the base line under its corner widget
-        // (the appearance button) starts at the corner widget, leaving a gap
-        // after the tab bar. Start it from the left edge instead.
-        QStyleOptionTabBarBase base = *qstyleoption_cast<const QStyleOptionTabBarBase *>(option);
-        base.rect.setLeft(0);
-        QProxyStyle::drawPrimitive(element, &base, painter, widget);
-        return;
-    }
     QProxyStyle::drawPrimitive(element, option, painter, widget);
+}
+
+void MacLayoutStyle::drawFullTabBase(QTabWidget *tabs) {
+    // Same as CoinPicker, whose line shows on every platform: the tab bar
+    // draws none, its parent draws it all.
+    tabs->tabBar()->setDrawBase(false);
+    tabs->installEventFilter(new FullTabBase(tabs));
 }

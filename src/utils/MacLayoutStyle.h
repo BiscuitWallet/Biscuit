@@ -6,6 +6,8 @@
 
 #include <QProxyStyle>
 
+class QTabWidget;
+
 // Fixes misaligned form rows with the native macOS style:
 //  - form labels are vertically centered on their field instead of pinned to
 //    the top of the row;
@@ -16,8 +18,6 @@
 //  - tab bars named "mainTabBar" (main tabs) or "centeredTabBar" (Swap) are
 //    centered, like the coin selectors, instead of pinned to the left;
 //  - the selected tab has exactly the window colour (Fusion lightened it);
-//  - the line under those tab bars runs on under the corner widget (the
-//    appearance button) without a gap;
 //  - the "Pay to" field (a multi-line PayToEdit) gets the same frame as the
 //    single-line fields next to it.
 // Used on every platform on top of Fusion.
@@ -34,6 +34,11 @@ public:
                      const QWidget *widget = nullptr) const override;
     void drawPrimitive(PrimitiveElement element, const QStyleOption *option, QPainter *painter,
                        const QWidget *widget = nullptr) const override;
+
+    // Draws the line under the tabs of a document-mode tab widget across its
+    // whole width, under the corner widget too, from the tab widget itself.
+    // Left to Qt, it was missing on Windows (main tabs, Swap tabs).
+    static void drawFullTabBase(QTabWidget *tabs);
 };
 
 #endif // BISCUIT_MACLAYOUTSTYLE_H

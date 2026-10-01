@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QLabel>
 #include <QStackedWidget>
+#include <QTabBar>
 #include <QTabWidget>
 #include <QLineEdit>
 #include <QStyleFactory>
@@ -44,6 +45,14 @@ int main(int argc, char *argv[]) {
 
     if (qEnvironmentVariableIsSet("PREVIEW_PAGE")) {
         for (auto *stack : widget->findChildren<QStackedWidget *>()) stack->setCurrentIndex(qEnvironmentVariableIntValue("PREVIEW_PAGE"));
+    }
+    if (qEnvironmentVariableIsSet("PREVIEW_TABS")) {
+        // Tab widgets as the app sets them up (Appearance::styleTabs), centered.
+        for (auto *tabs : widget->findChildren<QTabWidget *>()) {
+            tabs->setDocumentMode(true);
+            tabs->tabBar()->setObjectName("centeredTabBar");
+            if (qEnvironmentVariableIntValue("PREVIEW_TABS") != 2) MacLayoutStyle::drawFullTabBase(tabs);
+        }
     }
     if (qEnvironmentVariableIsSet("PREVIEW_TAB")) {
         for (auto *tabs : widget->findChildren<QTabWidget *>()) tabs->setCurrentIndex(qEnvironmentVariableIntValue("PREVIEW_TAB"));
