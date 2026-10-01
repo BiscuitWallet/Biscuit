@@ -24,7 +24,8 @@ if [ -z "${2:-}" ]; then
     PRERELEASE="git${BUILD_ID:0:12}"
 fi
 
-# Same timestamps as the Guix build: the commit time.
+# Same timestamps as the Guix build: the commit time. (A fixed --hostname too:
+# the .rpm records the build host.)
 if COMMIT_TIME="$(git -C "$ROOT" log -1 --format=%ct "$BUILD_ID" 2>/dev/null)"; then
     export SOURCE_DATE_EPOCH="$COMMIT_TIME"
 else
@@ -57,7 +58,7 @@ find "$STAGE" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 sed -e "s|\${STAGE}|/stage|g" -e "s|\${VERSION}|$VERSION|g" -e "s|\${PRERELEASE}|$PRERELEASE|g" \
     "$HERE/nfpm.yaml" > "$WORK/nfpm.yaml"
 for packager in deb rpm archlinux; do
-    podman run --rm \
+    podman run --rm --hostname biscuit \
         -v "$WORK/nfpm.yaml":/cfg/nfpm.yaml:ro,z -v "$STAGE":/stage:ro,z -v "$PKGDIR":/out:z \
         -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
         "$NFPM_IMAGE" package --config /cfg/nfpm.yaml --packager "$packager" --target /out/ < /dev/null
