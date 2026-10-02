@@ -288,7 +288,7 @@ static const Icon16 icons16[] = {
         "..kowoooooowok..",
         ".koowwoooowwook.",
         ".koowwwoowwwook.",
-        ".koowwowwowwook.",
+        ".koowwgwwgwwook.",
         ".koowwggggwwook.",
         ".koowwggggwwook.",
         ".kwwwwggggwwwwk.",
