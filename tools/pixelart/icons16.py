@@ -293,13 +293,13 @@ icon("info", {"o": BLUE, "w": WHITE}, overlay(disc(6.6), [
 # Coins.
 icon("monero", {"o": (242, 104, 34), "g": (76, 76, 76), "w": WHITE},
      overlay(band(disc(7.0), 10, "g"), [
-         "ww......ww",
-         "www....www",
-         "ww.w..w.ww",
-         "ww..ww..ww",
-         "ww......ww",
-         "ww......ww",
-     ], 3, 4))
+         "..w......w..",
+         "..ww....ww..",
+         "..www..www..",
+         "..ww.ww.ww..",
+         "..ww....ww..",
+         "wwww....wwww",
+     ], 2, 4))
 icon("bitcoin", {"o": (247, 147, 26), "w": WHITE}, overlay(disc(7.0), [
     "..w.w.",
     "wwwww.",
@@ -310,14 +310,14 @@ icon("bitcoin", {"o": (247, 147, 26), "w": WHITE}, overlay(disc(7.0), [
     ".ww.ww",
     "wwwww.",
     "..w.w.",
-], 5, 3))
+], 5, 4))
 icon("litecoin", {"o": (52, 93, 157), "w": WHITE}, overlay(disc(7.0), [
     "..ww....",
     "..ww....",
     "..ww.ww.",
     "..wwww..",
     ".www....",
-    "wwww....",
+    "..ww....",
     "..ww....",
     "..wwwwww",
 ], 4, 4))
