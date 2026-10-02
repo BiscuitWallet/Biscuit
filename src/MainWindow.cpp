@@ -805,12 +805,22 @@ void MainWindow::onProxySettingsChanged() {
 
     if (proxy == Config::Proxy::Tor) {
         this->onTorConnectionStateChanged(torManager()->torConnected);
+        m_statusBtnProxySettings->setToolTip("Tor mode: click to change");
         m_statusBtnProxySettings->show();
         return;
     }
 
     if (proxy == Config::Proxy::i2p) {
         m_statusBtnProxySettings->setIcon(icons()->icon("i2p.png"));
+        m_statusBtnProxySettings->setToolTip("i2p: click to change");
+        m_statusBtnProxySettings->show();
+        return;
+    }
+
+    // Biscuit: direct connection stays visible, and Tor one click away.
+    if (proxy == Config::Proxy::None) {
+        m_statusBtnProxySettings->setIcon(icons()->icon("tor_logo_disabled.png"));
+        m_statusBtnProxySettings->setToolTip("Direct connection (Tor is off): click to change");
         m_statusBtnProxySettings->show();
         return;
     }
