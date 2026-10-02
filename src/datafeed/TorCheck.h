@@ -39,6 +39,7 @@ private:
     QTimer m_timer;
     Result m_result = Result::Unknown;
     quint64 m_generation = 0;
+    bool m_torConnected = false;
 };
 
 }

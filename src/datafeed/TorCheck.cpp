@@ -4,6 +4,7 @@
 #include "TorCheck.h"
 
 #include <QCoreApplication>
+#include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
@@ -32,7 +33,14 @@ TorCheck::TorCheck(QObject *parent)
 {
     m_timer.setSingleShot(true);
     connect(&m_timer, &QTimer::timeout, this, &TorCheck::check);
-    connect(torManager(), &TorManager::connectionStateChanged, this, &TorCheck::restart);
+    // TorManager repeats its state every few seconds: only a change counts.
+    m_torConnected = torManager()->torConnected;
+    connect(torManager(), &TorManager::connectionStateChanged, this, [this](bool connected) {
+        if (connected != m_torConnected) {
+            m_torConnected = connected;
+            restart();
+        }
+    });
     schedule(10 * 1000);
 }
 
@@ -91,6 +99,7 @@ void TorCheck::check() {
 void TorCheck::setResult(Result result) {
     if (result != m_result) {
         m_result = result;
+        qInfo() << "Tor check:" << (result == Result::Tor ? "through Tor" : result == Result::NotTor ? "NOT through Tor" : "unknown");
         emit resultChanged(result);
     }
 }
