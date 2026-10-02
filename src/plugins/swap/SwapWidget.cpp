@@ -33,6 +33,7 @@
 #include "libwalletqt/Wallet.h"
 #include "libwalletqt/WalletManager.h"
 #include "utils/Icons.h"
+#include "WindowManager.h"
 #include "utils/Utils.h"
 
 using namespace biscuit::swap;
@@ -215,8 +216,9 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         m_pendingDepositTrade.clear();
     });
 
+    // Tor mode switched in the settings while this tab is on screen.
+    connect(WindowManager::instance(), &WindowManager::proxySettingsChanged, this, &SwapWidget::updateTorMode);
     updateTorMode();
-    loadAssets();
     updateForm();
     refreshTrades();
 }
@@ -236,6 +238,10 @@ void SwapWidget::updateTorMode() {
     ui->frame_demo->setVisible(m_manager->demoMode() && !onAtomicTab);
     m_torNotice->setVisible(torMode && !onAtomicTab);
     ui->tab_new->setEnabled(m_mainnet && !torMode);
+    // The coin list cannot load in Tor mode: ask again once it is off.
+    if (!torMode && !m_assetsLoaded && !m_loadingAssets) {
+        loadAssets();
+    }
     ui->btn_offers->setEnabled(!TrocadorSwapProvider::keyRejected());
     if (TrocadorSwapProvider::keyRejected()) {
         ui->label_status->setText("Swaps are unavailable in this version of Biscuit. Please update Biscuit.");
@@ -302,11 +308,15 @@ void SwapWidget::loadAssets() {
         return;
     }
     // One provider for now. With several, their lists will be merged.
+    m_loadingAssets = true;
+    ui->label_status->clear();
     providers.first()->supportedAssets([this](const QList<AssetInfo> &partnerAssets, const QString &error) {
+        m_loadingAssets = false;
         if (!error.isEmpty()) {
             ui->label_status->setText("Unable to load coins: " + error);
             return;
         }
+        m_assetsLoaded = true;
         const QList<AssetInfo> assets = walletAssets(partnerAssets);
         m_updating = true;
         for (QComboBox *combo : {ui->combo_from, ui->combo_to}) {
