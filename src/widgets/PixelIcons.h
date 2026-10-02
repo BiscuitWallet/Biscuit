@@ -22,7 +22,7 @@ namespace PixelIcons {
     // name: status_connected, status_synchronizing, status_connecting,
     // status_disconnected, status_offline, lock, settings, seed, tor_on,
     // tor_off, warning, update, account, appearance, network, storage,
-    // display, transactions, plugins, misc, unlock. An unknown name gives a null icon.
+    // display, transactions, plugins, misc, unlock, converter. An unknown name gives a null icon.
     QIcon icon(const char *name);
 }
 

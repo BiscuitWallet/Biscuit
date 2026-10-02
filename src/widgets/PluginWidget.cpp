@@ -8,6 +8,7 @@
 #include "utils/config.h"
 #include "utils/Icons.h"
 #include "plugins/PluginRegistry.h"
+#include "widgets/PixelIcons.h"
 
 PluginWidget::PluginWidget(QWidget *parent)
         : QWidget(parent)
@@ -105,7 +106,16 @@ void PluginWidget::pluginToggled(QTreeWidgetItem* item, int column) {
 }
 
 void PluginWidget::setupItem(QTreeWidgetItem *item, Plugin *plugin) {
-    item->setIcon(0, icons()->icon(plugin->icon()));
+    // Biscuit: the same pixel icons as the tabs.
+    if (plugin->id() == "home") {
+        item->setIcon(0, PixelIcons::computer());
+    } else if (plugin->id() == "swap") {
+        item->setIcon(0, PixelIcons::network());
+    } else if (plugin->id() == "calc") {
+        item->setIcon(0, PixelIcons::icon("converter"));
+    } else {
+        item->setIcon(0, icons()->icon(plugin->icon()));
+    }
     item->setText(0, plugin->displayName());
     item->setData(0, Qt::UserRole, plugin->id());
 

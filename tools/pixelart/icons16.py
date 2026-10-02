@@ -361,6 +361,26 @@ icon("plugins", {"g": GREEN, "G": GREEN_DARK}, [
     "................",
 ])
 
+# Converter: a calculator.
+icon("converter", {"g": BEIGE, "b": GREY_DARK, "r": ORANGE, "L": GREEN_LIGHT}, [
+    "................",
+    "..kkkkkkkkkkkk..",
+    "..kggggggggggk..",
+    "..kgkkkkkkkkgk..",
+    "..kgkLLLLLLkgk..",
+    "..kgkkkkkkkkgk..",
+    "..kggggggggggk..",
+    "..kgbbgbbgrrgk..",
+    "..kggggggggggk..",
+    "..kgbbgbbgrrgk..",
+    "..kggggggggggk..",
+    "..kgbbgbbgrrgk..",
+    "..kggggggggggk..",
+    "..kkkkkkkkkkkk..",
+    "................",
+    "................",
+])
+
 # Misc: a red toolbox.
 icon("misc", {"r": RED, "R": RED_DARK, "y": YELLOW}, [
     "................",
