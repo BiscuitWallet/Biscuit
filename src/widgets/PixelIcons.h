@@ -23,7 +23,7 @@ namespace PixelIcons {
     // status_disconnected, status_offline, lock, settings, seed, tor_on,
     // tor_off, warning, update, account, appearance, network, storage,
     // display, transactions, plugins, misc, unlock, converter, info, monero, bitcoin,
-    // litecoin, sun, moon. An unknown name gives a null icon.
+    // litecoin. An unknown name gives a null icon.
     QIcon icon(const char *name);
     // The same, as a pixmap of size x size logical pixels (16 or 32).
     QPixmap pixmap(const char *name, int size = 16);
