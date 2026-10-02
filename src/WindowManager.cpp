@@ -119,8 +119,16 @@ void WindowManager::close() {
 
     deleteLater();
 
-    qDebug() << "Calling QApplication::quit()";
-    QApplication::quit();
+    // Biscuit: on macOS quit() ends in [NSApp terminate:], which calls exit()
+    // without returning from exec(). Windows still waiting for deleteLater()
+    // were then deleted after the application, and crashed; and this object's
+    // destructor, which waits for the wallets to be saved and closed, might
+    // not run at all. Back in the event loop, delete them first, then quit.
+    QTimer::singleShot(0, qApp, [] {
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        qDebug() << "Calling QApplication::quit()";
+        QApplication::quit();
+    });
 }
 
 void WindowManager::closeWindow(MainWindow *window) {
