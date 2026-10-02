@@ -29,6 +29,7 @@
 #include "utils/Icons.h"
 #include "utils/Utils.h"
 #include "utils/config.h"
+#include "widgets/PixelIcons.h"
 
 namespace {
     constexpr int recentCount = 5;
@@ -48,7 +49,7 @@ namespace {
     }
 
     QIcon coinIcon(const QString &ticker) {
-        if (ticker == "XMR") return QIcon(":/assets/images/appicons/monero.png");
+        if (ticker == "XMR") return PixelIcons::icon("monero");
         return icons()->icon(ticker == "BTC" ? "bitcoin.png" : "litecoin.png");
     }
 }

@@ -10,6 +10,7 @@
 #include "utils/nodes.h"
 #include "Utils.h"
 #include "WalletWizard.h"
+#include "widgets/PixelIcons.h"
 
 PageNetwork::PageNetwork(QWidget *parent)
     : QWizardPage(parent)
@@ -25,8 +26,7 @@ PageNetwork::PageNetwork(QWidget *parent)
     ui->btnGroup_network->setId(ui->radio_autoConnect, Button::AUTO);
     ui->btnGroup_network->setId(ui->radio_custom, Button::CUSTOM);
 
-    QPixmap infoIcon = QPixmap(":/assets/images/info2.svg");
-    ui->infoIcon->setPixmap(infoIcon.scaledToWidth(32, Qt::SmoothTransformation));
+    ui->infoIcon->setPixmap(PixelIcons::pixmap("info", 32));
 
     connect(ui->btnGroup_network, &QButtonGroup::idClicked, [this](int id) {
         ui->frame_customNode->setVisible(id == Button::CUSTOM);

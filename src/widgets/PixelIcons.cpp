@@ -145,7 +145,8 @@ namespace {
         "................",
     };
 
-    QPixmap draw(const char *const rows[16], const QHash<char, QColor> &colors) {
+    // size: logical pixels (16, or 32 for twice as big), sharp at 2x.
+    QPixmap draw(const char *const rows[16], const QHash<char, QColor> &colors, int size = 16) {
         QImage image(16, 16, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
         for (int y = 0; y < 16; ++y) {
@@ -154,7 +155,7 @@ namespace {
             }
         }
         // Nearest-neighbour upscale: crisp pixels at 2x.
-        QPixmap pixmap = QPixmap::fromImage(image.scaled(32, 32, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+        QPixmap pixmap = QPixmap::fromImage(image.scaled(size * 2, size * 2, Qt::IgnoreAspectRatio, Qt::FastTransformation));
         pixmap.setDevicePixelRatio(2.0);
         return pixmap;
     }
@@ -200,14 +201,9 @@ QIcon receive() {
     return QIcon(draw(receiveRows, {{'k', outline}, {'d', QColor(205, 192, 160)}, {'a', QColor(63, 174, 74)}}));
 }
 
-QIcon icon(const char *name) {
-    static QHash<QByteArray, QIcon> cache;
-    const QByteArray key(name);
-    if (auto it = cache.constFind(key); it != cache.constEnd()) {
-        return *it;
-    }
+QPixmap pixmap(const char *name, int size) {
     for (const Icon16 &entry : icons16) {
-        if (key == entry.name) {
+        if (qstrcmp(name, entry.name) == 0) {
             QHash<char, QColor> colors{{'k', outline}};
             for (const auto &c : entry.colors) {
                 if (!c.key) {
@@ -215,10 +211,27 @@ QIcon icon(const char *name) {
                 }
                 colors.insert(c.key, QColor::fromRgb(c.rgb));
             }
-            return cache.insert(key, QIcon(draw(entry.rows, colors))).value();
+            return draw(entry.rows, colors, size);
         }
     }
     return {};
+}
+
+QIcon icon(const char *name) {
+    static QHash<QByteArray, QIcon> cache;
+    const QByteArray key(name);
+    if (auto it = cache.constFind(key); it != cache.constEnd()) {
+        return *it;
+    }
+    const QPixmap small = pixmap(name, 16);
+    if (small.isNull()) {
+        return {};
+    }
+    // 16 px, and 32 px for the places that show icons bigger (info frames):
+    // pixels doubled, never smoothed.
+    QIcon result(small);
+    result.addPixmap(pixmap(name, 32));
+    return cache.insert(key, result).value();
 }
 
 }

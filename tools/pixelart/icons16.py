@@ -239,6 +239,111 @@ icon("account", {"c": CREAM, "b": BLUE, "s": BEIGE_DARK}, [
     "................",
 ])
 
+# --- Discs: drawn from a shape, then a glyph laid on top --------------------------
+
+def shape(inside, fill="o"):
+    """Rows for the pixels where inside(x, y) holds, outlined in 'k'."""
+    def at(x, y):
+        return 0 <= x < 16 and 0 <= y < 16 and inside(x + 0.5, y + 0.5)
+    rows = []
+    for y in range(16):
+        row = ""
+        for x in range(16):
+            if not at(x, y):
+                row += "."
+            elif all(at(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                row += fill
+            else:
+                row += "k"
+        rows.append(row)
+    return rows
+
+
+def disc(r=7.0, cx=8.0, cy=8.0):
+    return shape(lambda x, y: (x - cx) ** 2 + (y - cy) ** 2 <= r * r)
+
+
+def overlay(rows, glyph, x0, y0):
+    """Lays glyph (rows of chars, '.' = keep) on rows at (x0, y0)."""
+    rows = [list(r) for r in rows]
+    for dy, line in enumerate(glyph):
+        for dx, ch in enumerate(line):
+            if ch != ".":
+                rows[y0 + dy][x0 + dx] = ch
+    return ["".join(r) for r in rows]
+
+
+def band(rows, y_from, ch):
+    """Repaints the fill below y_from (the outline stays)."""
+    return [r if y < y_from else r.replace("o", ch) for y, r in enumerate(rows)]
+
+
+# Information: a blue disc with a white i.
+icon("info", {"o": BLUE, "w": WHITE}, overlay(disc(6.6), [
+    "ww.",
+    "ww.",
+    "...",
+    "www",
+    ".ww",
+    ".ww",
+    ".ww",
+    "wwww",
+], 6, 3))
+
+# Coins.
+icon("monero", {"o": (242, 104, 34), "g": (76, 76, 76), "w": WHITE},
+     overlay(band(disc(7.0), 10, "g"), [
+         "ww......ww",
+         "www....www",
+         "ww.w..w.ww",
+         "ww..ww..ww",
+         "ww......ww",
+         "ww......ww",
+     ], 3, 4))
+icon("bitcoin", {"o": (247, 147, 26), "w": WHITE}, overlay(disc(7.0), [
+    "..w.w.",
+    "wwwww.",
+    ".ww.ww",
+    ".ww.ww",
+    ".wwww.",
+    ".ww.ww",
+    ".ww.ww",
+    "wwwww.",
+    "..w.w.",
+], 5, 3))
+icon("litecoin", {"o": (52, 93, 157), "w": WHITE}, overlay(disc(7.0), [
+    "..ww....",
+    "..ww....",
+    "..ww.ww.",
+    "..wwww..",
+    ".www....",
+    "wwww....",
+    "..ww....",
+    "..wwwwww",
+], 4, 4))
+
+# Appearance toggle: the sun (back to light) and the moon (to dark).
+icon("sun", {"o": YELLOW, "y": YELLOW}, overlay(shape(lambda x, y: (x - 8) ** 2 + (y - 8) ** 2 <= 4.2 ** 2), [
+    ".......yy.......",
+    ".......yy.......",
+    "..y..........y..",
+    "...y........y...",
+    "................",
+    "................",
+    "................",
+    "yy............yy",
+    "yy............yy",
+    "................",
+    "................",
+    "................",
+    "...y........y...",
+    "..y..........y..",
+    ".......yy.......",
+    ".......yy.......",
+], 0, 0))
+icon("moon", {"o": (240, 222, 140)},
+     shape(lambda x, y: (x - 8) ** 2 + (y - 8) ** 2 <= 6.5 ** 2 and (x - 11.5) ** 2 + (y - 5) ** 2 > 5.6 ** 2))
+
 # --- Settings pages -------------------------------------------------------------
 
 # Appearance: a painter's palette.

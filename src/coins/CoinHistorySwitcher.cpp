@@ -22,6 +22,7 @@
 #include "libwalletqt/WalletManager.h"
 #include "utils/Icons.h"
 #include "utils/Utils.h"
+#include "widgets/PixelIcons.h"
 
 namespace biscuit::coins {
 
@@ -182,7 +183,7 @@ void CoinHistorySwitcher::refresh() {
             item->setText(ColDate, row.timestamp.toString("yyyy-MM-dd HH:mm"));
             item->setData(ColDate, SortRole, row.pending ? std::numeric_limits<qint64>::max() : row.timestamp.toSecsSinceEpoch());
             item->setData(ColDate, TickerRole, "XMR");
-            item->setIcon(ColCoin, QIcon(":/assets/images/appicons/monero.png"));
+            item->setIcon(ColCoin, PixelIcons::icon("monero"));
             item->setText(ColCoin, "XMR");
             item->setText(ColAmount, QString("%1%2 XMR").arg(row.balanceDelta < 0 ? "-" : "+",
                     WalletManager::displayAmount(quint64(std::llabs(row.balanceDelta)), false)));

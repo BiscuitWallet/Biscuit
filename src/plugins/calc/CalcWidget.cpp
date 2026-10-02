@@ -11,6 +11,7 @@
 #include "utils/ColorScheme.h"
 #include "utils/config.h"
 #include "utils/WebsocketNotifier.h"
+#include "widgets/PixelIcons.h"
 
 CalcWidget::CalcWidget(QWidget *parent)
     : QWidget(parent)
@@ -48,8 +49,7 @@ CalcWidget::CalcWidget(QWidget *parent)
 
     m_statusTimer.start(5000);
     connect(&m_statusTimer, &QTimer::timeout, this, &CalcWidget::updateStatus);
-    QPixmap warningIcon = QPixmap(":/assets/images/warning.png");
-    ui->icon_warning->setPixmap(warningIcon.scaledToWidth(32, Qt::SmoothTransformation));
+    ui->icon_warning->setPixmap(PixelIcons::pixmap("warning", 32));
 
     this->updateStatus();
 }

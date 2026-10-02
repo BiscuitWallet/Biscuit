@@ -9,6 +9,7 @@
 #include <QTabBar>
 
 #include "utils/Icons.h"
+#include "widgets/PixelIcons.h"
 
 namespace biscuit::coins {
 
@@ -56,7 +57,7 @@ void CoinPicker::paintEvent(QPaintEvent *event) {
 }
 
 void addWalletCoins(CoinPicker *picker) {
-    picker->addCoin(QIcon(":/assets/images/appicons/monero.png"), "Monero");
+    picker->addCoin(PixelIcons::icon("monero"), "Monero");
     picker->addCoin(icons()->icon("bitcoin.png"), "Bitcoin");
     picker->addCoin(icons()->icon("litecoin.png"), "Litecoin");
 }
