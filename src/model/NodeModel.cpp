@@ -5,12 +5,13 @@
 #include "utils/nodes.h"
 #include "utils/ColorScheme.h"
 #include "utils/Icons.h"
+#include "widgets/PixelIcons.h"
 
 NodeModel::NodeModel(int nodeSource, QObject *parent)
         : QAbstractTableModel(parent)
         , m_nodeSource(nodeSource)
-        , m_offline(icons()->icon("status_offline.svg"))
-        , m_online(icons()->icon("status_connected.svg"))
+        , m_offline(PixelIcons::icon("status_offline"))
+        , m_online(PixelIcons::icon("status_connected"))
 {
 }
 

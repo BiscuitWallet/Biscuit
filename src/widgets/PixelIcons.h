@@ -17,6 +17,13 @@ namespace PixelIcons {
     QIcon history();                            // History tab: a clock
     QIcon send();                               // Send tab: an envelope going out
     QIcon receive();                            // Receive tab: a tray, arrow in
+
+    // Status bar and settings icons, drawn in tools/pixelart/icons16.py, by
+    // name: status_connected, status_synchronizing, status_connecting,
+    // status_disconnected, status_offline, lock, settings, seed, tor_on,
+    // tor_off, warning, update, account, appearance, network, storage,
+    // display, transactions, plugins, misc, unlock. An unknown name gives a null icon.
+    QIcon icon(const char *name);
 }
 
 #endif // BISCUIT_PIXELICONS_H

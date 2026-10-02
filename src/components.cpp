@@ -30,7 +30,7 @@ StatusBarButton::StatusBarButton(const QIcon &icon, const QString &tooltip, QWid
     setToolTip(tooltip);
     setFlat(true);
     setMaximumWidth(20);
-    setIconSize(QSize(20,20));
+    setIconSize(QSize(16,16));   // Biscuit: pixel icons at their size, sharp
     setCursor(QCursor(Qt::PointingHandCursor));
 }
 

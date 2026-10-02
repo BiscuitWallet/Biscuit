@@ -25,6 +25,7 @@
 #include "utils/WebsocketNotifier.h"
 #include "widgets/NetworkProxyWidget.h"
 #include "utils/ColorScheme.h"
+#include "widgets/PixelIcons.h"
 
 Settings::Settings(Nodes *nodes, QWidget *parent)
         : QDialog(parent)
@@ -47,17 +48,17 @@ Settings::Settings(Nodes *nodes, QWidget *parent)
     });
 
     ui->selector->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->selector->setIconSize(QSize(16, 16));   // Biscuit: pixel icons, never scaled
     ui->selector->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    new QListWidgetItem(icons()->icon("interface_32px.png"), "Appearance", ui->selector, Pages::APPEARANCE);
-    new QListWidgetItem(icons()->icon("nw_32px.png"), "Network", ui->selector, Pages::NETWORK);
-    new QListWidgetItem(icons()->icon("hd_32px.png"), "Storage", ui->selector, Pages::STORAGE);
-    new QListWidgetItem(icons()->icon("vrdp_32px.png"), "Display", ui->selector, Pages::DISPLAY);
+    new QListWidgetItem(PixelIcons::icon("appearance"), "Appearance", ui->selector, Pages::APPEARANCE);
+    new QListWidgetItem(PixelIcons::icon("network"), "Network", ui->selector, Pages::NETWORK);
+    new QListWidgetItem(PixelIcons::icon("storage"), "Storage", ui->selector, Pages::STORAGE);
+    new QListWidgetItem(PixelIcons::icon("display"), "Display", ui->selector, Pages::DISPLAY);
 //  new QListWidgetItem(icons()->icon("chipset_32px.png"), "Memory", ui->selector, Pages::MEMORY);
-    new QListWidgetItem(icons()->icon("file_manager_32px.png"), "Transactions", ui->selector, Pages::TRANSACTIONS);
-    QString connectIcon = ColorScheme::darkScheme ? "connect_white.svg" : "connect.svg";;
-    new QListWidgetItem(icons()->icon(connectIcon), "Plugins", ui->selector, Pages::PLUGINS);
-    new QListWidgetItem(icons()->icon("settings_disabled_32px.png"), "Misc", ui->selector, Pages::MISC);
+    new QListWidgetItem(PixelIcons::icon("transactions"), "Transactions", ui->selector, Pages::TRANSACTIONS);
+    new QListWidgetItem(PixelIcons::icon("plugins"), "Plugins", ui->selector, Pages::PLUGINS);
+    new QListWidgetItem(PixelIcons::icon("misc"), "Misc", ui->selector, Pages::MISC);
 
     ui->selector->setFixedWidth(ui->selector->sizeHintForColumn(0) + ui->selector->frameWidth() + 5);
 

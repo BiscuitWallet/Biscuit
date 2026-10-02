@@ -181,7 +181,8 @@ void MainWindow::initStatusBar() {
     m_statusUpdateAvailable = new QPushButton(this);
     m_statusUpdateAvailable->setFlat(true);
     m_statusUpdateAvailable->setCursor(Qt::PointingHandCursor);
-    m_statusUpdateAvailable->setIcon(icons()->icon("tab_party.png"));
+    m_statusUpdateAvailable->setIcon(PixelIcons::icon("update"));
+    m_statusUpdateAvailable->setIconSize(QSize(16, 16));
     m_statusUpdateAvailable->hide();
     this->statusBar()->addPermanentWidget(m_statusUpdateAvailable);
 
@@ -192,33 +193,34 @@ void MainWindow::initStatusBar() {
     this->statusBar()->addPermanentWidget(m_statusLabelBalance);
     connect(m_statusLabelBalance, &ClickableLabel::clicked, this, &MainWindow::showBalanceDialog);
 
-    m_statusBtnConnectionStatusIndicator = new StatusBarButton(icons()->icon("status_disconnected.svg"), "Connection status", this);
+    m_statusBtnConnectionStatusIndicator = new StatusBarButton(PixelIcons::icon("status_disconnected"), "Connection status", this);
     connect(m_statusBtnConnectionStatusIndicator, &StatusBarButton::clicked, [this](){
         this->onShowSettingsPage(Settings::Pages::NETWORK);
     });
     this->statusBar()->addPermanentWidget(m_statusBtnConnectionStatusIndicator);
     this->onConnectionStatusChanged(Wallet::ConnectionStatus_Disconnected);
 
-    m_statusAccountSwitcher = new StatusBarButton(icons()->icon("change_account.png"), "Account switcher", this);
+    m_statusAccountSwitcher = new StatusBarButton(PixelIcons::icon("account"), "Account switcher", this);
     connect(m_statusAccountSwitcher, &StatusBarButton::clicked, this, &MainWindow::showAccountSwitcherDialog);
     this->statusBar()->addPermanentWidget(m_statusAccountSwitcher);
 
-    m_statusBtnPassword = new StatusBarButton(icons()->icon("lock.svg"), "Password", this);
+    m_statusBtnPassword = new StatusBarButton(PixelIcons::icon("lock"), "Password", this);
     connect(m_statusBtnPassword, &StatusBarButton::clicked, this, &MainWindow::showPasswordDialog);
     this->statusBar()->addPermanentWidget(m_statusBtnPassword);
 
-    m_statusBtnPreferences = new StatusBarButton(icons()->icon("preferences.svg"), "Settings", this);
+    m_statusBtnPreferences = new StatusBarButton(PixelIcons::icon("settings"), "Settings", this);
     connect(m_statusBtnPreferences, &StatusBarButton::clicked, this, &MainWindow::menuSettingsClicked);
     this->statusBar()->addPermanentWidget(m_statusBtnPreferences);
 
-    m_statusBtnSeed = new StatusBarButton(icons()->icon("seed.png"), "Seed", this);
+    m_statusBtnSeed = new StatusBarButton(PixelIcons::icon("seed"), "Seed", this);
     connect(m_statusBtnSeed, &StatusBarButton::clicked, this, &MainWindow::showSeedDialog);
     this->statusBar()->addPermanentWidget(m_statusBtnSeed);
 
     // Biscuit: Tor mode is on, but biscuitwallet.com does not see Biscuit
     // coming from Tor (see TorCheck).
-    m_statusTorWarning = new QPushButton(icons()->icon("warning.png"), "Not going through Tor", this);
+    m_statusTorWarning = new QPushButton(PixelIcons::icon("warning"), "Not going through Tor", this);
     m_statusTorWarning->setFlat(true);
+    m_statusTorWarning->setIconSize(QSize(16, 16));
     m_statusTorWarning->setCursor(Qt::PointingHandCursor);
     m_statusTorWarning->setToolTip("Tor mode is on, but Biscuit's connections do not reach the internet through Tor.\n"
                                    "Your IP address may be visible. Check the proxy settings.");
@@ -227,7 +229,7 @@ void MainWindow::initStatusBar() {
     connect(biscuit::datafeed::TorCheck::instance(), &biscuit::datafeed::TorCheck::resultChanged, this, &MainWindow::updateTorWarning);
     this->statusBar()->addPermanentWidget(m_statusTorWarning);
 
-    m_statusBtnProxySettings = new StatusBarButton(icons()->icon("tor_logo_disabled.png"), "Proxy settings", this);
+    m_statusBtnProxySettings = new StatusBarButton(PixelIcons::icon("tor_off"), "Proxy settings", this);
     connect(m_statusBtnProxySettings, &StatusBarButton::clicked, this, &MainWindow::menuProxySettingsClicked);
     this->statusBar()->addPermanentWidget(m_statusBtnProxySettings);
     this->onProxySettingsChanged();
@@ -819,7 +821,7 @@ void MainWindow::onProxySettingsChanged() {
 
     // Biscuit: direct connection stays visible, and Tor one click away.
     if (proxy == Config::Proxy::None) {
-        m_statusBtnProxySettings->setIcon(icons()->icon("tor_logo_disabled.png"));
+        m_statusBtnProxySettings->setIcon(PixelIcons::icon("tor_off"));
         m_statusBtnProxySettings->setToolTip("Direct connection (Tor is off): click to change");
         m_statusBtnProxySettings->show();
         return;
@@ -887,30 +889,30 @@ void MainWindow::onConnectionStatusChanged(int status)
 
     QIcon icon;
     if (conf()->get(Config::offlineMode).toBool()) {
-        icon = icons()->icon("status_offline.svg");
+        icon = PixelIcons::icon("status_offline");
         this->setStatusText("Offline mode");
     } else {
         switch(status){
             case Wallet::ConnectionStatus_Disconnected:
-                icon = icons()->icon("status_disconnected.svg");
+                icon = PixelIcons::icon("status_disconnected");
                 this->setStatusText("Disconnected");
                 break;
             case Wallet::ConnectionStatus_Connecting:
-                icon = icons()->icon("status_lagging.svg");
+                icon = PixelIcons::icon("status_connecting");
                 this->setStatusText("Connecting to node");
                 break;
             case Wallet::ConnectionStatus_WrongVersion:
-                icon = icons()->icon("status_disconnected.svg");
+                icon = PixelIcons::icon("status_disconnected");
                 this->setStatusText("Incompatible node");
                 break;
             case Wallet::ConnectionStatus_Synchronizing:
-                icon = icons()->icon("status_waiting.svg");
+                icon = PixelIcons::icon("status_synchronizing");
                 break;
             case Wallet::ConnectionStatus_Synchronized:
-                icon = icons()->icon("status_connected.svg");
+                icon = PixelIcons::icon("status_connected");
                 break;
             default:
-                icon = icons()->icon("status_disconnected.svg");
+                icon = PixelIcons::icon("status_disconnected");
                 break;
         }
     }
@@ -1243,7 +1245,7 @@ void MainWindow::showPasswordDialog() {
 
 void MainWindow::updatePasswordIcon() {
     bool emptyPassword = m_wallet->verifyPassword("");
-    QIcon icon = emptyPassword ? icons()->icon("unlock.svg") : icons()->icon("lock.svg");
+    QIcon icon = emptyPassword ? PixelIcons::icon("unlock") : PixelIcons::icon("lock");
     m_statusBtnPassword->setIcon(icon);
 }
 
@@ -1759,9 +1761,9 @@ void MainWindow::onTorConnectionStateChanged(bool connected) {
     }
 
     if (connected)
-        m_statusBtnProxySettings->setIcon(icons()->icon("tor_logo.png"));
+        m_statusBtnProxySettings->setIcon(PixelIcons::icon("tor_on"));
     else
-        m_statusBtnProxySettings->setIcon(icons()->icon("tor_logo_disabled.png"));
+        m_statusBtnProxySettings->setIcon(PixelIcons::icon("tor_off"));
 }
 
 void MainWindow::showUpdateNotification() {

@@ -10,6 +10,8 @@
 namespace PixelIcons {
 
 namespace {
+#include "PixelIcons16.inc"
+
     const char *const hourglassRows[16] = {
         "..kkkkkkkkkkkk..",
         "..kLLLLLLLLLLk..",
@@ -196,6 +198,27 @@ QIcon send() {
 
 QIcon receive() {
     return QIcon(draw(receiveRows, {{'k', outline}, {'d', QColor(205, 192, 160)}, {'a', QColor(63, 174, 74)}}));
+}
+
+QIcon icon(const char *name) {
+    static QHash<QByteArray, QIcon> cache;
+    const QByteArray key(name);
+    if (auto it = cache.constFind(key); it != cache.constEnd()) {
+        return *it;
+    }
+    for (const Icon16 &entry : icons16) {
+        if (key == entry.name) {
+            QHash<char, QColor> colors{{'k', outline}};
+            for (const auto &c : entry.colors) {
+                if (!c.key) {
+                    break;
+                }
+                colors.insert(c.key, QColor::fromRgb(c.rgb));
+            }
+            return cache.insert(key, QIcon(draw(entry.rows, colors))).value();
+        }
+    }
+    return {};
 }
 
 }
