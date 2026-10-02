@@ -125,6 +125,7 @@ private slots:
     void loadSignedTxFromText();
 
     void onTorConnectionStateChanged(bool connected);
+    void updateTorWarning();
     void showUpdateDialog();
     void onInitiateTransaction();
     void onKeysCorrupted();
@@ -244,6 +245,7 @@ private:
     StatusBarButton *m_statusBtnPreferences;
     StatusBarButton *m_statusBtnSeed;
     StatusBarButton *m_statusBtnProxySettings;
+    QPushButton *m_statusTorWarning;
     StatusBarButton *m_statusBtnHwDevice;
 
     QSignalMapper *m_tabShowHideSignalMapper;

@@ -9,6 +9,7 @@
 
 #include "Amount.h"
 #include "utils/Appearance.h"
+#include "datafeed/TorCheck.h"
 #include "widgets/PixelIcons.h"
 #include "coins/CoinCoinsSwitcher.h"
 #include "coins/CoinContactsSwitcher.h"
@@ -213,6 +214,18 @@ void MainWindow::initStatusBar() {
     m_statusBtnSeed = new StatusBarButton(icons()->icon("seed.png"), "Seed", this);
     connect(m_statusBtnSeed, &StatusBarButton::clicked, this, &MainWindow::showSeedDialog);
     this->statusBar()->addPermanentWidget(m_statusBtnSeed);
+
+    // Biscuit: Tor mode is on, but biscuitwallet.com does not see Biscuit
+    // coming from Tor (see TorCheck).
+    m_statusTorWarning = new QPushButton(icons()->icon("warning.png"), "Not going through Tor", this);
+    m_statusTorWarning->setFlat(true);
+    m_statusTorWarning->setCursor(Qt::PointingHandCursor);
+    m_statusTorWarning->setToolTip("Tor mode is on, but Biscuit's connections do not reach the internet through Tor.\n"
+                                   "Your IP address may be visible. Check the proxy settings.");
+    m_statusTorWarning->hide();
+    connect(m_statusTorWarning, &QPushButton::clicked, this, &MainWindow::menuProxySettingsClicked);
+    connect(biscuit::datafeed::TorCheck::instance(), &biscuit::datafeed::TorCheck::resultChanged, this, &MainWindow::updateTorWarning);
+    this->statusBar()->addPermanentWidget(m_statusTorWarning);
 
     m_statusBtnProxySettings = new StatusBarButton(icons()->icon("tor_logo_disabled.png"), "Proxy settings", this);
     connect(m_statusBtnProxySettings, &StatusBarButton::clicked, this, &MainWindow::menuProxySettingsClicked);
@@ -787,6 +800,8 @@ void MainWindow::onCoinServersChanged() {
 
 void MainWindow::onProxySettingsChanged() {
     int proxy = conf()->get(Config::proxy).toInt();
+    biscuit::datafeed::TorCheck::instance()->restart();
+    this->updateTorWarning();
 
     if (proxy == Config::Proxy::Tor) {
         this->onTorConnectionStateChanged(torManager()->torConnected);
@@ -819,6 +834,7 @@ void MainWindow::onOfflineMode(bool offline) {
 
     m_statusLabelBalance->setVisible(!offline);
     m_statusBtnProxySettings->setVisible(!offline);
+    this->updateTorWarning();
 }
 
 void MainWindow::onManualFeeSelectionEnabled(bool enabled) {
@@ -1719,6 +1735,12 @@ void MainWindow::onHideUpdateNotifications(bool hidden) {
         m_statusUpdateAvailable->show();
     }
 #endif
+}
+
+void MainWindow::updateTorWarning() {
+    const bool notTor = biscuit::datafeed::TorCheck::instance()->result() == biscuit::datafeed::TorCheck::Result::NotTor;
+    m_statusTorWarning->setVisible(notTor && conf()->get(Config::proxy).toInt() == Config::Proxy::Tor
+                                   && !conf()->get(Config::offlineMode).toBool());
 }
 
 void MainWindow::onTorConnectionStateChanged(bool connected) {
