@@ -278,32 +278,40 @@ def band(rows, y_from, ch):
     return [r if y < y_from else r.replace("o", ch) for y, r in enumerate(rows)]
 
 
-# Information: a blue disc with a white i.
-icon("info", {"o": BLUE, "w": WHITE}, overlay(disc(6.6), [
-    "ww.",
-    "ww.",
-    "...",
-    "www",
-    ".ww",
-    ".ww",
-    ".ww",
-    "wwww",
-], 6, 3))
+# Information: a blue i.
+icon("info", {"b": BLUE}, [
+    "................",
+    "......kkkk......",
+    "......kbbk......",
+    "......kbbk......",
+    "......kkkk......",
+    "................",
+    ".....kkkkk......",
+    ".....kbbbk......",
+    ".....kkbbk......",
+    "......kbbk......",
+    "......kbbk......",
+    "......kbbk......",
+    ".....kkbbkk.....",
+    ".....kbbbbk.....",
+    ".....kkkkkk.....",
+    "................",
+])
 
 # Coins.
 icon("monero", {"o": (242, 104, 34), "g": (76, 76, 76), "w": WHITE},
-     overlay(band(disc(7.0), 10, "g"), [
+     overlay(band(disc(7.0), 11, "g"), [
          "..w......w..",
          "..ww....ww..",
          "..www..www..",
          "..ww.ww.ww..",
-         "..ww....ww..",
-         "wwww....wwww",
+         "..wwggggww..",
+         "..wwggggww..",
+         "wwwwggggwwww",
      ], 2, 4))
 icon("bitcoin", {"o": (247, 147, 26), "w": WHITE}, overlay(disc(7.0), [
     "..w.w.",
     "wwwww.",
-    ".ww.ww",
     ".ww.ww",
     ".wwww.",
     ".ww.ww",
@@ -319,7 +327,7 @@ icon("litecoin", {"o": (52, 93, 157), "w": WHITE}, overlay(disc(7.0), [
     ".www....",
     "..ww....",
     "..ww....",
-    "..wwwwww",
+    "..wwwww.",
 ], 4, 4))
 
 # --- Settings pages -------------------------------------------------------------
