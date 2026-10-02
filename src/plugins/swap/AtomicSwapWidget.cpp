@@ -147,7 +147,10 @@ void AtomicSwapWidget::updateTorOption() {
     }
     ui->check_tor->setEnabled(!forced && !m_daemon->isRunning());
 
-    if (forced) {
+    const QString system = AtomicSwapDaemon::systemTorName();
+    if (!system.isEmpty()) {
+        ui->label_torNote->setText(QString("Makers are reached through the Tor of %1.").arg(system));
+    } else if (forced) {
         ui->label_torNote->setText("Tor mode is on: makers are reached through Tor.");
     } else if (ui->check_tor->isChecked()) {
         ui->label_torNote->setText("Makers are reached through Tor. Finding them takes longer.");
@@ -172,7 +175,7 @@ void AtomicSwapWidget::onDiscover() {
     ui->tree_offers->clear();
     ui->label_details->clear();
     ui->label_peers->setText("Connected to 0 peers");
-    setHeadline(tor ? "Starting Tor" : "Starting", true);
+    setHeadline(AtomicSwapDaemon::networkFlag(tor) == "--tor" ? "Starting Tor" : "Starting", true);
     setPhone(Phone::Waiting);
     setBusy(true);
     ui->btn_discover->setText("Stop");

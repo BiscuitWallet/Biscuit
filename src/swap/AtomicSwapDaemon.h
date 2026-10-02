@@ -25,6 +25,12 @@ public:
     // Empty when the helper cannot be found. BISCUIT_SWAPD overrides the path
     // (development builds); otherwise it is expected next to the Biscuit binary.
     static QString helperPath();
+    // Tails or Whonix, whose system sends everything through Tor ("" otherwise).
+    static QString systemTorName();
+    // The helper's network flag. On Tails and Whonix the system already sends
+    // everything through Tor (or blocks it), so the helper connects directly
+    // instead of running its own Tor inside the system's one.
+    static QString networkFlag(bool tor);
 
     bool isRunning() const;
     // tor = false reveals the IP address to rendezvous points and makers:

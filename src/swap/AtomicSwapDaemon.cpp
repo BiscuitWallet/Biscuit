@@ -11,6 +11,8 @@
 
 #include "utils/ChildProcess.h"
 #include "utils/config.h"
+#include "utils/os/tails.h"
+#include "utils/os/whonix.h"
 
 namespace biscuit::swap {
 
@@ -25,6 +27,20 @@ AtomicSwapDaemon::~AtomicSwapDaemon() {
         m_process->kill();
         m_process->waitForFinished(1000);
     }
+}
+
+QString AtomicSwapDaemon::systemTorName() {
+    if (TailsOS::detect()) {
+        return "Tails";
+    }
+    if (WhonixOS::detect()) {
+        return "Whonix";
+    }
+    return {};
+}
+
+QString AtomicSwapDaemon::networkFlag(bool tor) {
+    return tor && systemTorName().isEmpty() ? "--tor" : "--clearnet";
 }
 
 QString AtomicSwapDaemon::helperPath() {
@@ -70,7 +86,7 @@ void AtomicSwapDaemon::start(bool tor) {
     m_stopping = false;
     m_process = new QProcess(this);
     m_process->setProgram(program);
-    m_process->setArguments({"discover", tor ? "--tor" : "--clearnet", "--data-dir", dataDir});
+    m_process->setArguments({"discover", networkFlag(tor), "--data-dir", dataDir});
     // Logs are not needed here, and an unread pipe would eventually block the helper.
     m_process->setStandardErrorFile(QProcess::nullDevice());
     ChildProcess::endWithBiscuit(m_process);

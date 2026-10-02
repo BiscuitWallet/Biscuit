@@ -226,7 +226,7 @@ bool AtomicSwapRunner::launch(const AtomicSwapRecord &record, bool resume, QStri
     } else {
         args << "buy";
     }
-    args << (record.tor ? "--tor" : "--clearnet") << "--data-dir" << dataDir;
+    args << AtomicSwapDaemon::networkFlag(record.tor) << "--data-dir" << dataDir;
     for (const QString &url : btc->electrumUrls()) {
         args << "--electrum" << url;
     }
