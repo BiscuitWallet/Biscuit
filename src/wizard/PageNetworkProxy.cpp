@@ -8,6 +8,7 @@
 
 #include "WalletWizard.h"
 #include "utils/config.h"
+#include "utils/Utils.h"
 
 PageNetworkProxy::PageNetworkProxy(QWidget *parent)
     : QWizardPage(parent)
@@ -29,6 +30,19 @@ void PageNetworkProxy::initializePage() {
     QTimer::singleShot(1, [this]{
         ui->frame_privacyLevel->setVisible(false);
     });
+
+    // Biscuit: in Tor mode, a Tor already running on this computer (the SOCKS
+    // address in the settings, 127.0.0.1:9050 by default) is used instead of
+    // the bundled one. Someone running their own Tor most likely wants it:
+    // suggest Tor and say which one.
+    const QString host = conf()->get(Config::socks5Host).toString();
+    const quint16 port = conf()->get(Config::socks5Port).toString().toUShort();
+    if (Utils::portOpen(host, port)) {
+        ui->radio_tor->setChecked(true);
+        ui->label_torSwaps->setText(QString("A Tor is already running on this computer (%1:%2): Biscuit will use it, "
+                                            "and your IP address stays hidden. Exchange swaps are off, because exchanges "
+                                            "refuse Tor connections. Atomic swaps still work, through Tor.").arg(host).arg(port));
+    }
 }
 
 int PageNetworkProxy::nextId() const {
