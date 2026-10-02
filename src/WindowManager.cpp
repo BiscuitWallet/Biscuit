@@ -55,6 +55,12 @@ WindowManager::WindowManager(QObject *parent)
 
     this->showCrashLogs();
 
+    // Biscuit: Tor is opt-in, but Tails and Whonix only allow Tor. Their Tor
+    // question is skipped, so set Tor mode here, at every start.
+    if (TailsOS::detect() || WhonixOS::detect()) {
+        conf()->set(Config::proxy, Config::Proxy::Tor);
+    }
+
     if (!conf()->get(Config::firstRun).toBool() || TailsOS::detect() || WhonixOS::detect()) {
         this->onInitialNetworkConfigured();
     }
