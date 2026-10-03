@@ -89,6 +89,9 @@ public:
     // Removes an added wallet (never the main seed). Its seed is erased from
     // the file: the user needs their own backup to add it again.
     bool removeWallet(const QString &id, QString *error);
+    // Renames a wallet, the main one included (its name is kept per coin).
+    // Names are unique per coin.
+    bool renameWallet(const QString &id, const QString &name, QString *error);
 
     // Address book for Bitcoin and Litecoin (Monero keeps Feather's), stored
     // in the encrypted file. Needs the vault unlocked.

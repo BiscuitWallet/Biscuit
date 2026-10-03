@@ -155,8 +155,11 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
     const QJsonObject caches = obj.value("coins").toObject();
     QByteArray seedBytes = *seed;
     bool ok = true;
+    // The main wallets' names, if renamed ("mainNames": {"BTC": ..., "LTC": ...}).
+    const QJsonObject mainNames = obj.value("mainNames").toObject();
     for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
-        ok = ok && addEntry(mainId(*params), mainName, true, *params, seedBytes,
+        const QString name = mainNames.value(params->ticker).toString(mainName);
+        ok = ok && addEntry(mainId(*params), name, true, *params, seedBytes,
                             caches.value(params->ticker).toObject(), error);
     }
     walletfile::wipe(seedBytes);
@@ -506,6 +509,55 @@ bool CoinVault::removeWallet(const QString &id, QString *error) {
         m_selected[params.ticker] = mainId(params);
     }
     scheduleSave();
+    emit walletsChanged();
+    return true;
+}
+
+bool CoinVault::renameWallet(const QString &id, const QString &name, QString *error) {
+    const auto it = std::find_if(m_entries.begin(), m_entries.end(), [&id](const Entry &e) { return e.id == id; });
+    if (it == m_entries.end()) {
+        if (error) *error = "This wallet is no longer in Biscuit";
+        return false;
+    }
+    const QString clean = name.simplified();
+    if (clean.isEmpty()) {
+        if (error) *error = "The name cannot be empty.";
+        return false;
+    }
+    if (clean.size() > 32) {
+        if (error) *error = "The name is too long (32 characters at most).";
+        return false;
+    }
+    const CoinParams &params = it->wallet->params();
+    for (const Entry &e : wallets(params)) {
+        if (e.id != id && e.name.compare(clean, Qt::CaseInsensitive) == 0) {
+            if (error) *error = QString("Another %1 wallet is already called \"%2\".").arg(params.name, e.name);
+            return false;
+        }
+    }
+    const bool mainSeed = it->mainSeed;
+    const QString ticker = params.ticker;
+    const bool written = rewrite([&](QJsonObject &obj) {
+        if (mainSeed) {
+            QJsonObject names = obj.value("mainNames").toObject();
+            names[ticker] = clean;
+            obj["mainNames"] = names;
+            return;
+        }
+        QJsonArray extra = obj.value("extra").toArray();
+        for (int i = 0; i < extra.size(); ++i) {
+            QJsonObject entry = extra.at(i).toObject();
+            if (entry.value("id").toString() == id) {
+                entry["name"] = clean;
+                extra[i] = entry;
+            }
+        }
+        obj["extra"] = extra;
+    }, error);
+    if (!written) {
+        return false;
+    }
+    it->name = clean;
     emit walletsChanged();
     return true;
 }

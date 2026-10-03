@@ -6,6 +6,7 @@
 #include <QButtonGroup>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QInputDialog>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
@@ -124,6 +125,7 @@ void CoinWalletBar::rebuild() {
         connect(button, &QWidget::customContextMenuRequested, this,
                 [this, button, id, name = entry.name, mainSeed = entry.mainSeed](const QPoint &pos) {
             QMenu menu(this);
+            menu.addAction("Rename…", [this, id, name] { rename(id, name); });
             menu.addAction("Show seed…", [this, id, mainSeed] { showCoinSeed(m_vault, this, mainSeed ? QString() : id); });
             if (!mainSeed) {
                 menu.addAction(QString("Remove \"%1\"…").arg(name), [this, id, name] { confirmRemove(id, name); });
@@ -152,6 +154,19 @@ void CoinWalletBar::rebuild() {
     m_balance->setTextFormat(Qt::RichText);
     m_layout->addWidget(m_balance);
     updateBalances();
+}
+
+void CoinWalletBar::rename(const QString &id, const QString &name) {
+    bool ok = false;
+    const QString newName = QInputDialog::getText(this, QString("Rename %1 wallet").arg(m_params.name), "New name:",
+                                                  QLineEdit::Normal, name, &ok);
+    if (!ok || newName.simplified() == name) {
+        return;
+    }
+    QString error;
+    if (!m_vault->renameWallet(id, newName, &error)) {
+        QMessageBox::warning(this, QString("Rename %1 wallet").arg(m_params.name), error);
+    }
 }
 
 void CoinWalletBar::confirmRemove(const QString &id, const QString &name) {

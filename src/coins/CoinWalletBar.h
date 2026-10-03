@@ -38,6 +38,7 @@ private:
     void rebuild();
     void updateBalances();
     QString format(quint64 amount) const;
+    void rename(const QString &id, const QString &name);
     void confirmRemove(const QString &id, const QString &name);
 
     QPointer<CoinVault> m_vault;
