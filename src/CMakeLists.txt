@@ -237,8 +237,14 @@ if(NOT BISCUIT_SWAPD_BINARY AND EXISTS "${BISCUIT_SWAPD_DEFAULT}")
     set(BISCUIT_SWAPD_BINARY "${BISCUIT_SWAPD_DEFAULT}")
 endif()
 if(BISCUIT_SWAPD_BINARY)
+    # A copy marked executable: the release binaries may arrive without that
+    # bit (scp, git), and the macOS bundle takes the file as it is.
+    get_filename_component(BISCUIT_SWAPD_NAME "${BISCUIT_SWAPD_BINARY}" NAME)
+    set(BISCUIT_SWAPD_STAGED "${CMAKE_CURRENT_BINARY_DIR}/swapd/${BISCUIT_SWAPD_NAME}")
+    file(COPY "${BISCUIT_SWAPD_BINARY}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/swapd"
+            FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     add_custom_command(TARGET feather POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BISCUIT_SWAPD_BINARY}" "$<TARGET_FILE_DIR:feather>/biscuit-swapd${CMAKE_EXECUTABLE_SUFFIX}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BISCUIT_SWAPD_STAGED}" "$<TARGET_FILE_DIR:feather>/biscuit-swapd${CMAKE_EXECUTABLE_SUFFIX}"
             COMMENT "Bundling biscuit-swapd")
     if(APPLE)
         # Already inside Biscuit.app (Contents/MacOS), installed with the bundle.
