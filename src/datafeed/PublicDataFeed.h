@@ -40,10 +40,15 @@ private:
         Converter convert;
         int intervalMinutes;
         QTimer *timer;
+        QString cacheKey;   // non-empty: last data kept on disk (prices)
     };
 
-    bool fetch(const Source &source);   // false: waiting for Tor
+    bool fetch(Source &source);   // false: waiting for Tor
     void schedule(Source &source, int baseMs);
+    // Prices are public: the last ones are kept for a day, shown at start
+    // until fresh ones arrive.
+    void loadCache();
+    void saveCache(const QString &key, const QJsonObject &message);
 
     QList<Source> m_sources;
     bool m_running = false;

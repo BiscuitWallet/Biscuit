@@ -3,9 +3,13 @@
 
 #include "PublicDataFeed.h"
 
+#include <QDateTime>
+#include <QFile>
+#include <QJsonDocument>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRandomGenerator>
+#include <QSaveFile>
 
 #include "PublicData.h"
 #include "utils/config.h"
@@ -19,8 +23,8 @@ PublicDataFeed::PublicDataFeed(QObject *parent)
     : QObject(parent)
 {
     m_sources = {
-        {cryptoRatesUrl(), cryptoRatesMessage, 10, new QTimer(this)},
-        {fiatRatesUrl(), fiatRatesMessage, 60, new QTimer(this)},
+        {cryptoRatesUrl(), cryptoRatesMessage, 10, new QTimer(this), "crypto"},
+        {fiatRatesUrl(), fiatRatesMessage, 60, new QTimer(this), "fiat"},
         {crowdfundingUrl(), crowdfundingMessage, 60, new QTimer(this)},
         {newsUrl(), newsMessage, 360, new QTimer(this)},
     };
@@ -54,6 +58,7 @@ void PublicDataFeed::start() {
         return;
     }
     m_running = true;
+    loadCache();
     // First fetch a few seconds after start, at a random moment.
     for (Source &source : m_sources) {
         schedule(source, 2000);
@@ -75,7 +80,7 @@ void PublicDataFeed::schedule(Source &source, int baseMs) {
     source.timer->start(baseMs + jitterMs);
 }
 
-bool PublicDataFeed::fetch(const Source &source) {
+bool PublicDataFeed::fetch(Source &source) {
     if (!m_running || !allowedByProxySettings()) {
         return true;   // not waiting for anything: back at the usual interval
     }
@@ -102,17 +107,67 @@ bool PublicDataFeed::fetch(const Source &source) {
         return true;  // offline mode
     }
 
-    const Converter convert = source.convert;
-    connect(reply, &QNetworkReply::finished, this, [this, reply, convert] {
+    Source *src = &source;
+    connect(reply, &QNetworkReply::finished, this, [this, reply, src] {
         reply->deleteLater();
-        if (!m_running || reply->error() != QNetworkReply::NoError) {
-            return;  // retried at the next interval
+        if (!m_running) {
+            return;
         }
-        if (const auto msg = convert(reply->readAll())) {
-            emit message(*msg);
+        const auto msg = reply->error() == QNetworkReply::NoError ? src->convert(reply->readAll()) : std::nullopt;
+        if (!msg) {
+            // Failed: try again in a minute or two, not at the next interval.
+            schedule(*src, 60 * 1000);
+            return;
+        }
+        emit message(*msg);
+        if (!src->cacheKey.isEmpty()) {
+            saveCache(src->cacheKey, *msg);
         }
     });
     return true;
+}
+
+namespace {
+    QString cachePath() {
+        return Config::defaultConfigDir().filePath("datafeed-cache.json");
+    }
+    constexpr qint64 cacheMaxAgeSecs = 24 * 3600;
+}
+
+void PublicDataFeed::loadCache() {
+    QFile file(cachePath());
+    if (!file.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    const QJsonObject cache = QJsonDocument::fromJson(file.readAll()).object();
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    for (const Source &source : m_sources) {
+        const QJsonObject entry = cache.value(source.cacheKey).toObject();
+        const qint64 time = qint64(entry.value("time").toDouble());
+        const QJsonObject msg = entry.value("message").toObject();
+        if (source.cacheKey.isEmpty() || msg.isEmpty() || now - time > cacheMaxAgeSecs || time > now) {
+            continue;
+        }
+        // After start() returns: listeners are connected by then.
+        QTimer::singleShot(0, this, [this, msg] {
+            if (m_running) emit message(msg);
+        });
+    }
+}
+
+void PublicDataFeed::saveCache(const QString &key, const QJsonObject &message) {
+    QFile file(cachePath());
+    QJsonObject cache;
+    if (file.open(QIODevice::ReadOnly)) {
+        cache = QJsonDocument::fromJson(file.readAll()).object();
+        file.close();
+    }
+    cache.insert(key, QJsonObject{{"time", double(QDateTime::currentSecsSinceEpoch())}, {"message", message}});
+    QSaveFile out(cachePath());
+    if (out.open(QIODevice::WriteOnly)) {
+        out.write(QJsonDocument(cache).toJson(QJsonDocument::Compact));
+        out.commit();
+    }
 }
 
 }
