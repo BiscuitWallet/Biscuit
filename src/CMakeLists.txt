@@ -453,7 +453,9 @@ endif()
 # Biscuit: sign the bundle in build/bin once everything is in it (ad hoc, no
 # Apple account). Bundling Tor and the helper breaks the linker signature, and
 # macOS then takes the running app for another one than the Dock icon.
-if(APPLE)
+# Only when building on a Mac: Guix cross-compiles from Linux, without
+# codesign, and contrib/release/macos-adhoc-sign.sh signs the release zips.
+if(APPLE AND CMAKE_HOST_APPLE)
     add_custom_command(TARGET feather POST_BUILD
             COMMAND codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:feather>"
             COMMENT "Signing the app bundle (ad hoc)"
