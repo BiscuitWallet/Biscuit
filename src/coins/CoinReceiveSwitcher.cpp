@@ -3,14 +3,17 @@
 
 #include "CoinReceiveSwitcher.h"
 
+#include <QCheckBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
+#include "CoinAddressesDialog.h"
 #include "CoinPicker.h"
 #include "CoinWalletBar.h"
 #include "CoinSetupDialog.h"
@@ -87,18 +90,46 @@ QWidget *CoinReceiveSwitcher::coinPage(const CoinParams &params) {
     addressRow->addWidget(w.address);
     addressRow->addWidget(copy);
     form->addRow("Address", addressRow);
-    auto *hint = new QLabel("A new address is shown after each payment received, for privacy. "
-                            "Previous addresses keep working.", page);
-    hint->setWordWrap(true);
-    hint->setStyleSheet("color: gray;");
-    hint->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    form->addRow(QString(), hint);
+    auto *actions = new QHBoxLayout;
+    auto *fresh = new QPushButton("New address", page);
+    fresh->setToolTip("Show another address of this wallet, never used yet. "
+                      "Earlier addresses keep working.");
+    auto *all = new QPushButton("All addresses…", page);
+    actions->addWidget(fresh);
+    actions->addWidget(all);
+    actions->addStretch();
+    form->addRow(QString(), actions);
+    w.keep = new QCheckBox("Keep this address after payments", page);
+    form->addRow(QString(), w.keep);
+    w.hint = new QLabel(page);
+    w.hint->setWordWrap(true);
+    w.hint->setStyleSheet("color: gray;");
+    w.hint->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    form->addRow(QString(), w.hint);
     pageLayout->addLayout(form, 1);
     w.qr = new QLabel(page);
     w.qr->setFixedSize(180, 180);
     w.qr->setAlignment(Qt::AlignCenter);
     pageLayout->addWidget(w.qr, 0, Qt::AlignTop);
     connect(copy, &QPushButton::clicked, this, [address = w.address] { Utils::copyToClipboard(address->text()); });
+    const CoinParams *p = &params;
+    connect(fresh, &QPushButton::clicked, this, [this, p] {
+        CoinWallet *c = coin(*p);
+        if (c && !c->newReceiveAddress()) {
+            Utils::showError(this, "No new address",
+                             "The last 20 addresses shown have not received anything yet. Use one of them, "
+                             "or wait for a payment: if this wallet were restored from its seed, payments "
+                             "to addresses further on would not be found.");
+        }
+    });
+    connect(all, &QPushButton::clicked, this, [this, p] {
+        if (CoinWallet *c = coin(*p)) {
+            CoinAddressesDialog(c, m_vault->selectedName(*p), this).exec();
+        }
+    });
+    connect(w.keep, &QCheckBox::toggled, this, [this, p](bool keep) {
+        if (CoinWallet *c = coin(*p)) c->setKeepReceiveAddress(keep);
+    });
 
     // Wallet buttons ([Main] [Litecoin 2] [+ Add]) above the address.
     auto *withBar = new QWidget(w.state);
@@ -114,13 +145,27 @@ QWidget *CoinReceiveSwitcher::coinPage(const CoinParams &params) {
     return w.state;
 }
 
+CoinWallet *CoinReceiveSwitcher::coin(const CoinParams &params) const {
+    return m_vault->isUnlocked() ? m_vault->wallet(params) : nullptr;
+}
+
 void CoinReceiveSwitcher::refresh() {
     for (CoinWidgets &w : m_coinWidgets) {
-        CoinWallet *coin = m_vault->isUnlocked() ? m_vault->wallet(*w.params) : nullptr;
+        CoinWallet *coin = this->coin(*w.params);
         w.state->setCurrentIndex(coin ? 1 : 0);
         if (!coin) {
             continue;
         }
+        const bool keep = coin->keepsReceiveAddress();
+        {
+            const QSignalBlocker blocker(w.keep);
+            w.keep->setChecked(keep);
+        }
+        w.hint->setText(keep
+            ? "This address stays the same. Anyone who knows it can look it up on the blockchain "
+              "and see every payment it receives."
+            : "Once this address receives a payment, a new one is shown, so that people who pay you "
+              "cannot see your other payments. Earlier addresses keep working: see All addresses.");
         const QString address = coin->receiveAddress();
         if (w.address->text() == address) {
             continue;

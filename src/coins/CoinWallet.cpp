@@ -67,6 +67,9 @@ CoinWallet::CoinWallet(HdAccount account, const QJsonObject &cache, QObject *par
             m_firstSeen.insert(it.key(), qint64(it.value().toDouble()));
         }
         m_height = cache.value("height").toInt();
+        m_receiveAsked = quint32(cache.value("receiveAsked").toInt());
+        m_keptReceive = cache.value("keptReceive").toInt(-1);
+        for (quint32 i = 0; i <= receiveIndex(); ++i) scriptHash({HdAccount::Receive, i});
         recompute();
     }
 }
@@ -190,20 +193,24 @@ void CoinWallet::onReady() {
     });
     refreshFees();
 
-    m_scanner = electrum::GapScanner(gapLimit);
+    // The new scan runs beside the last complete one, which keeps giving the
+    // receive and change addresses until it is done.
+    m_scanning = electrum::GapScanner(gapLimit);
     m_heights.clear();
     scanNext();
 }
 
 void CoinWallet::scanNext() {
-    const auto batch = m_scanner.nextBatch();
+    const auto batch = m_scanning.nextBatch();
     if (batch.isEmpty()) {
-        if (m_scanner.done()) {
+        if (m_scanning.done()) {
+            m_scanner = m_scanning;
             fetchMissingTransactions([this] { fetchBlockTimes([this] {
                 recompute();
                 setStatus(Status::Synchronized);
                 // Be told when anything changes on our addresses.
-                for (quint32 i = 0; i < m_scanner.firstUnused(HdAccount::Receive) + 5; ++i) {
+                const quint32 receiveEnd = std::max(m_scanner.firstUnused(HdAccount::Receive), receiveIndex()) + 5;
+                for (quint32 i = 0; i < receiveEnd; ++i) {
                     m_client->call("blockchain.scripthash.subscribe", {scriptHash({HdAccount::Receive, i})}, nullptr);
                 }
                 for (quint32 i = 0; i < m_scanner.firstUnused(HdAccount::Change) + 2; ++i) {
@@ -227,7 +234,7 @@ void CoinWallet::scanNext() {
                 const QJsonObject item = v.toObject();
                 m_heights.insert(item.value("tx_hash").toString(), item.value("height").toInt());
             }
-            m_scanner.setUsed(ref, !items.isEmpty());
+            m_scanning.setUsed(ref, !items.isEmpty());
             if (--m_pendingScans == 0) {
                 scanNext();
             }
@@ -342,6 +349,14 @@ void CoinWallet::recompute() {
         if (!m_firstSeen.contains(e.txid)) m_firstSeen.insert(e.txid, now);
     }
     m_utxos = electrum::computeUtxos(txs, m_heights, m_scripts);
+    m_scriptTxs.clear();
+    for (const auto &tx : txs) {
+        QSet<QByteArray> paid;
+        for (const auto &out : tx.outputs) {
+            if (m_scripts.contains(out.scriptPubKey)) paid.insert(out.scriptPubKey);
+        }
+        for (const QByteArray &script : paid) m_scriptTxs[script]++;
+    }
     emit updated();
     emit cacheChanged();
 }
@@ -453,8 +468,70 @@ CoinWallet::Balance CoinWallet::balance() const {
     return b;
 }
 
+quint32 CoinWallet::receiveIndex() const {
+    if (m_keptReceive >= 0) {
+        return quint32(m_keptReceive);
+    }
+    return std::max(m_scanner.firstUnused(HdAccount::Receive), m_receiveAsked);
+}
+
 QString CoinWallet::receiveAddress() const {
-    return m_account.address(HdAccount::Receive, m_scanner.firstUnused(HdAccount::Receive));
+    return m_account.address(HdAccount::Receive, receiveIndex());
+}
+
+bool CoinWallet::newReceiveAddress() {
+    const quint32 firstUnused = m_scanner.firstUnused(HdAccount::Receive);
+    const quint32 next = std::max(firstUnused, receiveIndex() + 1);
+    if (next >= firstUnused + gapLimit) {
+        return false;
+    }
+    m_receiveAsked = next;
+    if (m_keptReceive >= 0) {
+        m_keptReceive = next;
+    }
+    const QString hash = scriptHash({HdAccount::Receive, next});
+    if (m_status == Status::Synchronized) {
+        m_client->call("blockchain.scripthash.subscribe", {hash}, nullptr);
+    }
+    emit updated();
+    emit cacheChanged();
+    return true;
+}
+
+void CoinWallet::setKeepReceiveAddress(bool keep) {
+    if (keep == keepsReceiveAddress()) {
+        return;
+    }
+    if (keep) {
+        m_keptReceive = receiveIndex();
+    } else {
+        // Back to the usual: the next unused address from now on.
+        m_receiveAsked = quint32(m_keptReceive);
+        m_keptReceive = -1;
+    }
+    emit updated();
+    emit cacheChanged();
+}
+
+QList<CoinWallet::AddressInfo> CoinWallet::addresses(HdAccount::Chain chain) const {
+    QMap<quint32, quint64> balances;
+    for (const auto &c : m_utxos) {
+        if (c.utxo.chain == chain) balances[c.utxo.index] += c.utxo.value;
+    }
+    quint32 count = m_scanner.firstUnused(chain);
+    if (chain == HdAccount::Receive) {
+        count = std::max(count, receiveIndex() + 1);
+    }
+    QList<AddressInfo> list;
+    for (quint32 i = 0; i < count; ++i) {
+        AddressInfo info;
+        info.index = i;
+        info.address = m_account.address(chain, i);
+        info.transactions = m_scriptTxs.value(m_account.scriptPubKey(chain, i));
+        info.balance = balances.value(i);
+        list.append(info);
+    }
+    return list;
 }
 
 double CoinWallet::feeRate(int targetBlocks) const {
@@ -572,6 +649,8 @@ QJsonObject CoinWallet::cache() const {
         }()},
         {"receiveNext", int(m_scanner.firstUnused(HdAccount::Receive))},
         {"changeNext", int(m_scanner.firstUnused(HdAccount::Change))},
+        {"receiveAsked", int(m_receiveAsked)},
+        {"keptReceive", int(m_keptReceive)},
         {"height", m_height},
         {"blockTimes", [this] {
             QJsonObject o;

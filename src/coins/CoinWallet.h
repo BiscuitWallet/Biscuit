@@ -63,8 +63,27 @@ public:
     // Block time of a confirmed transaction, or when it was first seen.
     QDateTime transactionTime(const QString &txid) const;
 
-    // Next address never used to receive (a new one each time a payment arrives).
+    // Address shown on the receive page: the next one never used, unless the
+    // user asked for a further one or to keep this one after payments.
     QString receiveAddress() const;
+    quint32 receiveIndex() const;
+    // Shows a further unused address. False when the wallet is already
+    // gapLimit addresses past the last used one: restoring the seed would
+    // not find payments beyond that.
+    bool newReceiveAddress();
+    // Keeps the shown address even after it receives payments.
+    bool keepsReceiveAddress() const { return m_keptReceive >= 0; }
+    void setKeepReceiveAddress(bool keep);
+
+    struct AddressInfo {
+        quint32 index = 0;
+        QString address;
+        int transactions = 0;   // transactions paying to it
+        quint64 balance = 0;    // unspent, confirmed or not
+    };
+    // Every address of a chain up to the last used one (on the receive
+    // chain, up to the one shown).
+    QList<AddressInfo> addresses(HdAccount::Chain chain) const;
     // First receive address: identifies the seed without exposing it.
     QString firstAddress() const { return m_account.address(HdAccount::Receive, 0); }
 
@@ -131,7 +150,8 @@ private:
     bool m_running = false;
     int m_failures = 0;
 
-    electrum::GapScanner m_scanner;
+    electrum::GapScanner m_scanner;    // last complete scan
+    electrum::GapScanner m_scanning;   // scan in progress
     int m_pendingScans = 0;
     QMap<QByteArray, electrum::AddressRef> m_scripts;      // scriptPubKey -> address
     QMap<QString, electrum::AddressRef> m_scriptHashes;    // electrum scripthash -> address
@@ -144,8 +164,11 @@ private:
     QList<electrum::HistoryEntry> m_history;
     QList<electrum::WalletUtxo> m_utxos;
     QSet<QString> m_frozen;   // coinKey values
+    QMap<QByteArray, int> m_scriptTxs;                      // scriptPubKey -> transactions paying to it
     int m_height = 0;
     QString m_spendLock;
+    quint32 m_receiveAsked = 0;   // index from newReceiveAddress (cache)
+    qint64 m_keptReceive = -1;    // index kept after payments, -1 = none (cache)
 };
 
 }

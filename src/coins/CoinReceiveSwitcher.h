@@ -7,6 +7,7 @@
 #include <QPointer>
 #include <QWidget>
 
+class QCheckBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -16,6 +17,7 @@ class Wallet;
 namespace biscuit::coins {
 
 class CoinPicker;
+class CoinWallet;
 class CoinVault;
 struct CoinParams;
 
@@ -31,6 +33,7 @@ public:
 private:
     QWidget *coinPage(const CoinParams &params);
     void refresh();
+    CoinWallet *coin(const CoinParams &params) const;
 
     QPointer<CoinVault> m_vault;
     CoinPicker *m_coin;
@@ -41,6 +44,8 @@ private:
         QStackedWidget *state = nullptr;   // 0 = not set up, 1 = address
         QLineEdit *address = nullptr;
         QLabel *qr = nullptr;
+        QCheckBox *keep = nullptr;
+        QLabel *hint = nullptr;
     };
     QList<CoinWidgets> m_coinWidgets;
 };
