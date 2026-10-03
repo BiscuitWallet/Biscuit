@@ -376,6 +376,9 @@ std::optional<TxPlan> CoinWallet::planBump(const QString &txid, double feeRate, 
         if (error) *error = message;
         return std::nullopt;
     };
+    if (!m_spendLock.isEmpty()) {
+        return fail(m_spendLock);
+    }
     const auto fee = transactionFee(txid);
     if (!m_parsed.contains(txid) || m_heights.value(txid, 1) > 0 || !fee) {
         return fail("Only an unconfirmed transaction sent from this wallet can be sped up.");
@@ -464,6 +467,10 @@ double CoinWallet::feeRate(int targetBlocks) const {
 
 std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amount, double feeRate, bool sendAll,
                                            QString *error, const QStringList &onlyCoins) const {
+    if (!m_spendLock.isEmpty()) {
+        if (error) *error = m_spendLock;
+        return std::nullopt;
+    }
     // Silent payment: plan with a Taproot output of the right size, then
     // derive the real one from the coins the plan spends.
     const auto silent = sp::addressFor(address, params());
@@ -512,6 +519,10 @@ std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amoun
 }
 
 void CoinWallet::broadcast(const TxPlan &plan, std::function<void(const QString &, const QString &)> callback) {
+    if (!m_spendLock.isEmpty()) {
+        callback({}, m_spendLock);
+        return;
+    }
     QString error;
     const auto tx = signTransaction(plan, m_account, quint32(std::max(0, m_height)), &error);
     if (!tx) {

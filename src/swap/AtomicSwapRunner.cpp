@@ -65,6 +65,11 @@ namespace {
     bool biscuitUsesProxy() {
         return conf()->get(Config::proxy).toInt() != Config::Proxy::None;
     }
+
+    QList<AtomicSwapRunner *> &runners() {
+        static QList<AtomicSwapRunner *> list;
+        return list;
+    }
 }
 
 AtomicSwapRunner::AtomicSwapRunner(Wallet *wallet, QObject *parent)
@@ -87,13 +92,19 @@ AtomicSwapRunner::AtomicSwapRunner(Wallet *wallet, QObject *parent)
     // Unfinished swaps go on as soon as the Bitcoin wallet is available.
     if (auto *vault = coins::CoinVault::forWallet(m_wallet)) {
         connect(vault, &coins::CoinVault::unlocked, this, &AtomicSwapRunner::resumeNext);
+        // The wallets are created at unlock: lock them again then.
+        connect(vault, &coins::CoinVault::unlocked, this, &AtomicSwapRunner::updateSpendLocks);
+        connect(vault, &coins::CoinVault::walletsChanged, this, &AtomicSwapRunner::updateSpendLocks);
         if (vault->isUnlocked()) {
             QTimer::singleShot(0, this, &AtomicSwapRunner::resumeNext);
         }
     }
+    updateSpendLocks();
+    runners().append(this);
 }
 
 AtomicSwapRunner::~AtomicSwapRunner() {
+    runners().removeAll(this);
     // The swap is saved at every step: it resumes at the next start.
     if (m_process) {
         m_process->disconnect(this);
@@ -373,7 +384,37 @@ void AtomicSwapRunner::save() {
         // Written at once: the stage decides whether the swap resumes.
         m_wallet->storeSafer();
     }
+    updateSpendLocks();
     emit recordsChanged();
+}
+
+void AtomicSwapRunner::updateSpendLocks() {
+    auto *vault = m_wallet ? coins::CoinVault::forWallet(m_wallet) : nullptr;
+    if (!vault || !vault->isUnlocked()) {
+        return;
+    }
+    // From the agreement with the maker (the helper picks the coins of its
+    // lock transaction) until the swap ends, refunds included.
+    for (const auto &entry : vault->wallets(coins::bitcoin())) {
+        const auto swap = std::find_if(m_records.begin(), m_records.end(), [&entry](const AtomicSwapRecord &r) {
+            const bool sameWallet = r.walletId == entry.id || (r.walletId.isEmpty() && entry.mainSeed);
+            return sameWallet && !isFinalStage(r.stage);
+        });
+        entry.wallet->setSpendLock(swap == m_records.end() ? QString()
+            : QString("Sends from \"%1\" are paused while an atomic swap uses this wallet (%2). "
+                      "They resume when the swap ends.").arg(entry.name, stageText(swap->stage)));
+    }
+}
+
+bool AtomicSwapRunner::fundsAtStakeAnywhere() {
+    for (const AtomicSwapRunner *runner : runners()) {
+        for (const AtomicSwapRecord &r : runner->m_records) {
+            if (fundsAtStake(r.stage)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 QString AtomicSwapRunner::swapSubaddress(const QString &label) {

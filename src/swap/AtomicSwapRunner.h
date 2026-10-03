@@ -44,6 +44,10 @@ public:
     // Relaunches the next unfinished swap, if any (vault unlocked).
     void resumeNext();
 
+    // True if any open wallet has a swap whose BTC is locked: closing Biscuit
+    // then stops the automatic refund (see fundsAtStake).
+    static bool fundsAtStakeAnywhere();
+
     // Removes finished swaps from the list (see atomic::withoutFinished).
     // The helper's database and the logs are kept. Returns how many went.
     int clearFinished();
@@ -59,6 +63,8 @@ private:
     void onFinished(int exitCode, QProcess::ExitStatus status);
     void update(const QString &id, const std::function<void(atomic::AtomicSwapRecord &)> &change);
     void save();
+    // Pauses sends from the Bitcoin wallets an unfinished swap uses.
+    void updateSpendLocks();
     // Subaddress receiving the XMR: an unused one left by a cancelled swap,
     // or a new one.
     QString swapSubaddress(const QString &label);

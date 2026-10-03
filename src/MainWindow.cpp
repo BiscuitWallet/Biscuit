@@ -12,6 +12,7 @@
 #include "Amount.h"
 #include "utils/Appearance.h"
 #include "datafeed/TorCheck.h"
+#include "swap/AtomicSwapRunner.h"
 #include "widgets/PixelIcons.h"
 #include "coins/CoinCoinsSwitcher.h"
 #include "coins/CoinContactsSwitcher.h"
@@ -1397,6 +1398,26 @@ QIcon MainWindow::hardwareDeviceUnpairedIcon() {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     qDebug() << Q_FUNC_INFO;
+
+    // Biscuit: an atomic swap with locked BTC needs Biscuit running to finish
+    // or to refund. Closing stays possible, after a clear warning.
+    if (!this->cleanedUp && biscuit::swap::AtomicSwapRunner::fundsAtStakeAnywhere()) {
+        QMessageBox box(this);
+        box.setIcon(QMessageBox::Warning);
+        box.setWindowTitle("Atomic swap in progress");
+        box.setText("An atomic swap is still running, and your BTC is locked in it.");
+        box.setInformativeText("Biscuit finishes the swap, or refunds your BTC if it fails, only while it is open. "
+                               "If Biscuit stays closed for about a day, the maker can keep your BTC.\n\n"
+                               "Keep Biscuit open until the swap is done.");
+        QPushButton *keep = box.addButton("Keep Biscuit open", QMessageBox::RejectRole);
+        box.addButton("Close anyway", QMessageBox::DestructiveRole);
+        box.setDefaultButton(keep);
+        box.exec();
+        if (box.clickedButton() == keep) {
+            event->ignore();
+            return;
+        }
+    }
 
     if (!this->cleanedUp) {
         qDebug() << "MainWindow: cleaning up";

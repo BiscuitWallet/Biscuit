@@ -91,6 +91,12 @@ public:
     std::optional<quint64> transactionFee(const QString &txid) const;
     double transactionFeeRate(const QString &txid) const;
 
+    // While an atomic swap uses this wallet, nothing else may spend from it:
+    // the swap helper builds its own transactions from these coins. The
+    // reason is the error every send gets; empty: sends allowed.
+    void setSpendLock(const QString &reason) { m_spendLock = reason; }
+    QString spendLock() const { return m_spendLock; }
+
     // Signs and broadcasts a plan the user has confirmed.
     void broadcast(const TxPlan &plan, std::function<void(const QString &txid, const QString &error)> callback);
 
@@ -139,6 +145,7 @@ private:
     QList<electrum::WalletUtxo> m_utxos;
     QSet<QString> m_frozen;   // coinKey values
     int m_height = 0;
+    QString m_spendLock;
 };
 
 }

@@ -98,8 +98,12 @@ void WindowManager::quitAfterLastWindow() {
 
 void WindowManager::close() {
     qDebug() << Q_FUNC_INFO << QThread::currentThreadId();
-    for (const auto &window: m_windows) {
-        window->close();
+    // A window may refuse to close (an atomic swap with locked BTC): then
+    // Biscuit does not quit.
+    for (const auto &window: QList(m_windows)) {
+        if (!window->close()) {
+            return;
+        }
     }
 
     if (m_splashDialog) {
