@@ -1,2 +1,4 @@
 761d8c6fca7e1c58e85f6ee3154d100e65ef270f10214f7761cb3f04a8740a4b  bin/biscuit-swapd-x86_64-linux-gnu
 0a8ef2b4bf688c1d08ced16abe93678e920ed2ce203b69bae684c25ce673a26e  bin/biscuit-swapd-x86_64-w64-mingw32.exe
+91cd814ae182f7edc636b92c1fd02a1da25ff9bc4630ede1cbaa0dcdfd25fb2f  bin/biscuit-swapd-arm64-apple-darwin
+03c3708cd97f4efebce98270a3596181b27d6ec528d12c1e8e1c1cacc2fd3cf5  bin/biscuit-swapd-x86_64-apple-darwin
