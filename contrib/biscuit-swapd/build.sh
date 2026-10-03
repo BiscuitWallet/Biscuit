@@ -4,23 +4,64 @@
 #
 #   contrib/biscuit-swapd/build.sh linux     -> bin/biscuit-swapd-x86_64-linux-gnu
 #   contrib/biscuit-swapd/build.sh windows   -> bin/biscuit-swapd-x86_64-w64-mingw32.exe
+#   contrib/biscuit-swapd/build.sh macos     -> bin/biscuit-swapd-arm64-apple-darwin
+#                                               bin/biscuit-swapd-x86_64-apple-darwin
 #
 # Linux: needs glibc 2.34 at run time (Ubuntu 22.04, Debian 12, Tails 6 and
 # later); Monero's Boost does not build against older glibc here.
 # Windows: cross-compiled with the MinGW-w64 GCC that eigenwallet's script
 # builds from source (signatures checked), as for eigenwallet's releases.
+# macOS: built natively on a Mac (Apple Silicon), for both processors, to run
+# on macOS 14 and later. Needs the external/biscuit-swapd submodule with its
+# own submodules (Monero), or SWAPD_SRC=<checkout at the same commit>, and
+# rustup with both apple-darwin targets.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 SRC="$ROOT/external/biscuit-swapd"
+# macos: another checkout of biscuit-swapd may be used (SWAPD_SRC), at the
+# commit this repository pins.
+if [ "${1:-}" = macos ] && [ -n "${SWAPD_SRC:-}" ]; then
+    PIN="$(git -C "$ROOT" ls-tree HEAD external/biscuit-swapd | awk '{print $3}')"
+    [ "$(git -C "$SWAPD_SRC" rev-parse HEAD)" = "$PIN" ] \
+        || { echo "SWAPD_SRC is not at the pinned commit $PIN" >&2; exit 1; }
+    [ -z "$(git -C "$SWAPD_SRC" status --porcelain --untracked-files=no)" ] \
+        || { echo "SWAPD_SRC has local changes" >&2; exit 1; }
+    SRC="$(cd "$SWAPD_SRC" && pwd)"
+fi
 IMAGE="docker.io/library/ubuntu@sha256:281c5745f657873d78e5531fc5ba8575f46ab7769b94550ac99543f122679986"   # ubuntu:22.04
 RUST_VERSION="$(sed -n 's/^channel = "\(.*\)"/\1/p' "$SRC/rust-toolchain.toml")"
 case "${1:-}" in
     linux)   TARGET="";                       OUT="biscuit-swapd-x86_64-linux-gnu" ;;
     windows) TARGET="x86_64-pc-windows-gnu";  OUT="biscuit-swapd-x86_64-w64-mingw32.exe" ;;
-    *) echo "usage: $0 linux|windows" >&2; exit 1 ;;
+    macos)   TARGET="";                       OUT="" ;;
+    *) echo "usage: $0 linux|windows|macos" >&2; exit 1 ;;
 esac
+
+if [ "$1" = macos ]; then
+    [ "$(uname)" = Darwin ] || { echo "macos: run this on a Mac" >&2; exit 1; }
+    mkdir -p "$HERE/bin"
+    # Monero's depends target macOS 10.8, which current libc++ refuses, and
+    # monero-sys runs make with an empty environment but PATH: a make first
+    # in PATH sets the minimum version instead.
+    WRAP="$(mktemp -d)"
+    trap 'rm -rf "$WRAP"' EXIT
+    printf '#!/bin/sh\nexec /usr/bin/make OSX_MIN_VERSION=14.0 "$@"\n' > "$WRAP/make"
+    chmod +x "$WRAP/make"
+    for arch in aarch64 x86_64; do
+        # Cargo's default strip breaks the proc-macro libraries on recent macOS.
+        (cd "$SRC" && PATH="$WRAP:$HOME/.cargo/bin:$PATH" MACOSX_DEPLOYMENT_TARGET=14.0 \
+            CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP=false \
+            rustup run "$RUST_VERSION" cargo build --release -p biscuit-swapd --target "$arch-apple-darwin")
+        out="$HERE/bin/biscuit-swapd-${arch/aarch64/arm64}-apple-darwin"
+        cp "$SRC/target/$arch-apple-darwin/release/biscuit-swapd" "$out"
+        strip "$out"
+        codesign --force --sign - "$out"
+        echo "$(cd "$HERE" && shasum -a 256 "bin/$(basename "$out")")"
+    done
+    exit 0
+fi
 
 [ -f "$SRC/Cargo.toml" ] || { echo "external/biscuit-swapd is missing: git submodule update --init --recursive external/biscuit-swapd" >&2; exit 1; }
 mkdir -p "$HERE/bin"
