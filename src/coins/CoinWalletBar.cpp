@@ -119,14 +119,17 @@ void CoinWalletBar::rebuild() {
         m_layout->addWidget(button);
         const QString id = entry.id;
         connect(button, &QPushButton::clicked, this, [this, id] { m_vault->select(m_params, id); });
-        if (!entry.mainSeed) {
-            button->setContextMenuPolicy(Qt::CustomContextMenu);
-            connect(button, &QWidget::customContextMenuRequested, this, [this, button, id, name = entry.name](const QPoint &pos) {
-                QMenu menu(this);
+        // Right click: its seed, and removing the wallets the user added.
+        button->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(button, &QWidget::customContextMenuRequested, this,
+                [this, button, id, name = entry.name, mainSeed = entry.mainSeed](const QPoint &pos) {
+            QMenu menu(this);
+            menu.addAction("Show seed…", [this, id, mainSeed] { showCoinSeed(m_vault, this, mainSeed ? QString() : id); });
+            if (!mainSeed) {
                 menu.addAction(QString("Remove \"%1\"…").arg(name), [this, id, name] { confirmRemove(id, name); });
-                menu.exec(button->mapToGlobal(pos));
-            });
-        }
+            }
+            menu.exec(button->mapToGlobal(pos));
+        });
     }
 
     if (m_addVisible) {

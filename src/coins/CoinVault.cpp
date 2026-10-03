@@ -284,7 +284,8 @@ bool CoinVault::changePassword(const QString &oldPassword, const QString &newPas
     return saved;
 }
 
-std::optional<QPair<QString, QString>> CoinVault::revealMnemonic(const QString &password, QString *error) const {
+std::optional<QPair<QString, QString>> CoinVault::revealMnemonic(const QString &password, QString *error,
+                                                                 const QString &id) const {
     QFile file(path());
     if (!file.open(QIODevice::ReadOnly)) {
         if (error) *error = file.errorString();
@@ -297,7 +298,17 @@ std::optional<QPair<QString, QString>> CoinVault::revealMnemonic(const QString &
     }
     const QJsonObject obj = parseContent(*content);
     walletfile::wipe(*content);
-    return qMakePair(obj.value("mnemonic").toString(), obj.value("passphrase").toString());
+    if (id.isEmpty() || id.startsWith("main-")) {
+        return qMakePair(obj.value("mnemonic").toString(), obj.value("passphrase").toString());
+    }
+    for (const QJsonValue &value : obj.value("extra").toArray()) {
+        const QJsonObject extra = value.toObject();
+        if (extra.value("id").toString() == id) {
+            return qMakePair(extra.value("mnemonic").toString(), extra.value("passphrase").toString());
+        }
+    }
+    if (error) *error = "This wallet is no longer in the file.";
+    return std::nullopt;
 }
 
 CoinWallet *CoinVault::wallet(const CoinParams &params) const {

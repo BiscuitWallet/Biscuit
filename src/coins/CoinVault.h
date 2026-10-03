@@ -52,8 +52,10 @@ public:
     // the Monero wallet password was changed.
     bool changePassword(const QString &oldPassword, const QString &newPassword, QString *error);
 
-    // Seed and optional passphrase, read from the file with the password.
-    std::optional<QPair<QString, QString>> revealMnemonic(const QString &password, QString *error) const;
+    // Seed and optional passphrase, read from the file with the password: the
+    // main seed, or with `id` the seed of a wallet added with addWallet.
+    std::optional<QPair<QString, QString>> revealMnemonic(const QString &password, QString *error,
+                                                          const QString &id = {}) const;
     // BIP39 seed (64 bytes) of one wallet, read from the file (vault
     // unlocked). For the atomic swap helper, which spends from that wallet.
     // The caller wipes it (walletfile::wipe) once handed over.

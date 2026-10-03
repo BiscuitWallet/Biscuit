@@ -9,6 +9,7 @@
 class QCheckBox;
 class QLabel;
 class QLineEdit;
+class QMenu;
 class QPlainTextEdit;
 class QPushButton;
 class QStackedWidget;
@@ -69,8 +70,12 @@ private:
     QLabel *m_error = nullptr;
 };
 
-// Shows the Bitcoin/Litecoin seed after asking the wallet password again.
-void showCoinSeed(CoinVault *vault, QWidget *parent);
+// Shows a Bitcoin/Litecoin seed after asking the wallet password again: the
+// main seed, or with `id` the seed of an added wallet.
+void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id = {});
+// Adds one "Show seed" action per Bitcoin/Litecoin seed to `menu`: the main
+// seed, then each added wallet.
+void addCoinSeedActions(QMenu *menu, CoinVault *vault, QWidget *parent);
 
 }
 

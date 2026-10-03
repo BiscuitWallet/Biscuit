@@ -3,6 +3,8 @@
 
 #include "MainWindow.h"
 
+#include <QCursor>
+#include <QMenu>
 #include <QGuiApplication>
 #include <QStyleHints>
 #include "ui_MainWindow.h"
@@ -212,8 +214,20 @@ void MainWindow::initStatusBar() {
     connect(m_statusBtnPreferences, &StatusBarButton::clicked, this, &MainWindow::menuSettingsClicked);
     this->statusBar()->addPermanentWidget(m_statusBtnPreferences);
 
-    m_statusBtnSeed = new StatusBarButton(PixelIcons::icon("seed"), "Seed", this);
-    connect(m_statusBtnSeed, &StatusBarButton::clicked, this, &MainWindow::showSeedDialog);
+    m_statusBtnSeed = new StatusBarButton(PixelIcons::icon("seed"), "Seeds", this);
+    // Biscuit: the Monero seed, or once Bitcoin/Litecoin are set up, a choice of seeds.
+    connect(m_statusBtnSeed, &StatusBarButton::clicked, this, [this] {
+        auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+        if (!vault->exists()) {
+            this->showSeedDialog();
+            return;
+        }
+        QMenu menu(this);
+        menu.addAction("Monero seed…", this, &MainWindow::showSeedDialog);
+        menu.addSeparator();
+        biscuit::coins::addCoinSeedActions(&menu, vault, this);
+        menu.exec(QCursor::pos());
+    });
     this->statusBar()->addPermanentWidget(m_statusBtnSeed);
 
     // Biscuit: Tor mode is on, but biscuitwallet.com does not see Biscuit
@@ -382,17 +396,19 @@ void MainWindow::initMenu() {
     // Biscuit: the Bitcoin/Litecoin seed, next to the Monero one.
     {
         ui->actionSeed->setText("Monero seed");
-        auto *coinSeed = new QAction("Bitcoin and Litecoin seed…", this);
-        ui->menuWallet->insertAction(ui->actionSeed, coinSeed);
+        // A submenu, filled when opened: the main seed and each added wallet.
+        auto *coinSeeds = new QMenu("Bitcoin and Litecoin seeds", this);
+        QAction *coinSeedsAction = coinSeeds->menuAction();
+        ui->menuWallet->insertAction(ui->actionSeed, coinSeedsAction);
         ui->menuWallet->removeAction(ui->actionSeed);
-        ui->menuWallet->insertAction(coinSeed, ui->actionSeed);
-        connect(coinSeed, &QAction::triggered, this, [this] {
+        ui->menuWallet->insertAction(coinSeedsAction, ui->actionSeed);
+        connect(coinSeeds, &QMenu::aboutToShow, this, [this, coinSeeds] {
+            coinSeeds->clear();
             auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
             if (vault->exists()) {
-                biscuit::coins::showCoinSeed(vault, this);
+                biscuit::coins::addCoinSeedActions(coinSeeds, vault, this);
             } else {
-                Utils::showInfo(this, "Bitcoin and Litecoin", "Bitcoin and Litecoin are not set up in this wallet yet.",
-                                {"Go to the Receive tab and choose Bitcoin or Litecoin to set them up."});
+                coinSeeds->addAction("Not set up yet: go to Receive › Bitcoin or Litecoin")->setEnabled(false);
             }
         });
     }

@@ -12,6 +12,7 @@
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -284,7 +285,21 @@ void CoinSetupDialog::finish() {
     accept();
 }
 
-void showCoinSeed(CoinVault *vault, QWidget *parent) {
+void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
+    // Which seed: the main one (Bitcoin and Litecoin), or an added wallet (one coin).
+    const CoinParams *coin = nullptr;
+    QString name;
+    if (!id.isEmpty()) {
+        for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
+            for (const auto &entry : vault->wallets(*params)) {
+                if (entry.id == id && !entry.mainSeed) {
+                    coin = params;
+                    name = entry.name;
+                }
+            }
+        }
+    }
+
     bool ok = false;
     const QString password = QInputDialog::getText(parent, "Show seed", "Password of this wallet:",
                                                    QLineEdit::Password, {}, &ok);
@@ -292,23 +307,26 @@ void showCoinSeed(CoinVault *vault, QWidget *parent) {
         return;
     }
     QString error;
-    auto seed = vault->revealMnemonic(password, &error);
+    auto seed = vault->revealMnemonic(password, &error, coin ? id : QString());
     if (!seed) {
         QMessageBox::warning(parent, "Show seed", error);
         return;
     }
 
     QDialog dialog(parent);
-    dialog.setWindowTitle("Bitcoin and Litecoin seed");
+    dialog.setWindowTitle(coin ? QString("Seed of \"%1\"").arg(name) : QString("Bitcoin and Litecoin seed"));
     auto *l = new QVBoxLayout(&dialog);
-    auto *intro = new QLabel("Never share these words. Anyone who has them can take your Bitcoin and Litecoin.", &dialog);
+    auto *intro = new QLabel(coin ? QString("Never share these words. Anyone who has them can take the %1 in \"%2\".").arg(coin->name, name)
+                                  : QString("Never share these words. Anyone who has them can take your Bitcoin and Litecoin."), &dialog);
     intro->setWordWrap(true);
     l->addWidget(intro);
     l->addWidget(seedWordsView(seed->first, &dialog));
     if (!seed->second.isEmpty()) {
         l->addWidget(new QLabel("This seed also uses a passphrase.", &dialog));
     }
-    auto *paths = new QLabel("BIP39 · native SegWit (BIP84) · Bitcoin m/84'/0'/0' · Litecoin m/84'/2'/0'", &dialog);
+    auto *paths = new QLabel(coin == &bitcoin()    ? QString("BIP39 · native SegWit (BIP84) · Bitcoin m/84'/0'/0'")
+                             : coin == &litecoin() ? QString("BIP39 · native SegWit (BIP84) · Litecoin m/84'/2'/0'")
+                             : QString("BIP39 · native SegWit (BIP84) · Bitcoin m/84'/0'/0' · Litecoin m/84'/2'/0'"), &dialog);
     paths->setStyleSheet("color: gray;");
     l->addWidget(paths);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
@@ -317,6 +335,21 @@ void showCoinSeed(CoinVault *vault, QWidget *parent) {
     dialog.resize(560, dialog.sizeHint().height());
     dialog.exec();
     seed->first.fill(QChar(' '));
+}
+
+
+void addCoinSeedActions(QMenu *menu, CoinVault *vault, QWidget *parent) {
+    menu->addAction("Bitcoin and Litecoin seed…", parent, [vault, parent] { showCoinSeed(vault, parent); });
+    for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
+        for (const auto &entry : vault->wallets(*params)) {
+            if (entry.mainSeed) {
+                continue;
+            }
+            const QString id = entry.id;
+            menu->addAction(QString("%1 seed (%2)…").arg(entry.name, params->name), parent,
+                            [vault, parent, id] { showCoinSeed(vault, parent, id); });
+        }
+    }
 }
 
 }
