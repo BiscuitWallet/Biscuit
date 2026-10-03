@@ -42,6 +42,8 @@ BalanceDialog::BalanceDialog(QWidget *parent, Wallet *wallet)
     layout->addWidget(buttons);
 
     connect(m_wallet, &Wallet::balanceUpdated, this, &BalanceDialog::updateBalance);
+    connect(&appData()->prices, &Prices::cryptoPricesUpdated, this, &BalanceDialog::updateBalance);
+    connect(&appData()->prices, &Prices::fiatPricesUpdated, this, &BalanceDialog::updateBalance);
     for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
                         &biscuit::coins::CoinVault::walletsChanged, &biscuit::coins::CoinVault::walletUpdated}) {
         connect(m_vault, signal, this, &BalanceDialog::updateBalance);
@@ -98,8 +100,9 @@ void BalanceDialog::updateBalance() {
             const double value = prices.convert(ticker, fiat, coins);
             totalValue += value;
             cell(row, ColValue, Utils::amountToCurrencyString(value, fiat));
-        } else if (total > 0) {
-            valueKnown = false;
+        } else if (showFiat) {
+            cell(row, ColValue, "price unknown");
+            if (total > 0) valueKnown = false;
         }
     };
 
