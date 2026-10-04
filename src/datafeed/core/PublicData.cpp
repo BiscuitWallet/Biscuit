@@ -150,8 +150,9 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
     constexpr int maxItems = 20;
     constexpr int maxTitle = 120;
     constexpr int maxSummary = 400;
+    constexpr int maxCategory = 20;
 
-    struct Item { QString title, url, date, summary; bool pinned = false; };
+    struct Item { QString title, url, date, summary, category; bool pinned = false; };
     QList<Item> items;
     Item current;
     bool inEntry = false;
@@ -175,9 +176,14 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
                 current.date = xml.readElementText().left(10);
             } else if (inEntry && name == QLatin1String("link") && current.url.isEmpty()) {
                 current.url = xml.attributes().value("href").toString();
-            } else if (inEntry && name == QLatin1String("category")
-                       && xml.attributes().value("term") == QLatin1String("pinned")) {
-                current.pinned = true;
+            } else if (inEntry && name == QLatin1String("category")) {
+                // "pinned" keeps a post on top; any other term is its kind: Essay, News, Release...
+                const QString term = xml.attributes().value("term").toString().simplified();
+                if (term == QLatin1String("pinned")) {
+                    current.pinned = true;
+                } else if (current.category.isEmpty()) {
+                    current.category = term.left(maxCategory);
+                }
             }
         } else if (xml.isEndElement() && xml.name() == QLatin1String("entry")) {
             inEntry = false;
@@ -207,6 +213,7 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
             {"date", item.date},
             {"summary", item.summary.left(maxSummary)},
             {"pinned", item.pinned},
+            {"category", item.category},
         });
     }
     return message("news", news);

@@ -25,7 +25,7 @@ QString NewsPlugin::parent() {
 }
 
 QString NewsPlugin::displayName() {
-    return "News";
+    return "Journal";
 }
 
 QString NewsPlugin::description() {

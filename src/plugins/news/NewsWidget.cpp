@@ -26,12 +26,14 @@ NewsWidget::NewsWidget(QWidget *parent)
         : QWidget(parent)
         , m_list(new QTreeWidget(this))
         , m_open(new QPushButton("Read on biscuitwallet.com", this))
-        , m_empty(new QLabel("No news yet.", this))
+        , m_empty(new QLabel("Nothing in the journal yet.", this))
 {
     m_list->setRootIsDecorated(false);
     m_list->setUniformRowHeights(true);
-    m_list->setHeaderLabels({"Date", "Title"});
+    // Date, kind of post (Essay, News, Release...), title.
+    m_list->setHeaderLabels({"Date", "Type", "Title"});
     m_list->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    m_list->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     m_list->header()->setStretchLastSection(true);
     m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 
@@ -72,15 +74,16 @@ void NewsWidget::update(const QJsonArray &news) {
         auto *item = new QTreeWidgetItem(m_list);
         const QDate date = QDate::fromString(obj.value("date").toString(), Qt::ISODate);
         item->setText(0, QLocale().toString(date, QLocale::ShortFormat));
-        item->setText(1, obj.value("title").toString());
+        item->setText(1, obj.value("category").toString());
+        item->setText(2, obj.value("title").toString());
         item->setData(0, UrlRole, obj.value("url").toString());
-        item->setToolTip(1, obj.value("summary").toString().toHtmlEscaped());
+        item->setToolTip(2, obj.value("summary").toString().toHtmlEscaped());
         if (obj.value("pinned").toBool()) {
             // Kept on top by the feed: say why, instead of a date out of order.
             item->setText(0, tr("Pinned"));
-            QFont bold = item->font(1);
+            QFont bold = item->font(2);
             bold.setBold(true);
-            item->setFont(1, bold);
+            item->setFont(2, bold);
         }
         if (item->data(0, UrlRole).toString() == selectedUrl) {
             m_list->setCurrentItem(item);

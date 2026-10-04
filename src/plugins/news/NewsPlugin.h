@@ -8,7 +8,7 @@
 
 class NewsWidget;
 
-// Biscuit: "News" tab of Home, fed by the public data feed (news/feed.xml on
+// Biscuit: "Journal" tab of Home, fed by the public data feed (news/feed.xml on
 // biscuitwallet.com), so it follows the same privacy rules as prices.
 class NewsPlugin : public Plugin {
     Q_OBJECT
