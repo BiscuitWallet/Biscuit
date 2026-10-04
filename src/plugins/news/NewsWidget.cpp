@@ -75,6 +75,13 @@ void NewsWidget::update(const QJsonArray &news) {
         item->setText(1, obj.value("title").toString());
         item->setData(0, UrlRole, obj.value("url").toString());
         item->setToolTip(1, obj.value("summary").toString().toHtmlEscaped());
+        if (obj.value("pinned").toBool()) {
+            // Kept on top by the feed: say why, instead of a date out of order.
+            item->setText(0, tr("Pinned"));
+            QFont bold = item->font(1);
+            bold.setBold(true);
+            item->setFont(1, bold);
+        }
         if (item->data(0, UrlRole).toString() == selectedUrl) {
             m_list->setCurrentItem(item);
         }

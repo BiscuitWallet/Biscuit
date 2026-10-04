@@ -107,6 +107,25 @@ private slots:
         QCOMPARE(older.value("summary").toString(), QString("A light wallet & more."));
     }
 
+    void newsPinnedFirst() {
+        const QString site = "https://biscuitwallet.com";
+        QByteArray pinned = entry("Manifesto", site + "/news/manifesto/", "2026-10-04T00:00:00Z");
+        pinned.replace("</entry>", "<category term=\"pinned\"/></entry>");
+        const auto msg = newsMessage(feed({
+            entry("Newer", site + "/news/newer/", "2026-12-01T00:00:00Z"),
+            pinned,
+            entry("Older", site + "/news/older/", "2026-09-01T00:00:00Z"),
+        }));
+        QVERIFY(msg.has_value());
+        const QJsonArray data = msg->value("data").toArray();
+        QCOMPARE(data.size(), 3);
+        QCOMPARE(data.at(0).toObject().value("title").toString(), QString("Manifesto"));
+        QVERIFY(data.at(0).toObject().value("pinned").toBool());
+        QCOMPARE(data.at(1).toObject().value("title").toString(), QString("Newer"));
+        QVERIFY(!data.at(1).toObject().value("pinned").toBool());
+        QCOMPARE(data.at(2).toObject().value("title").toString(), QString("Older"));
+    }
+
     void newsIsPlainText() {
         // Markup in a title arrives as text, never as HTML to render.
         const QByteArray body = feed({entry("&lt;b&gt;Bold&lt;/b&gt;", "https://biscuitwallet.com/news/a/", "2026-10-01T00:00:00Z")});

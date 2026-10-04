@@ -133,7 +133,7 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
     constexpr int maxTitle = 120;
     constexpr int maxSummary = 400;
 
-    struct Item { QString title, url, date, summary; };
+    struct Item { QString title, url, date, summary; bool pinned = false; };
     QList<Item> items;
     Item current;
     bool inEntry = false;
@@ -157,6 +157,9 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
                 current.date = xml.readElementText().left(10);
             } else if (inEntry && name == QLatin1String("link") && current.url.isEmpty()) {
                 current.url = xml.attributes().value("href").toString();
+            } else if (inEntry && name == QLatin1String("category")
+                       && xml.attributes().value("term") == QLatin1String("pinned")) {
+                current.pinned = true;
             }
         } else if (xml.isEndElement() && xml.name() == QLatin1String("entry")) {
             inEntry = false;
@@ -174,7 +177,10 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
         return std::nullopt;
     }
 
-    std::stable_sort(items.begin(), items.end(), [](const Item &a, const Item &b) { return a.date > b.date; });
+    // Pinned posts first, then newest first.
+    std::stable_sort(items.begin(), items.end(), [](const Item &a, const Item &b) {
+        return a.pinned != b.pinned ? a.pinned : a.date > b.date;
+    });
     QJsonArray news;
     for (const Item &item : items.mid(0, maxItems)) {
         news.append(QJsonObject{
@@ -182,6 +188,7 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
             {"url", item.url},
             {"date", item.date},
             {"summary", item.summary.left(maxSummary)},
+            {"pinned", item.pinned},
         });
     }
     return message("news", news);
