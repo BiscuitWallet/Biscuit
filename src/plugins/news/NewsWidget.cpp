@@ -31,9 +31,10 @@ NewsWidget::NewsWidget(QWidget *parent)
     m_list->setRootIsDecorated(false);
     m_list->setUniformRowHeights(true);
     // Date, kind of post (Essay, News, Release...), title.
-    m_list->setHeaderLabels({"Date", "Type", "Title"});
+    m_list->setHeaderLabels({"Date", "Type", "Title", ""});
     m_list->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_list->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    m_list->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_list->header()->setStretchLastSection(true);
     m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 
@@ -76,6 +77,15 @@ void NewsWidget::update(const QJsonArray &news) {
         item->setText(0, QLocale().toString(date, QLocale::ShortFormat));
         item->setText(1, obj.value("category").toString());
         item->setText(2, obj.value("title").toString());
+        // The subtitle, if any, next to the title, in grey italics.
+        if (const QString subtitle = obj.value("subtitle").toString(); !subtitle.isEmpty()) {
+            item->setText(3, subtitle);
+            QFont italic = item->font(3);
+            italic.setItalic(true);
+            item->setFont(3, italic);
+            item->setForeground(3, m_list->palette().brush(QPalette::Disabled, QPalette::Text));
+            item->setToolTip(3, obj.value("summary").toString().toHtmlEscaped());
+        }
         item->setData(0, UrlRole, obj.value("url").toString());
         item->setToolTip(2, obj.value("summary").toString().toHtmlEscaped());
         if (obj.value("pinned").toBool()) {

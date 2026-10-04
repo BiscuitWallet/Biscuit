@@ -124,7 +124,8 @@ private slots:
     void newsPinnedFirst() {
         const QString site = "https://biscuitwallet.com";
         QByteArray pinned = entry("Manifesto", site + "/news/manifesto/", "2026-10-04T00:00:00Z");
-        pinned.replace("</entry>", "<category term=\"pinned\"/><category term=\"Essay\"/></entry>");
+        pinned.replace("</entry>", "<category term=\"pinned\"/><category term=\"Essay\"/>"
+                                   "<biscuit:subtitle xmlns:biscuit=\"https://biscuitwallet.com/ns/journal\">A  manifesto</biscuit:subtitle></entry>");
         const auto msg = newsMessage(feed({
             entry("Newer", site + "/news/newer/", "2026-12-01T00:00:00Z"),
             pinned,
@@ -136,6 +137,8 @@ private slots:
         QCOMPARE(data.at(0).toObject().value("title").toString(), QString("Manifesto"));
         QVERIFY(data.at(0).toObject().value("pinned").toBool());
         QCOMPARE(data.at(0).toObject().value("category").toString(), QString("Essay"));
+        QCOMPARE(data.at(0).toObject().value("subtitle").toString(), QString("A manifesto"));
+        QCOMPARE(data.at(1).toObject().value("subtitle").toString(), QString());
         QCOMPARE(data.at(1).toObject().value("category").toString(), QString());
         QCOMPARE(data.at(1).toObject().value("title").toString(), QString("Newer"));
         QVERIFY(!data.at(1).toObject().value("pinned").toBool());

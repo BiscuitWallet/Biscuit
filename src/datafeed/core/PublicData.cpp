@@ -152,7 +152,7 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
     constexpr int maxSummary = 400;
     constexpr int maxCategory = 20;
 
-    struct Item { QString title, url, date, summary, category; bool pinned = false; };
+    struct Item { QString title, url, date, summary, category, subtitle; bool pinned = false; };
     QList<Item> items;
     Item current;
     bool inEntry = false;
@@ -170,6 +170,8 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
                 current = {};
             } else if (inEntry && name == QLatin1String("title")) {
                 current.title = xml.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
+            } else if (inEntry && name == QLatin1String("subtitle")) {
+                current.subtitle = xml.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
             } else if (inEntry && name == QLatin1String("summary")) {
                 current.summary = xml.readElementText(QXmlStreamReader::IncludeChildElements).simplified();
             } else if (inEntry && name == QLatin1String("updated")) {
@@ -214,6 +216,7 @@ std::optional<QJsonObject> newsMessage(const QByteArray &body) {
             {"summary", item.summary.left(maxSummary)},
             {"pinned", item.pinned},
             {"category", item.category},
+            {"subtitle", item.subtitle.left(maxTitle)},
         });
     }
     return message("news", news);
