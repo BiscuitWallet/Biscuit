@@ -22,6 +22,7 @@ public:
     {
         // General
         firstRun,
+        lastRunVersion,   // Biscuit: the version that ran last (Windows icon refresh after updates)
         warnOnStagenet,
         warnOnTestnet,
         systemTorNotice,

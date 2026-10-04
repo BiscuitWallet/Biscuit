@@ -22,6 +22,7 @@ struct ConfigDirective
 static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         // General
         {Config::firstRun, {QS("firstRun"), true}},
+        {Config::lastRunVersion, {QS("lastRunVersion"), ""}},
         {Config::warnOnStagenet,{QS("warnOnStagenet"), true}},
         {Config::warnOnTestnet,{QS("warnOnTestnet"), true}},
         {Config::systemTorNotice,{QS("systemTorNotice"), true}},

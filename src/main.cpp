@@ -24,6 +24,7 @@
 #if defined(Q_OS_WIN)
 #include <windows.h>
 #include <vfw.h>
+#include <shlobj.h>
 #endif
 
 #if defined(Q_OS_LINUX) && defined(STATIC)
@@ -184,6 +185,15 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         conf()->set(Config::useLocalTor, true);
 
     conf()->set(Config::restartRequired, false);
+
+#if defined(Q_OS_WIN)
+    // Biscuit: after an update, Explorer may keep showing the old icon on shortcuts
+    // and in the taskbar until the next restart. Tell it once that icons changed.
+    if (conf()->get(Config::lastRunVersion).toString() != FEATHER_VERSION) {
+        SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+        conf()->set(Config::lastRunVersion, QString(FEATHER_VERSION));
+    }
+#endif
 
     if (!quiet) {
         QList<QPair<QString, QString>> info;
