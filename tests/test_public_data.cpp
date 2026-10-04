@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: The Biscuit developers
 
 #include <QJsonArray>
+#include <QUrl>
 #include <QUrlQuery>
 #include <QtTest>
 
@@ -105,6 +106,19 @@ private slots:
         QCOMPARE(newest.value("url").toString(), site + "/news/v1/");
         const QJsonObject older = data.at(1).toObject();
         QCOMPARE(older.value("summary").toString(), QString("A light wallet & more."));
+    }
+
+    void onionAddresses() {
+        const QString onion = onionSiteUrl();
+        QVERIFY(onion.startsWith("http://biscuit") && onion.endsWith(".onion"));
+        QCOMPARE(QUrl(onion).host().size(), 62);   // v3: 56 characters + ".onion"
+        QCOMPARE(onionUrl(siteUrl()), onion);
+        QCOMPARE(onionUrl(updatesUrl()), onion + "/updates.json");
+        QCOMPARE(onionUrl(siteUrl() + "/files/releases/hashes-1.0.7-plain.txt?x=1"),
+                 onion + "/files/releases/hashes-1.0.7-plain.txt?x=1");
+        // Only our own site moves to the onion.
+        QCOMPARE(onionUrl("https://biscuitwallet.com.evil.example/x"), QString("https://biscuitwallet.com.evil.example/x"));
+        QCOMPARE(onionUrl("https://relay.biscuitwallet.com/api/coins"), QString("https://relay.biscuitwallet.com/api/coins"));
     }
 
     void newsPinnedFirst() {

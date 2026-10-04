@@ -7,6 +7,7 @@
 #include <QNetworkProxy>
 #include <QUrl>
 
+#include "datafeed/core/PublicData.h"
 #include "utils/config.h"
 #include "utils/Utils.h"
 
@@ -43,6 +44,17 @@ bool dataThroughTor()
     return conf()->get(Config::dataTorOnly).toBool() && conf()->get(Config::proxy).toInt() != Config::Proxy::Tor;
 }
 
+bool siteThroughOnion()
+{
+    return conf()->get(Config::proxy).toInt() == Config::Proxy::Tor || dataThroughTor();
+}
+
+bool clearnetSiteAllowed()
+{
+    const int proxy = conf()->get(Config::proxy).toInt();
+    return proxy != Config::Proxy::i2p && !(proxy == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool());
+}
+
 QNetworkAccessManager* getNetworkClearnet()
 {
     if (!g_networkManagerClearnet) {
@@ -56,7 +68,9 @@ QNetworkAccessManager* getNetwork(const QString &address)
 {
     // Biscuit: in "Tor only" mode, whatever comes from biscuitwallet.com
     // (data, news, updates and their downloads) goes through Tor.
-    if (dataThroughTor() && QUrl(address).host().endsWith(QLatin1String("biscuitwallet.com"))) {
+    const QString host = QUrl(address).host();
+    if (dataThroughTor() && (host.endsWith(QLatin1String("biscuitwallet.com"))
+                             || host == QUrl(biscuit::datafeed::onionSiteUrl()).host())) {
         return getNetworkDataTor();
     }
 

@@ -36,21 +36,15 @@ PublicDataFeed::PublicDataFeed(QObject *parent)
         connect(m_sources[i].timer, &QTimer::timeout, this, [this, i] {
             Source &source = m_sources[i];
             // Waiting for Tor ("Tor only"): try again soon, not at the next interval.
-            const bool sent = fetch(source);
+            const bool sent = fetch(source, siteThroughOnion());
             schedule(source, sent ? source.intervalMinutes * 60 * 1000 : 20 * 1000);
         });
     }
 }
 
 bool PublicDataFeed::allowedByProxySettings() {
-    const int proxy = conf()->get(Config::proxy).toInt();
-    if (proxy == Config::Proxy::i2p) {
-        return false;
-    }
-    if (proxy == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool()) {
-        return false;
-    }
-    return true;
+    // Through Tor the onion service is used, so "onion services only" is fine.
+    return conf()->get(Config::proxy).toInt() != Config::Proxy::i2p;
 }
 
 void PublicDataFeed::start() {
@@ -80,11 +74,12 @@ void PublicDataFeed::schedule(Source &source, int baseMs) {
     source.timer->start(baseMs + jitterMs);
 }
 
-bool PublicDataFeed::fetch(Source &source) {
+bool PublicDataFeed::fetch(Source &source, bool viaOnion) {
     if (!m_running || !allowedByProxySettings()) {
         return true;   // not waiting for anything: back at the usual interval
     }
 
+    const QString url = viaOnion ? onionUrl(source.url) : source.url;
     QNetworkReply *reply = nullptr;
     if (dataThroughTor()) {
         // "Tor only": through Tor or not at all, retried at the next interval
@@ -95,25 +90,29 @@ bool PublicDataFeed::fetch(Source &source) {
         if (!torManager()->torConnected) {
             return false;
         }
-        QNetworkRequest request{QUrl(source.url)};
+        QNetworkRequest request{QUrl(url)};
         request.setRawHeader("User-Agent", Networking(this).userAgent().toUtf8());
         reply = getNetworkDataTor()->get(request);
         reply->setParent(this);
     } else {
         Networking network{this};
-        reply = network.getJson(this, source.url);
+        reply = network.getJson(this, url);
     }
     if (!reply) {
         return true;  // offline mode
     }
 
     Source *src = &source;
-    connect(reply, &QNetworkReply::finished, this, [this, reply, src] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, src, viaOnion] {
         reply->deleteLater();
         if (!m_running) {
             return;
         }
         const auto msg = reply->error() == QNetworkReply::NoError ? src->convert(reply->readAll()) : std::nullopt;
+        if (!msg && viaOnion && clearnetSiteAllowed()) {
+            fetch(*src, false);
+            return;
+        }
         if (!msg) {
             // Failed: try again in a minute or two, not at the next interval.
             schedule(*src, 60 * 1000);

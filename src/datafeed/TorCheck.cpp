@@ -12,6 +12,7 @@
 
 #include "PublicDataFeed.h"
 #include "utils/config.h"
+#include "utils/NetworkManager.h"
 #include "utils/Networking.h"
 #include "utils/TorManager.h"
 
@@ -48,7 +49,9 @@ bool TorCheck::enabled() {
     return conf()->get(Config::proxy).toInt() == Config::Proxy::Tor
         && !conf()->get(Config::disableWebsocket).toBool()
         && !conf()->get(Config::offlineMode).toBool()
-        && PublicDataFeed::allowedByProxySettings();
+        // biscuitwallet.com, not the onion: what is checked is that Biscuit's
+        // traffic leaves the Tor network at an exit, which an onion cannot show.
+        && clearnetSiteAllowed();
 }
 
 void TorCheck::restart() {

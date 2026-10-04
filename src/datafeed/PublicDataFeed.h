@@ -43,7 +43,9 @@ private:
         QString cacheKey;   // non-empty: last data kept on disk (prices)
     };
 
-    bool fetch(Source &source);   // false: waiting for Tor
+    // false: waiting for Tor. Through Tor, the onion address first; if it
+    // does not answer, biscuitwallet.com once more, still through Tor.
+    bool fetch(Source &source, bool viaOnion);
     void schedule(Source &source, int baseMs);
     // Prices are public: the last ones are kept for a day, shown at start
     // until fresh ones arrive.

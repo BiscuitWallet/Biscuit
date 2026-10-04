@@ -10,6 +10,8 @@
 #include "utils/config.h"
 #include "Utils.h"
 #include "utils/AsyncTask.h"
+#include "datafeed/core/PublicData.h"
+#include "utils/NetworkManager.h"
 #include "utils/Networking.h"
 #include "utils/SemanticVersion.h"
 
@@ -183,12 +185,12 @@ QString Updater::getPlatformTag() {
 }
 
 QString Updater::getWebsiteUrl() {
-    // Biscuit has no onion or i2p address yet: no update check in those modes.
-    const int proxy = conf()->get(Config::proxy).toInt();
-    if ((proxy == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool()) || proxy == Config::Proxy::i2p) {
+    // Biscuit has no i2p address: no update check there. Through Tor, the
+    // onion service (the files are checked against the release key either way).
+    if (conf()->get(Config::proxy).toInt() == Config::Proxy::i2p) {
         return {};
     }
-    return "https://biscuitwallet.com";
+    return siteThroughOnion() ? biscuit::datafeed::onionSiteUrl() : biscuit::datafeed::siteUrl();
 }
 
 bool Updater::isPackaged() {

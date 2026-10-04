@@ -24,6 +24,14 @@
 // conversion, Tickers, Calc, Home) work unchanged.
 namespace biscuit::datafeed {
 
+    // biscuitwallet.com, and the same website as a Tor onion service (no
+    // relay there: prices, news, updates and release files only).
+    QString siteUrl();
+    QString onionSiteUrl();
+    // A biscuitwallet.com address on the onion service, same path and query;
+    // any other address is returned unchanged.
+    QString onionUrl(const QString &url);
+
     // CoinGecko markets, fixed coin list.
     QString cryptoRatesUrl();
     // European Central Bank reference rates via Frankfurter, base USD.

@@ -28,6 +28,24 @@ namespace {
     }
 }
 
+QString siteUrl() {
+    return "https://biscuitwallet.com";
+}
+
+QString onionSiteUrl() {
+    return "http://biscuit6qpejzxfr7us7oibhjasvrozfeno7xonffzzoj4lmw6o3kbyd.onion";
+}
+
+QString onionUrl(const QString &url) {
+    // Plain http is enough there: the onion address authenticates the server
+    // and Tor encrypts the connection end to end.
+    const QString site = siteUrl();
+    if (url == site || url.startsWith(site + "/")) {
+        return onionSiteUrl() + url.mid(site.size());
+    }
+    return url;
+}
+
 // Biscuit's own service (biscuitwallet.com) fetches CoinGecko, the ECB rates
 // and the Monero CCS list and serves them unchanged: the app only talks to
 // that host, and the sources never see users' IP addresses.
