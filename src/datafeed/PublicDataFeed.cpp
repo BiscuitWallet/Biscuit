@@ -25,8 +25,8 @@ PublicDataFeed::PublicDataFeed(QObject *parent)
     m_sources = {
         {cryptoRatesUrl(), cryptoRatesMessage, 10, new QTimer(this), "crypto"},
         {fiatRatesUrl(), fiatRatesMessage, 60, new QTimer(this), "fiat"},
-        {crowdfundingUrl(), crowdfundingMessage, 60, new QTimer(this)},
-        {newsUrl(), newsMessage, 360, new QTimer(this)},
+        {crowdfundingUrl(), crowdfundingMessage, 60, new QTimer(this), "ccs", 7},
+        {newsUrl(), newsMessage, 360, new QTimer(this), "news", 7},
     };
 #if defined(CHECK_UPDATES)
     m_sources.append({updatesUrl(), updatesMessage, 360, new QTimer(this)});
@@ -35,10 +35,31 @@ PublicDataFeed::PublicDataFeed(QObject *parent)
         m_sources[i].timer->setSingleShot(true);
         connect(m_sources[i].timer, &QTimer::timeout, this, [this, i] {
             Source &source = m_sources[i];
-            // Waiting for Tor ("Tor only"): try again soon, not at the next interval.
+            // Waiting for Tor: fetched as soon as Tor is ready (onTorConnected), this
+            // later try only covers a missed signal.
             const bool sent = fetch(source, siteThroughOnion());
-            schedule(source, sent ? source.intervalMinutes * 60 * 1000 : 20 * 1000);
+            source.waitingForTor = !sent;
+            schedule(source, sent ? source.intervalMinutes * 60 * 1000 : 60 * 1000);
         });
+    }
+    // TorManager repeats its state every few seconds: only the change counts.
+    m_torConnected = torManager()->torConnected;
+    connect(torManager(), &TorManager::connectionStateChanged, this, [this](bool connected) {
+        const bool became = connected && !m_torConnected;
+        m_torConnected = connected;
+        if (became) {
+            onTorConnected();
+        }
+    });
+}
+
+void PublicDataFeed::onTorConnected() {
+    // A few seconds of random delay still, so the requests do not leave together.
+    for (Source &source : m_sources) {
+        if (source.waitingForTor) {
+            source.waitingForTor = false;
+            schedule(source, 1000, 10 * 1000);
+        }
     }
 }
 
@@ -66,12 +87,11 @@ void PublicDataFeed::stop() {
     }
 }
 
-void PublicDataFeed::schedule(Source &source, int baseMs) {
+void PublicDataFeed::schedule(Source &source, int baseMs, int jitterMs) {
     if (!m_running) {
         return;
     }
-    const int jitterMs = QRandomGenerator::global()->bounded(60 * 1000);
-    source.timer->start(baseMs + jitterMs);
+    source.timer->start(baseMs + int(QRandomGenerator::global()->bounded(quint32(jitterMs))));
 }
 
 bool PublicDataFeed::fetch(Source &source, bool viaOnion) {
@@ -95,6 +115,10 @@ bool PublicDataFeed::fetch(Source &source, bool viaOnion) {
         reply = getNetworkDataTor()->get(request);
         reply->setParent(this);
     } else {
+        // Tor mode: wait for Tor, instead of a request that fails and waits a minute.
+        if (conf()->get(Config::proxy).toInt() == Config::Proxy::Tor && !torManager()->torConnected) {
+            return false;
+        }
         Networking network{this};
         reply = network.getJson(this, url);
     }
@@ -130,7 +154,6 @@ namespace {
     QString cachePath() {
         return Config::defaultConfigDir().filePath("datafeed-cache.json");
     }
-    constexpr qint64 cacheMaxAgeSecs = 24 * 3600;
 }
 
 void PublicDataFeed::loadCache() {
@@ -144,7 +167,7 @@ void PublicDataFeed::loadCache() {
         const QJsonObject entry = cache.value(source.cacheKey).toObject();
         const qint64 time = qint64(entry.value("time").toDouble());
         const QJsonObject msg = entry.value("message").toObject();
-        if (source.cacheKey.isEmpty() || msg.isEmpty() || now - time > cacheMaxAgeSecs || time > now) {
+        if (source.cacheKey.isEmpty() || msg.isEmpty() || now - time > source.cacheDays * 24 * 3600 || time > now) {
             continue;
         }
         // After start() returns: listeners are connected by then.

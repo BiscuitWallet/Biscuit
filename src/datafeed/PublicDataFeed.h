@@ -40,13 +40,16 @@ private:
         Converter convert;
         int intervalMinutes;
         QTimer *timer;
-        QString cacheKey;   // non-empty: last data kept on disk (prices)
+        QString cacheKey;   // non-empty: last data kept on disk, shown at once on start
+        int cacheDays = 1;  // how old that copy may be
+        bool waitingForTor = false;
     };
 
     // false: waiting for Tor. Through Tor, the onion address first; if it
     // does not answer, biscuitwallet.com once more, still through Tor.
     bool fetch(Source &source, bool viaOnion);
-    void schedule(Source &source, int baseMs);
+    void schedule(Source &source, int baseMs, int jitterMs = 60 * 1000);
+    void onTorConnected();
     // Prices are public: the last ones are kept for a day, shown at start
     // until fresh ones arrive.
     void loadCache();
@@ -54,6 +57,7 @@ private:
 
     QList<Source> m_sources;
     bool m_running = false;
+    bool m_torConnected = false;
 };
 
 }
