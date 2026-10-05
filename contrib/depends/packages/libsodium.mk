@@ -5,6 +5,11 @@ $(package)_file_name=libsodium-$($(package)_version).tar.gz
 $(package)_sha256_hash=adbdd8f16149e81ac6078a03aca6fc03b592b89ef7b5ed83841c086191be3349
 $(package)_patches=fix-blake2b-symbol-naming.patch
 
+# Optimized, whatever release_type says: the host files define release flags as
+# <os>_release_CFLAGS while release_type is "Release", so packages get no -O at
+# all. Unoptimized, Argon2id (wallet unlocking) ran 17 times slower.
+$(package)_cflags_Release=-O2
+
 define $(package)_set_vars
   $(package)_config_opts=--enable-static --disable-shared
   $(package)_config_opts+=--prefix=$(host_prefix)
