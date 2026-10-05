@@ -1,0 +1,21 @@
+<html><body>
+<h1>Biscuit won't start</h1>
+<p>Start Biscuit from a terminal: its messages there usually say what&rsquo;s wrong. Send them to us when you <a href="report-bug.html">report the problem</a>.</p>
+  <h2>From a terminal</h2>
+  <dl>
+    <dt>Windows</dt><dd>Press <b>Windows+R</b>, type <code>cmd</code>, press Enter. Drag Biscuit&rsquo;s .exe into the window and press Enter.</dd>
+    <dt>macOS</dt><dd>Open Terminal and run <code>/Applications/Biscuit.app/Contents/MacOS/biscuit</code>.</dd>
+    <dt>Linux and Tails</dt><dd>Open a terminal, drag the AppImage into it and press Enter. If you installed a package, run <code>biscuit</code>.</dd>
+  </dl>
+  <h2>Common causes</h2>
+  <ul>
+    <li><b>macOS says it can&rsquo;t verify Biscuit</b>: see <a href="install-macos.html">Install on macOS</a>.</li>
+    <li><b>Windows or an antivirus blocks it</b>: see <a href="install-windows.html">Install on Windows</a>.</li>
+    <li><b>The AppImage does nothing on Linux</b>: make it executable (<code>chmod +x</code>). On older systems, check the glibc version in <a href="install-linux.html">Install on Linux</a>.</li>
+    <li><b>An old version opens</b>: two copies are installed, an old package and a newer AppImage for example. The applications menu may start the old one. Remove the old one, or install the new package over it.</li>
+    <li><b>Tor doesn&rsquo;t connect</b>: open <b>Settings &rsaquo; Network &rsaquo; Proxy &rsaquo; Show status</b> to see Tor&rsquo;s log. Some networks block Tor.</li>
+  </ul>
+  <h2>Starting fresh</h2>
+  <p>If Biscuit starts but behaves strangely, quit it and rename <code>settings.json</code> in the <a href="wallet-files.html">settings folder</a>. Biscuit starts as on the first launch, with default settings. Your wallets aren&rsquo;t in that folder and aren&rsquo;t affected.</p>
+
+</body></html>

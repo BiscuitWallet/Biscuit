@@ -1,0 +1,23 @@
+<html><body>
+<h1>Exchange swaps</h1>
+<p>Biscuit asks Trocador for offers from many exchanges at once, and shows them best first, ranked by one thing: what you actually receive. Only exchanges rated A by Trocador are shown: the ones that don&rsquo;t ask for your identity.</p>
+  <h2>Step by step</h2>
+  <ol>
+    <li>On <b>Swap</b>, choose what you send, what you get, and the amount. <b>From wallet</b> picks which of your wallets pays.</li>
+    <li><b>Fixed</b> or <b>Floating</b>: with a fixed rate you get exactly the amount shown; with a floating rate, you choose what you send and what you get follows the market, a little up or down.</li>
+    <li><b>Receive at</b>: a new address in your own Biscuit wallet, or another address you paste. <b>Refund to</b>: where the coins go back if the swap fails.</li>
+    <li><b>Get offers</b>, pick one, and <b>Create swap</b>. Biscuit shows the exact amount to send and the exchange&rsquo;s deposit address.</li>
+    <li><b>Send from this wallet&hellip;</b> pays the deposit for you, after you confirm. You can also send it from another wallet.</li>
+    <li>Follow it under <b>History</b>. It resumes if you close Biscuit.</li>
+  </ol>
+  <p>Exchanges need the deposit confirmed before they send: minutes for Litecoin, longer for Bitcoin, about 20 minutes for Monero.</p>
+  <h2>If something goes wrong</h2>
+  <p>Double-click a swap in History for its details: the <b>Trade ID</b>, the <b>Exchange ID</b>, the deposit transaction and the exchange&rsquo;s support link. Keep these: exchanges delete trades after a while, and they&rsquo;re stored encrypted in your wallet file, not restored from seed. A swap that &ldquo;needs attention&rdquo; usually means the exchange wants to talk to you: contact its support with these identifiers.</p>
+  <h2>Fees and privacy</h2>
+  <ul>
+    <li>Biscuit never adds a fee. It may receive a share of the exchange&rsquo;s fee: you pay the same as on the exchange, and the ranking never depends on it.</li>
+    <li>Exchange swaps go through Biscuit&rsquo;s server, which holds our partner key with Trocador. Our server, Trocador and the exchange see the swap and your IP address: see the <a href="https://biscuitwallet.com/privacy/">privacy policy</a> for what is kept.</li>
+    <li>They&rsquo;re off in Tor mode, and on Tails and Whonix: exchanges refuse Tor connections. Swaps already running can be followed again once Tor mode is off.</li>
+  </ul>
+
+</body></html>

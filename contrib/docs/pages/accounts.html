@@ -1,0 +1,22 @@
+<html><body>
+<h1>Accounts and subaddresses</h1>
+<p>A Monero wallet can hold several accounts, and each account any number of subaddresses. All of them come from your seed: restoring it brings them all back.</p>
+  <h2>Subaddresses</h2>
+  <p>A subaddress is an address of your wallet that can&rsquo;t be linked to your other ones on the blockchain. Give a different one to each person or service that pays you, and nobody can tell that two payments went to the same wallet. Create them on <b>Receive</b> with <b>Create new address</b>, and label each one.</p>
+  <p>Mainnet subaddresses start with an <b>8</b>. A service that refuses them is out of date; ask them to support subaddresses.</p>
+  <h2>Accounts</h2>
+  <p>Each account has its own balance, history and subaddresses: one for savings, one for spending, one for donations. Switching account is faster than opening another wallet, and having many accounts doesn&rsquo;t slow down syncing.</p>
+  <ul>
+    <li>Open <b>Wallet &rsaquo; Account</b>, or click the account switcher in the status bar.</li>
+    <li>Select an account to switch to it. <b>New account</b> creates one.</li>
+    <li>Double-click a label to rename it.</li>
+  </ul>
+  <p>A transaction spends from one account only. Accounts can&rsquo;t be hidden or deleted. They keep your bookkeeping apart, but aren&rsquo;t a privacy wall: someone holding addresses from two of your accounts can, with some effort, check whether they belong to the same wallet (the &ldquo;Janus&rdquo; attack). For identities that must never be linked, use separate wallets.</p>
+<a name="primary"></a>
+  <h2>The primary address</h2>
+  <p>Every Monero wallet has one primary address, starting with a <b>4</b>. It works for receiving, but Biscuit hides it on Receive to discourage reusing it. You may need it to create a <a href="view-only.html">view-only wallet</a>, for solo mining, or for a service that doesn&rsquo;t accept subaddresses.</p>
+  <p>Find it in <b>Wallet &rsaquo; Keys</b>, or on Receive: right-click the column titles &rsaquo; <b>Show change address</b>, and tick <b>Show used addresses</b> if it has received before.</p>
+  <h2>Restoring many subaddresses</h2>
+  <p>After restoring from seed, Biscuit looks for payments on the first subaddresses of each account. If you used a very large number of them, raise the lookahead when restoring: <b>Options</b> on the seed page, then enter how many accounts and subaddresses to look ahead.</p>
+
+</body></html>

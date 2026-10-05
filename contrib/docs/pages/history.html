@@ -1,0 +1,35 @@
+<html><body>
+<h1>History</h1>
+<p>The <b>History</b> tab lists every payment of the coin chosen at the top, newest first. <b>Ctrl+F</b> shows a search bar.</p>
+  <h2>Monero</h2>
+  <p>Double-click a transaction for its details: amount, fee, destinations, inputs. Right-click for more:</p>
+  <ul>
+    <li><b>Show details</b>, and from there <b>Copy Tx Secret Key</b> for <a href="proofs.html">payment proofs</a>.</li>
+    <li><b>Create Tx Proof</b>, see <a href="proofs.html">Payment proofs</a>.</li>
+    <li><b>Copy</b> the amount, the date, the description or the transaction ID.</li>
+    <li><b>View on block explorer</b>. Choose which one in <b>Settings &rsaquo; Misc &rsaquo; Links</b>.</li>
+    <li><b>Resend transaction</b> and <b>Remove from history</b>, for a payment that failed, see <a href="failed-transaction.html">A payment I sent failed</a>.</li>
+  </ul>
+  <p>Double-click the description column to write a note on a payment. Notes stay in your wallet file, they&rsquo;re never sent. While the wallet synchronizes, the history may be incomplete.</p>
+  <h2>Bitcoin and Litecoin</h2>
+  <p>Each line shows the amount, confirmations and date for the selected wallet. Right-click for <b>Copy transaction ID</b>, <b>View on block explorer</b> and <b>Speed up (raise the fee)</b>, see <a href="btc-fees.html">Fees and speeding up</a>.</p>
+  <h2>Exporting</h2>
+  <p><b>Wallet &rsaquo; History &rsaquo; Export CSV</b> saves your Monero history to a spreadsheet file, for your accounts or your taxes. The columns:</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>Column</th><th>What it holds</th></tr></thead>
+    <tbody>
+      <tr><th>blockHeight</th><td>The block that included the transaction</td></tr>
+      <tr><th>timestamp, date</th><td>When the block was mined</td></tr>
+      <tr><th>accountIndex</th><td>The <a href="accounts.html">account</a>. A payment between two of your accounts shows twice.</td></tr>
+      <tr><th>direction</th><td><code>in</code> or <code>out</code></td></tr>
+      <tr><th>balanceDelta</th><td>How much your balance changed, fee included</td></tr>
+      <tr><th>amount</th><td>The amount sent or received, fee not included</td></tr>
+      <tr><th>fee</th><td>The network fee. For incoming payments, the sender paid it.</td></tr>
+      <tr><th>txid</th><td>The transaction ID</td></tr>
+      <tr><th>description</th><td>Your note</td></tr>
+      <tr><th>paymentID</th><td>Usually empty</td></tr>
+    </tbody>
+  </table>
+  <p><b>Import descriptions from CSV</b> reads your notes back from such a file, for example after <a href="restore-wallet.html">restoring from seed</a>.</p>
+
+</body></html>

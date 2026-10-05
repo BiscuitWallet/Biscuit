@@ -1,0 +1,32 @@
+<html><body>
+<h1>First launch</h1>
+<p>The first time you open it, Biscuit asks three questions about the network, before it makes any connection. Then it helps you create or restore your wallet. Everything can be changed later in the settings.</p>
+  <h2>1. How do you want to connect to the Monero network?</h2>
+  <p>Biscuit needs a Monero node to find your transactions. A node is a computer that keeps a copy of the Monero blockchain.</p>
+  <ul>
+    <li><b>Auto connect</b> picks one at random from a built-in list of public nodes run by trusted members of the Monero community. Most people should choose this.</li>
+    <li><b>Select node manually</b> lets you enter one, as <code>host:port</code>.</li>
+  </ul>
+  <p>If you run a node on this computer, Biscuit sees it on port 18081 and says so. See <a href="nodes.html">Nodes</a> for what a node can and can&rsquo;t learn about you.</p>
+  <h2>2. How should Biscuit route its network traffic?</h2>
+  <dl>
+    <dt>Connect directly (faster)</dt>
+    <dd>Every feature is available, exchange swaps included. The nodes, servers and swap partners Biscuit talks to see your IP address.</dd>
+    <dt>Connect through Tor (more private)</dt>
+    <dd>Your IP address stays hidden. Biscuit starts Tor for you, there&rsquo;s nothing to install. Exchange swaps are off, because exchanges refuse Tor; atomic swaps work, through Tor.</dd>
+    <dt>Custom settings</dt>
+    <dd>Your own Tor, I2P or a SOCKS5 proxy. Treated like Tor: exchange swaps are off.</dd>
+  </dl>
+  <p>On Tails and Whonix this question is skipped: Biscuit uses the system&rsquo;s Tor. Read <a href="tor.html">Tor mode</a> for the details, including how the first sync of a wallet is handled.</p>
+  <h2>3. Do you want to obtain third-party data?</h2>
+  <p>Biscuit can fetch prices, currency rates, the Journal and Monero&rsquo;s crowdfunding proposals from biscuitwallet.com, to show your balances in your currency. Nothing about your wallet is sent. Choose <b>Enable</b> or <b>Disable</b>; the settings also offer <b>Tor only</b>. See <a href="third-party-data.html">Prices and other data</a>.</p>
+  <h2>4. Your wallet</h2>
+  <p>Then comes the main menu:</p>
+  <ul>
+    <li><b>Create new wallet</b>: see <a href="create-wallet.html">Create a wallet</a>.</li>
+    <li><b>Open wallet file</b>: a wallet you already have, from Biscuit, Feather or another Monero wallet.</li>
+    <li><b>Restore wallet from&hellip;</b> a seed, keys or a hardware device: see <a href="restore-wallet.html">Restore a wallet</a>.</li>
+  </ul>
+  <p>Tick <b>Open on startup</b> when you open a wallet, and Biscuit opens it directly the next time.</p>
+
+</body></html>

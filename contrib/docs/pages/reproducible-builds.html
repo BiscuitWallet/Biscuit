@@ -1,0 +1,14 @@
+<html><body>
+<h1>Reproducible builds</h1>
+<p>Biscuit releases are built with <a href="https://guix.gnu.org">Guix</a>, like Bitcoin Core, Monero and Feather. Build the same version from its source and you get the same files, byte for byte. Anyone can check that a release really comes from its published source code, and nothing was added along the way.</p>
+  <h2>Rebuilding a release</h2>
+  <p>The source archive of each release is on the <a href="https://biscuitwallet.com/download/">download page</a>, and the build instructions in <code>RELEASE.md</code> in it. You need a Linux computer with Guix. The build takes a while the first time: Guix builds every tool from source.</p>
+  <p>Then compare the checksums of your files with the signed list, <code>hashes-&lt;version&gt;-plain.txt</code>.</p>
+  <h2>Two exceptions</h2>
+  <p>Two parts work differently, and we&rsquo;d rather you hear it from us:</p>
+  <ul>
+    <li><b>The atomic swap helper</b> (<code>biscuit-swapd</code>, written in Rust) isn&rsquo;t built by Guix. We build it separately, and the Guix build won&rsquo;t continue unless its SHA-256 matches the one recorded in the source code. Its source is in the archive, so you can rebuild it too.</li>
+    <li><b>macOS.</b> Macs with Apple Silicon don&rsquo;t run unsigned apps, so after the Guix build we sign Biscuit with an ad-hoc signature (no Apple account, no name in it) and zip it again. The Mac zip you download is therefore not byte for byte what Guix produced. The Windows and Linux files are.</li>
+  </ul>
+
+</body></html>

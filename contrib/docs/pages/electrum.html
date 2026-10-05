@@ -1,0 +1,16 @@
+<html><body>
+<h1>Electrum servers</h1>
+<p>Biscuit doesn&rsquo;t download the Bitcoin or Litecoin blockchain. It asks an Electrum server about your addresses: their payments, their balance, and the current fees. It&rsquo;s fast, but the server learns which addresses you ask about.</p>
+  <h2>Public servers</h2>
+  <p>By default, Biscuit uses well-known public servers, with encrypted (TLS) connections, and moves to another one if a server fails. In <a href="tor.html">Tor mode</a> it reaches them through Tor, so they don&rsquo;t see your IP address. They still see the addresses: a server could guess they belong together.</p>
+  <h2>Your own server</h2>
+  <p>With your own server, no one else learns your addresses. <b>Settings &rsaquo; Network &rsaquo; Bitcoin &amp; Litecoin</b>, then enter it as <code>host:port</code>:</p>
+  <ul>
+    <li>Any Electrum server works: Electrs, Fulcrum, Electrum Personal Server, on a node of yours, Umbrel or Start9.</li>
+    <li>Biscuit then connects only to that server, never to public ones.</li>
+    <li>The connection must be encrypted (TLS). A self-signed certificate is accepted and remembered on the first connection; if it changes later, Biscuit refuses it.</li>
+    <li>For a <code>.onion</code> address or a server on your local network, an unencrypted <code>tcp://host:port</code> is allowed too.</li>
+  </ul>
+  <p>Leave the field empty to go back to the public servers.</p>
+
+</body></html>

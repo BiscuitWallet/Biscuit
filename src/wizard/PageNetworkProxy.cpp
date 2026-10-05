@@ -53,6 +53,7 @@ bool PageNetworkProxy::validatePage() {
     if (ui->radio_tor->isChecked()) {
         // Biscuit: one-click Tor, managed by the app when it ships a Tor binary.
         conf()->set(Config::proxy, Config::Proxy::Tor);
+        conf()->set(Config::torPrivacyLevel, Config::allTor);
 #if defined(HAS_TOR_BIN) || defined(TOR_INSTALLED)
         conf()->set(Config::useLocalTor, false);
 #endif

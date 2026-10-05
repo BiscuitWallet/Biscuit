@@ -1,0 +1,23 @@
+<html><body>
+<h1>Hardware wallets</h1>
+<p>With a hardware wallet, your Monero keys stay on the device: Biscuit asks it to sign each payment, and you confirm on its screen. This covers Monero; Bitcoin and Litecoin in Biscuit keep their own seed in your encrypted wallet file.</p>
+  <h2>Supported devices</h2>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <tbody>
+      <tr><th>Ledger</th><td>Nano S, Nano S Plus, Nano X, Stax, Flex</td></tr>
+      <tr><th>Trezor</th><td>Model T, Safe 3, Safe 5</td></tr>
+    </tbody>
+  </table>
+  <p>The Trezor Safe 7 isn&rsquo;t supported yet: it uses a new communication protocol that Monero&rsquo;s code doesn&rsquo;t speak yet.</p>
+  <h2>Setting it up</h2>
+  <ol>
+    <li>Connect the device. On a Ledger, open the Monero app; on a Trezor, unlock it.</li>
+    <li>In Biscuit, choose <b>Restore wallet from&hellip; &rsaquo; Hardware device</b> and the device type.</li>
+    <li>Choose <b>Create a new wallet file from device</b> if this device never held Monero, or <b>Restore a wallet from device</b> if it did. For a restore, enter the restore height, or the date you got the device.</li>
+    <li>Choose a name and a password for the wallet file.</li>
+  </ol>
+  <p>To check an address on the device&rsquo;s screen, right-click it on Receive &rsaquo; <b>Show on device</b>. Building a payment on a device can take a minute or more.</p>
+  <h2>On Linux</h2>
+  <p>Linux needs udev rules before Biscuit can reach the device. Install them once, from <a href="https://github.com/LedgerHQ/udev-rules">Ledger</a> or <a href="https://trezor.io/learn/a/udev-rules">Trezor</a>, then reconnect the device.</p>
+
+</body></html>

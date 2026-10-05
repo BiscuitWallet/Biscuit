@@ -60,6 +60,16 @@ struct RestoreHeightLookup {
         return blockHeight;
     }
 
+    int estimateNetworkHeight(time_t now) {
+        // Biscuit: the current height of the network, estimated from the last
+        // checkpoint of the table and one block every two minutes since.
+        if (this->data.isEmpty() || this->type == NetworkType::TESTNET) {
+            return 0;
+        }
+        time_t lastBlockHeightTime = this->data.lastKey();
+        return this->data.last() + int((now - lastBlockHeightTime) / 120);
+    }
+
     time_t heightToTimestamp(int height) {
         // @TODO: most likely inefficient, refactor
         QMap<time_t, int>::iterator i;

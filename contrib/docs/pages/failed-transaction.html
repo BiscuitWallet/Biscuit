@@ -1,0 +1,21 @@
+<html><body>
+<h1>A payment I sent failed</h1>
+<p>A payment can fail to reach the network, or reach it and still seem missing to the recipient. Here&rsquo;s how to tell and what to do.</p>
+  <h2>Monero payment marked Failed</h2>
+  <p>The node you were connected to didn&rsquo;t pass your payment on to the network: badly configured or badly connected. Your coins didn&rsquo;t move.</p>
+  <ol>
+    <li>Right-click the payment in History &rsaquo; <b>Resend transaction</b>, and <b>Broadcast</b>.</li>
+    <li>Check a block explorer a few minutes later. If it isn&rsquo;t there, connect to another node (<b>Settings &rsaquo; Network &rsaquo; Node</b>) and resend.</li>
+    <li>If you&rsquo;d rather give up on it, <b>Remove from history</b> removes it from the list.</li>
+  </ol>
+  <p>With your own node, you can also relay it from the node: <code>relay_tx &lt;txid&gt;</code> in the monerod console. <b>Multibroadcast</b>, in <b>Settings &rsaquo; Transactions</b>, sends every payment to several nodes and avoids most of these failures.</p>
+  <h2>The recipient says it didn&rsquo;t arrive</h2>
+  <ol>
+    <li>Right-click the payment &rsaquo; <b>Copy</b> &rsaquo; <b>Transaction ID</b>, and look it up on a block explorer. Not there? See above.</li>
+    <li>Right-click &rsaquo; <b>Show details</b>, and check that the address under <b>Destinations</b> is the right one. Coins sent to a wrong address are gone.</li>
+    <li>If both are right, the problem is on their side. Send them a <a href="proofs.html">payment proof</a>.</li>
+  </ol>
+  <h2>Bitcoin and Litecoin</h2>
+  <p>A payment that stays unconfirmed for a long time usually has too low a fee for how busy the network is: <a href="btc-fees.html">speed it up</a>.</p>
+
+</body></html>

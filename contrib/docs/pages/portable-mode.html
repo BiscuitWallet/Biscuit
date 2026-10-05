@@ -1,0 +1,14 @@
+<html><body>
+<h1>Portable mode</h1>
+<p>In portable mode, Biscuit keeps its wallets, settings and Tor data in a folder next to the program, instead of your user folders. Handy on a USB drive or an encrypted volume.</p>
+  <h2>Turning it on</h2>
+  <p>Create an empty file named <code>.portable</code> or <code>portable.txt</code> in the same folder as Biscuit: next to <code>biscuit-&lt;version&gt;.exe</code> on Windows, or next to the AppImage on Linux. Start Biscuit: it finds the file and stores everything in a <code>biscuit_data</code> folder beside it.</p>
+  <p><b>Settings &rsaquo; Storage &rsaquo; Paths</b> then says <b>Portable mode is enabled</b>.</p>
+  <h2>Good to know</h2>
+  <ul>
+    <li>On Tails, portable mode is always on: that&rsquo;s how your wallets survive a restart in the Persistent folder.</li>
+    <li>Wallets you already have elsewhere aren&rsquo;t moved. Open them with <b>File &rsaquo; Open wallet</b>, or copy their files into <code>biscuit_data/wallets</code>.</li>
+    <li>Use the portable zip on Windows and the AppImage on Linux. The installer and the Linux packages install Biscuit in a system folder, where this doesn&rsquo;t make sense.</li>
+  </ul>
+
+</body></html>

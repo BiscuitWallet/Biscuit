@@ -33,8 +33,6 @@ private:
     QString m_currentSource = "";
 
     QMap<QString, QString> m_docs;
-    QMap<QString, QStringList> m_categoryIndex;
-    QMap<QString, QString> m_navTitleIndex;
 
     QMap<QString, QTreeWidgetItem *> m_items;
 };

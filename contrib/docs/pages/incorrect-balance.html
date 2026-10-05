@@ -1,0 +1,21 @@
+<html><body>
+<h1>My balance looks wrong</h1>
+<p>First, make sure the wallet is <b>Synchronized</b> (status bar). A balance is only complete once every block has been scanned. Expecting a payment that isn&rsquo;t there? See <a href="missing-transaction.html">A payment hasn&rsquo;t arrived</a>.</p>
+  <h2>Monero</h2>
+  <ul>
+    <li><b>Part of it is unconfirmed</b> after you sent a payment: your change is locked for 10 blocks, about 20 minutes. See <a href="balance.html">Balance</a>.</li>
+    <li><b>Frozen coins</b> don&rsquo;t count. Check <b>View &rsaquo; Coins</b>: frozen outputs show in blue. Thaw them to count them again.</li>
+    <li><b>Another account</b>: each account has its own balance. Check the account switcher.</li>
+    <li><b>Wallet &rsaquo; Advanced &rsaquo; Rescan spent</b> asks the node again which outputs are spent.</li>
+    <li><b>Restored from a seed with a restore height too high</b>: older payments are missed. Restore again with an earlier date.</li>
+    <li>A <b>view-only wallet</b> doesn&rsquo;t see what you spent, see <a href="view-only.html">View-only wallets</a>.</li>
+  </ul>
+  <p>If nothing helps, <a href="restore-wallet.html">restore the wallet from its seed</a> into a new file. It rebuilds everything from the blockchain.</p>
+  <h2>Bitcoin and Litecoin</h2>
+  <ul>
+    <li>Check the right wallet is selected: each has its own balance.</li>
+    <li>Coins on older address types of your seed (1&hellip;, 3&hellip;, L&hellip;, M&hellip;) aren&rsquo;t shown: Biscuit uses native SegWit.</li>
+    <li>Payments far beyond your used addresses: see the last step of <a href="missing-transaction.html">A payment hasn&rsquo;t arrived</a>.</li>
+  </ul>
+
+</body></html>

@@ -3,6 +3,8 @@
 
 #include "nodes.h"
 
+#include <QDateTime>
+
 #include "libwalletqt/Wallet.h"
 #include "utils/AppData.h"
 #include "utils/Utils.h"
@@ -447,9 +449,15 @@ bool Nodes::useOnionNodes() {
             return true;
         }
 
-        if (appData()->heights.contains(constants::networkType)) {
+        // Biscuit: Feather's service used to send the network height. Without it,
+        // estimate the height from the date, so that only a wallet far behind syncs
+        // outside Tor, as this setting promises, and not every wallet at every opening.
+        int networkHeight = appData()->heights.value(constants::networkType, 0);
+        if (networkHeight == 0 && appData()->restoreHeights.contains(constants::networkType)) {
+            networkHeight = appData()->restoreHeights[constants::networkType]->estimateNetworkHeight(QDateTime::currentSecsSinceEpoch());
+        }
+        if (networkHeight > 0) {
             int initSyncThreshold = conf()->get(Config::initSyncThreshold).toInt();
-            int networkHeight = appData()->heights[constants::networkType];
 
             if (m_wallet && m_wallet->blockChainHeight() > (networkHeight - initSyncThreshold)) {
                 return true;

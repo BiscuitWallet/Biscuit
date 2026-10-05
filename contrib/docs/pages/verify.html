@@ -1,0 +1,32 @@
+<html><body>
+<h1>Verify your download</h1>
+<p>It takes a couple of minutes, and it tells you the file you got is exactly the one we published, not something swapped in along the way.</p>
+  <h2>The release signing key</h2>
+  <p>Every release is signed with this key. Its fingerprint is what identifies it: compare it with the one your tools show.</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <tbody>
+      <tr><th>Name</th><td>Biscuit Wallet releases</td></tr>
+      <tr><th>Type</th><td>RSA 4096</td></tr>
+      <tr><th>Fingerprint</th><td><code>D714 332E 6101 C1DA AC60&nbsp; E644 202F 1FA3 98DE CEFA</code></td></tr>
+    </tbody>
+  </table>
+  <p>The public key is on the <a href="https://biscuitwallet.com/download/">download page</a>, in <a href="https://github.com/BiscuitWallet/Biscuit/blob/main/SECURITY.md">SECURITY.md</a>, and built into Biscuit: the app installs an update only after checking this signature.</p>
+  <h2>1. Check the signature of the checksums</h2>
+  <p>Each release has a list of SHA-256 checksums, <code>hashes-&lt;version&gt;-plain.txt</code>, signed with the key above. With GnuPG installed (on a Mac, from GPG Suite or Homebrew; on Windows, Gpg4win):</p>
+  <pre><code>gpg --import biscuit-release-key.asc
+gpg --verify hashes-1.0.9-plain.txt</code></pre>
+  <p>The output must say <b>Good signature from &ldquo;Biscuit Wallet releases&rdquo;</b>, and the fingerprint must match the one above. GnuPG may add that the key is not certified with a trusted signature: that only means you haven&rsquo;t signed our key yourself.</p>
+  <h2>2. Check the file against the list</h2>
+  <p>Compute the checksum of the file you downloaded and find the same value, next to the same file name, in the signed list.</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <tbody>
+      <tr><th>macOS</th><td><code>shasum -a 256 biscuit-1.0.9-mac-arm64.zip</code></td></tr>
+      <tr><th>Linux</th><td><code>sha256sum biscuit-1.0.9-linux-appimage.zip</code></td></tr>
+      <tr><th>Windows</th><td><code>certutil -hashfile biscuit-1.0.9-win.zip SHA256</code></td></tr>
+    </tbody>
+  </table>
+  <p>If the values differ, don&rsquo;t open the file: download it again from biscuitwallet.com.</p>
+  <h2>Going further</h2>
+  <p>Releases are built with Guix, so you can also rebuild one yourself and compare: see <a href="reproducible-builds.html">Reproducible builds</a>.</p>
+
+</body></html>

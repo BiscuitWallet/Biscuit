@@ -1,0 +1,39 @@
+<html><body>
+<h1>Wallet files and folders</h1>
+<p><b>Wallet &rsaquo; Information</b> shows where the open wallet is stored, and <b>Settings &rsaquo; Storage &rsaquo; Paths</b> shows every folder Biscuit uses, with buttons to open them.</p>
+  <h2>Folders</h2>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th></th><th>Wallets</th><th>Settings and app data</th></tr></thead>
+    <tbody>
+      <tr><th>Windows</th><td><code>Documents\Biscuit\wallets</code></td><td><code>AppData\Roaming\Biscuit</code></td></tr>
+      <tr><th>macOS</th><td><code>~/Biscuit/wallets</code></td><td><code>~/Library/Application Support/Biscuit</code></td></tr>
+      <tr><th>Linux</th><td><code>~/Biscuit/wallets</code></td><td><code>~/.config/biscuit</code></td></tr>
+    </tbody>
+  </table>
+  <p>In <a href="portable-mode.html">portable mode</a> and on Tails, both live in a <code>biscuit_data</code> folder next to Biscuit instead. To use another wallet folder, choose it in <b>Settings &rsaquo; Storage &rsaquo; Paths</b>; existing wallets aren&rsquo;t moved for you.</p>
+  <h2>A wallet&rsquo;s files</h2>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>File</th><th>What it holds</th></tr></thead>
+    <tbody>
+      <tr><th><code>name.keys</code></th><td>The Monero keys and wallet settings. Lose it without your seed, and the coins are gone.</td></tr>
+      <tr><th><code>name</code></th><td>The Monero cache: transactions, labels, contacts, notes, transaction keys, your Polyseed. Biscuit rebuilds most of it by syncing, but not labels, notes or transaction keys.</td></tr>
+      <tr><th><code>name.btcltc</code></th><td>Your Bitcoin and Litecoin wallets: seeds, addresses, labels, contacts, swap history.</td></tr>
+    </tbody>
+  </table>
+  <p>All three are encrypted with your password. The Monero files use Monero&rsquo;s own scheme (ChaCha20, with a key derived from the password by CryptoNight). The Bitcoin and Litecoin file uses XChaCha20-Poly1305, with a key derived by Argon2id, which is deliberately slow and memory-hungry to make guessing passwords expensive.</p>
+  <p>If the Monero cache can&rsquo;t be read, Biscuit renames it <code>name.old_cache</code> and builds a new one.</p>
+  <h2>The settings folder</h2>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <tbody>
+      <tr><th><code>settings.json</code></th><td>Your settings</td></tr>
+      <tr><th><code>datafeed-cache.json</code></th><td>The last prices and Journal, so they show at once on the next launch</td></tr>
+      <tr><th><code>tor/</code></th><td>The Tor that Biscuit starts, and its data</td></tr>
+      <tr><th><code>atomicswaps/</code></th><td>The state of your atomic swaps</td></tr>
+      <tr><th><code>libwallet.log</code></th><td>Monero&rsquo;s log, empty unless you turn on <b>Settings &rsaquo; Storage &rsaquo; Logging</b></td></tr>
+    </tbody>
+  </table>
+  <p>Never delete <code>atomicswaps/</code> while a swap is running: it holds what Biscuit needs to finish it or get your Bitcoin back.</p>
+  <h2>Other wallets</h2>
+  <p>The Monero files are standard: a wallet from Feather or Monero&rsquo;s own wallets opens in Biscuit, and the other way round. Keep both programs up to date before moving a wallet between them.</p>
+
+</body></html>

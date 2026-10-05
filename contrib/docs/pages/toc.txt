@@ -1,0 +1,70 @@
+Get started
+  index|Welcome
+  install|Supported systems
+  install-windows|Windows
+  install-macos|macOS
+  install-linux|Linux
+  install-tails|Tails and Whonix
+  verify|Verify your download
+  getting-started|First launch
+  create-wallet|Create a wallet
+  restore-wallet|Restore a wallet
+  receive|Receive
+  send|Send
+Your wallet
+  wallets|One wallet, three coins
+  backups|Seeds and backups
+  balance|Balance
+  history|History
+  contacts|Contacts
+  password|Password and locking
+  sign-message|Signed messages
+  qr-scanner|Webcam QR scanner
+  wallet-files|Wallet files and folders
+  portable-mode|Portable mode
+Monero
+  monero|Overview
+  accounts|Accounts and subaddresses
+  monero-fees|Fees and confirmations
+  coin-control|Coin control
+  pay-to-many|Pay to many
+  proofs|Payment proofs
+  view-only|View-only wallets
+  hardware-wallets|Hardware wallets
+  offline-signing|Offline signing
+  nodes|Nodes
+  synchronization|Synchronization
+  seed-types|Monero seeds
+  monero-tools|Advanced tools
+Bitcoin and Litecoin
+  bitcoin-litecoin|Overview
+  btc-addresses|Addresses
+  btc-fees|Fees and speeding up
+  btc-coin-control|Coin control
+  silent-payments|Silent payments
+  electrum|Electrum servers
+Swaps
+  swaps|Which swap?
+  exchange-swaps|Exchange swaps
+  atomic-swaps|Atomic swaps
+Home tab
+  home-tab|The Home tab
+Privacy and network
+  tor|Tor mode
+  network|What Biscuit connects to
+  third-party-data|Prices and other data
+  proxies|I2P, SOCKS5, offline
+  onion|Our onion service
+Security
+  updates|Updates
+  reproducible-builds|Reproducible builds
+Reference
+  settings|All settings
+  shortcuts|Shortcuts and command line
+Help
+  troubleshooting|Biscuit won't start
+  missing-transaction|A payment hasn’t arrived
+  failed-transaction|A payment I sent failed
+  incorrect-balance|My balance looks wrong
+  faq|Frequently asked questions
+  report-bug|Get help, report a bug

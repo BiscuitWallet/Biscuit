@@ -1,0 +1,29 @@
+<html><body>
+<h1>What Biscuit connects to</h1>
+<p>Biscuit only connects to what it needs, and tells you here exactly what that is. None of these connections carries your seed or your keys.</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>To</th><th>Why</th><th>Who sees your IP address</th></tr></thead>
+    <tbody>
+      <tr><th>A Monero node</th><td>Monero sync and payments</td><td>The node, unless it goes through <a href="tor.html">Tor</a> or it&rsquo;s your own</td></tr>
+      <tr><th>Electrum servers</th><td>Bitcoin and Litecoin</td><td>The server, unless you use Tor or your own server</td></tr>
+      <tr><th>biscuitwallet.com</th><td>Prices, currency rates, the Journal, crowdfunding, updates</td><td>Our server, which keeps no logs of these. In Tor mode: nobody, through our onion</td></tr>
+      <tr><th>Rendezvous servers and market makers</th><td>Atomic swaps</td><td>Them, unless you tick <b>Connect through Tor</b></td></tr>
+      <tr><th>Biscuit&rsquo;s swap service, Trocador, the exchange</th><td>Exchange swaps</td><td>All three (see the <a href="https://biscuitwallet.com/privacy/">privacy policy</a>)</td></tr>
+    </tbody>
+  </table>
+  <p>Opening a link, a block explorer for example, opens your browser; Biscuit asks first when <b>Settings &rsaquo; Display &rsaquo; Warn before opening external link</b> is on.</p>
+  <h2>What Biscuit never does</h2>
+  <ul>
+    <li>No accounts, no analytics, no crash reports, no identifier sent with requests.</li>
+    <li>No remote configuration: what Biscuit does is decided by the version you installed.</li>
+    <li>It never connects to Feather&rsquo;s servers. Biscuit is built on Feather, but uses its own.</li>
+    <li>Your keys and seeds never leave your computer.</li>
+  </ul>
+  <h2>Turning connections off</h2>
+  <ul>
+    <li><a href="third-party-data.html">Third-party data</a> can be disabled: no prices, no Journal, no update checks.</li>
+    <li><b>Settings &rsaquo; Network &rsaquo; Offline</b> disables every connection, for <a href="offline-signing.html">offline signing</a>.</li>
+    <li>Your own node and Electrum server replace the public ones.</li>
+  </ul>
+
+</body></html>

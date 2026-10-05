@@ -1,0 +1,27 @@
+<html><body>
+<h1>Nodes</h1>
+<p>A node is a computer that keeps a copy of the Monero blockchain. Biscuit asks one for blocks to find your transactions, and gives it your payments to pass on to the network.</p>
+  <h2>Public nodes</h2>
+  <p>By default, Biscuit connects to a random node from a list of public nodes run by trusted members of the Monero community, built into Biscuit and updated with each release. If a node stops answering, it moves to another one. In <a href="tor.html">Tor mode</a>, it uses the .onion addresses from the same list.</p>
+  <h2>What a public node learns</h2>
+  <p>A node doesn&rsquo;t know your addresses or your balance, can&rsquo;t see your incoming payments, can&rsquo;t see where you send money or how much, and can&rsquo;t take your coins. Your wallet scans every block on your computer.</p>
+  <p>A malicious node could still:</p>
+  <ul>
+    <li>try to guess which input of your transaction is the real one. It rarely works, and Biscuit warns you if it notices;</li>
+    <li>suggest an unusual fee, which would make your payments stand out;</li>
+    <li>link your payments to your IP address, unless you use Tor.</li>
+  </ul>
+  <p>Your own node removes all of that.</p>
+  <h2>Your own node</h2>
+  <p><b>Settings &rsaquo; Network &rsaquo; Node</b>: untick <b>Let Biscuit manage this list</b>, click <b>Add custom node(s)</b> and enter <code>host:port</code>.</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>Network</th><th>Default port</th></tr></thead>
+    <tbody>
+      <tr><th>Mainnet</th><td>18081 (restricted RPC: 18089)</td></tr>
+      <tr><th>Stagenet</th><td>38081</td></tr>
+      <tr><th>Testnet</th><td>28081</td></tr>
+    </tbody>
+  </table>
+  <p>A node on this computer is <code>127.0.0.1:18081</code>; Biscuit finds it by itself at first launch. Nodes on your local network (127.x, 10.x, 172.16&ndash;31.x, 192.168.x, or a <code>.local</code> name) count as local: Biscuit never sends their traffic through Tor. To run one, the <a href="https://sethforprivacy.com/guides/run-a-monero-node/">guide by Seth for Privacy</a> is a good start.</p>
+
+</body></html>

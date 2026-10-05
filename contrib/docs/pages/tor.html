@@ -1,0 +1,35 @@
+<html><body>
+<h1>Tor mode</h1>
+<p>Biscuit includes Tor: there&rsquo;s nothing to install. Turn on Tor mode at first launch, or later in <b>Settings &rsaquo; Network &rsaquo; Proxy</b>, and Biscuit hides your IP address from the nodes, servers and swap partners it talks to.</p>
+  <h2>What goes through Tor</h2>
+  <ul>
+    <li>Bitcoin and Litecoin: the Electrum servers.</li>
+    <li>Prices, the Journal and updates, from <a href="onion.html">our onion service</a>.</li>
+    <li>Atomic swaps.</li>
+    <li>Monero: depends on the <b>Node traffic</b> setting below.</li>
+  </ul>
+  <p>The onion at the bottom right of the window shows the mode: purple in Tor mode, grey for a direct connection. Click it to change. Exchange swaps are off in Tor mode, because exchanges refuse Tor; <a href="atomic-swaps.html">atomic swaps</a> work.</p>
+  <h2>Monero node traffic</h2>
+  <p>Syncing a Monero wallet downloads a lot of data, and that&rsquo;s slow over Tor. So the <b>Node traffic</b> setting offers three choices:</p>
+  <dl>
+    <dt>Always over Tor</dt>
+    <dd>Every connection to a Monero node goes through Tor, to .onion nodes. The most private choice. Syncing a wallet left closed for a long time is slower.</dd>
+    <dt>Switch to Tor after initial synchronization</dt>
+    <dd>The default. When you open a wallet, Biscuit first syncs it over a direct connection to a public node, then moves to an .onion node through Tor for everything else, sending your payments included. The node used for that first sync sees your IP address, but not your addresses or balance (see <a href="nodes.html">Nodes</a>).</dd>
+    <dt>Never over Tor</dt>
+    <dd>Monero nodes are always reached directly. Everything else still goes through Tor.</dd>
+  </dl>
+  <p>If you chose Tor so that no node ever sees your IP address, choose <b>Always over Tor</b>. A <a href="nodes.html">node on your own network</a> is always reached directly, whatever the setting.</p>
+  <h2>Only onion services</h2>
+  <p><b>Only allow connections to onion services</b> keeps every connection inside the Tor network: Monero uses .onion nodes only, and prices come from our onion. Bitcoin and Litecoin stay offline unless you set your own <a href="electrum.html">Electrum server</a> with an .onion address: no public onion Electrum server is built in yet.</p>
+  <h2>Which Tor</h2>
+  <ul>
+    <li>By default (<b>Automatic: Biscuit starts and manages Tor</b>), Biscuit starts its own Tor, and stops it when Biscuit closes, even if it closes abruptly.</li>
+    <li>If Tor already runs on your computer, on 127.0.0.1:9050, Biscuit offers to use it instead.</li>
+    <li>On Tails and Whonix, Tor mode is always on, and Biscuit uses the system&rsquo;s Tor. See <a href="install-tails.html">Tails and Whonix</a>.</li>
+  </ul>
+  <p><b>Show status</b> shows Tor&rsquo;s log, handy if it doesn&rsquo;t connect.</p>
+  <h2>Checking that Tor really works</h2>
+  <p>In Tor mode, Biscuit asks biscuitwallet.com from time to time whether its connection arrives through Tor. The answer is only yes or no, and nothing is kept. If the answer is no (a wrong proxy setting, or a program on 127.0.0.1:9050 that isn&rsquo;t Tor), the status bar shows <b>Not going through Tor</b>. Click it to open the proxy settings. The check is off when <a href="third-party-data.html">third-party data</a> is disabled.</p>
+
+</body></html>

@@ -1,0 +1,25 @@
+<html><body>
+<h1>Atomic swaps</h1>
+<p>An atomic swap trades your Bitcoin for Monero directly with a market maker, using the protocol created by the <a href="https://eigenwallet.org">eigenwallet</a> project. Nobody holds your coins in between: either the swap completes, or your Bitcoin comes back to you. Atomic swaps are in beta.</p>
+  <h2>Step by step</h2>
+  <ol>
+    <li>Your Bitcoin wallet must be set up and synchronized: the swap pays from it.</li>
+    <li>On <b>Swap</b>, choose <b>Atomic swap</b>, then <b>Find makers</b>. Biscuit asks public rendezvous servers for makers and lists their offers: price, minimum and maximum, how each compares to the market, and what they keep if a swap is refunded.</li>
+    <li>Pick an offer and enter how much Bitcoin to swap. Biscuit shows about how much Monero you get. The Bitcoin network fee is paid on top.</li>
+    <li><b>Start swap</b>. Keep Biscuit open until it&rsquo;s done: about an hour, mostly waiting for Bitcoin confirmations. The Monero arrives on a new subaddress of your wallet.</li>
+  </ol>
+  <p>One atomic swap at a time. If Biscuit closes during a swap, the swap continues the next time you open this wallet.</p>
+  <h2>How your Bitcoin stays safe</h2>
+  <ol>
+    <li>Your Bitcoin is locked in a shared address that neither side can spend alone.</li>
+    <li>The maker locks the Monero the same way.</li>
+    <li>Biscuit gives the maker what they need to take the Bitcoin, and taking it reveals to Biscuit the key to the Monero. Biscuit sweeps the Monero to your wallet.</li>
+  </ol>
+  <p>If the maker never locks the Monero, the swap is cancelled after 24 Bitcoin blocks, about 4 hours, and your Bitcoin comes back automatically. Biscuit must be running to get it back: after the cancel, you have about a day (144 blocks) to open it. After that, the maker may take the Bitcoin. Open Biscuit at least once a day while a swap isn&rsquo;t finished.</p>
+  <p>Some makers keep a small share of the Bitcoin when a swap is refunded, to discourage people from starting swaps they don&rsquo;t finish. It shows in the <b>Kept if refunded</b> column; pick a maker with &ldquo;none&rdquo; if you prefer.</p>
+  <h2>Privacy</h2>
+  <p>Without Tor, the rendezvous servers and the makers you connect to see your IP address. Tick <b>Connect through Tor</b> to hide it; finding makers then takes longer. In Tor mode, and on Tails and Whonix, atomic swaps always use Tor.</p>
+  <h2>The swap helper</h2>
+  <p>Atomic swaps run in a separate program, <code>biscuit-swapd</code>, built from eigenwallet&rsquo;s code and shipped with Biscuit. In the portable and tar.gz versions, keep it next to Biscuit. It&rsquo;s free software under the GPL-3.0, and its source is published with every release. Your atomic swap data is in the <code>atomicswaps</code> folder of <a href="wallet-files.html">Biscuit&rsquo;s settings folder</a>: never delete it while a swap is running.</p>
+
+</body></html>

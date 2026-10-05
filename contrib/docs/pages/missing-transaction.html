@@ -1,0 +1,22 @@
+<html><body>
+<h1>A payment hasn't arrived</h1>
+<p>Someone says they paid you, but it doesn&rsquo;t show. Go through these in order.</p>
+  <h2>1. Is Biscuit up to date and synchronized?</h2>
+  <p>The status bar must say <b>Synchronized</b>: payments in blocks not yet scanned don&rsquo;t show. Check your version in <b>Help &rsaquo; About</b> against the <a href="https://biscuitwallet.com/download/">download page</a>; very old versions can stop working when Monero changes its rules.</p>
+  <h2>2. Is it on the blockchain?</h2>
+  <p>Ask the sender for the transaction ID and look it up on a block explorer. If it isn&rsquo;t there, the payment never reached the network: the sender has to send it again (see <a href="failed-transaction.html">A payment I sent failed</a>).</p>
+  <h2>3. Monero: import it</h2>
+  <p>If it&rsquo;s on the blockchain, use <b>Tools &rsaquo; Import transaction</b> with its ID. Check you&rsquo;re looking at the right <a href="accounts.html">account</a>.</p>
+  <h2>4. Was it sent to your address?</h2>
+  <p><b>Tools &rsaquo; Address checker</b> tells you whether the address it was sent to belongs to this wallet. If it doesn&rsquo;t:</p>
+  <ul>
+    <li>you may have opened the wrong wallet;</li>
+    <li>the address may have been copied wrong;</li>
+    <li>or malware may have swapped the address in your clipboard. Check your computer.</li>
+  </ul>
+  <p>Coins sent to an address that isn&rsquo;t yours can&rsquo;t be recovered, by us or anyone.</p>
+  <h2>5. Ask for a proof</h2>
+  <p>Ask the sender for a <a href="proofs.html">payment proof</a> (OutProof) or the transaction key, and check it with <b>Tools &rsaquo; Verify transaction proof</b>. If they can&rsquo;t give one, they may not have paid you.</p>
+  <p>For Bitcoin and Litecoin, the explorer shows everything: if the payment is there to one of your addresses, and Biscuit doesn&rsquo;t show it, the address may be more than 20 addresses beyond the last one used: Biscuit, like most wallets, stops looking after 20 empty ones (see <a href="btc-addresses.html">Addresses</a>). <a href="report-bug.html">Write to us</a> and we&rsquo;ll help you get it back.</p>
+
+</body></html>

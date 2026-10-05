@@ -1,0 +1,36 @@
+<html><body>
+<h1>Offline signing</h1>
+<p>Offline signing keeps your Monero spend key on a computer that never connects to the internet. It works like a hardware wallet, done by hand: the online computer prepares the payment, the offline one signs it, the online one broadcasts it.</p>
+  <h2>What you need</h2>
+  <ul>
+    <li><b>The offline computer</b>: a laptop that stays offline for good, ideally with an encrypted disk. It holds the full wallet.</li>
+    <li><b>The online computer</b>: your everyday one. It holds a view-only copy.</li>
+    <li>A way to move data between them: <b>animated QR codes</b>, with a webcam on each side (a cheap 720p USB webcam is enough), or <b>files</b> on a USB stick or SD card.</li>
+  </ul>
+  <h2>Setting up</h2>
+  <ol>
+    <li>On the offline computer, turn on <b>Settings &rsaquo; Network &rsaquo; Offline &rsaquo; Disable all network connections (offline mode)</b>. Then <a href="create-wallet.html">create a wallet</a> and write down its seed.</li>
+    <li>On the offline wallet, click <b>View-only details</b>, then <b>Show QR</b>.</li>
+    <li>On the online computer, choose <b>Restore wallet from&hellip; &rsaquo; Keys</b>, click <b>Scan QR</b> and scan it. Go through the steps; the restore height is filled in.</li>
+  </ol>
+  <p>The offline wallet shows no balance and no history: it never sees the blockchain. Use the online one for that, and to get addresses. To check an address against the offline wallet, click <b>Show address</b> there and enter its number.</p>
+  <h2>Sending</h2>
+  <p>Send from the online, view-only wallet as usual. A window opens with an animated QR code and guides you; on the offline wallet, click <b>Sign a transaction</b>. Then, taking turns:</p>
+  <ol>
+    <li><b>Offline</b> scans the outputs shown by the online wallet.</li>
+    <li><b>Online</b> clicks Next and scans the key images shown by the offline wallet, then builds the transaction.</li>
+    <li><b>Offline</b> clicks Next, scans the unsigned transaction, checks the destination and the amount, and clicks <b>Sign</b>.</li>
+    <li><b>Online</b> clicks Next, scans the signed transaction, and confirms to broadcast it.</li>
+  </ol>
+  <p>Steps 1 and 2 only happen when the wallets need to catch up, usually the first time. The scanner shows a progress bar; keep scanning if it sits at 99%.</p>
+  <p>To use files instead, choose <b>Tools &rsaquo; Offline transaction signing</b> and the file option. <b>Tools &rsaquo; Transmit over UR</b> sets the size and speed of the animated codes.</p>
+  <h2>If scanning is hard</h2>
+  <ul>
+    <li>Turn on manual exposure in the scanner, if your webcam has it, and adjust the slider.</li>
+    <li>Make the window bigger, lower the screen brightness, or try the dark theme.</li>
+    <li>In the settings next to the code, make the fragments smaller and slower.</li>
+    <li>A &ldquo;double spend&rdquo; error when sending: <b>Wallet &rsaquo; Advanced &rsaquo; Rescan spent</b> on the online wallet.</li>
+  </ul>
+  <p>On Windows 10, webcams need version 22H2 or later.</p>
+
+</body></html>

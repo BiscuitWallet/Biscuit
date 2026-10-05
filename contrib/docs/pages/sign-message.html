@@ -1,0 +1,18 @@
+<html><body>
+<h1>Signed messages</h1>
+<p>Signing a message with an address proves you hold that address, without sending anything. Use <b>Tools &rsaquo; Sign/verify message</b> and pick the coin.</p>
+  <h2>Signing</h2>
+  <ol>
+    <li>Type the message. It can be several lines, or empty if you only want to prove ownership.</li>
+    <li>Choose the address. For Monero, any of your subaddresses; for Bitcoin and Litecoin, any address of the selected wallet.</li>
+    <li>Click <b>Sign</b>, then <b>Copy to clipboard</b> to copy the message, the address and the signature together.</li>
+  </ol>
+  <p>Whoever checks it needs all three: the message, the address and the signature.</p>
+  <h2>Verifying</h2>
+  <p>Paste the message exactly as written (it is case-sensitive), the address and the signature, then click <b>Verify</b>.</p>
+  <ul>
+    <li><b>Monero</b> signatures start with <code>SigV2</code>.</li>
+    <li><b>Bitcoin and Litecoin</b> signatures use the format of Electrum, Sparrow and Bitcoin Core. Verifying works with any address type, legacy ones included.</li>
+  </ul>
+
+</body></html>

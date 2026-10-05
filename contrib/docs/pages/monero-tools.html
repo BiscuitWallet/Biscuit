@@ -1,0 +1,23 @@
+<html><body>
+<h1>Advanced tools</h1>
+<p>Tools you rarely need, but are glad to have when you do. Most are in the <b>Tools</b> menu and in <b>Wallet &rsaquo; Advanced</b>.</p>
+  <h2>Import transaction</h2>
+  <p>A payment shows on a block explorer but not in your wallet? Once the wallet is synchronized, <b>Tools &rsaquo; Import transaction</b>, paste the transaction ID, and click <b>Import</b>. If it belongs to the wallet, it appears in History. Check that the right <a href="accounts.html">account</a> is selected.</p>
+  <h2>Broadcast transaction</h2>
+  <p><b>Tools &rsaquo; Broadcast transaction &rsaquo; From text</b> (or <b>From file</b>) sends a signed transaction, in hex, to the network: through the connected node or one you choose, following your <a href="tor.html">Tor and proxy settings</a>.</p>
+  <h2>Address checker</h2>
+  <p><b>Tools &rsaquo; Address checker</b> tells you whether an address is valid, whether it belongs to the open wallet, and to which account and index.</p>
+  <h2>Wallet &rsaquo; Advanced</h2>
+  <dl>
+    <dt>Rescan spent</dt><dd>Asks the node again which of your outputs are spent. Fixes some wrong balances and &ldquo;double spend&rdquo; errors.</dd>
+    <dt>Update balance (Ctrl+U)</dt><dd>Recomputes the balance.</dd>
+    <dt>Save wallet (Ctrl+S)</dt><dd>Saves now. Biscuit saves by itself anyway.</dd>
+    <dt>Refresh models (Ctrl+R)</dt><dd>Redraws the lists. Avoid it during a sync.</dd>
+    <dt>Wallet cache debug</dt><dd>Shows what the wallet cache holds, for developers and the curious. It can show sensitive data: not with someone looking over your shoulder.</dd>
+  </dl>
+  <h2>Tx pool viewer</h2>
+  <p><b>Tools &rsaquo; Tx pool viewer</b> lists the transactions waiting to be included in a block, as the connected node sees them.</p>
+  <h2>Stagenet and testnet</h2>
+  <p>For developers and testing, start Biscuit with <code>--stagenet</code> or <code>--testnet</code>. Coins on these networks are worthless; never accept them as payment. A <a href="https://stagenet-faucet.xmr-tw.org/">stagenet faucet</a> gives free test coins.</p>
+
+</body></html>

@@ -186,6 +186,18 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
 
     conf()->set(Config::restartRequired, false);
 
+    // Biscuit 1.0.10: before, Tor mode kept Feather's "switch to Tor after initial
+    // synchronization", which without Feather's service synced every wallet outside
+    // Tor at each opening. Tor mode now means every connection; move existing Tor users
+    // once (they can choose the exception again in Settings > Network > Proxy).
+    if (!conf()->get(Config::torAllTrafficMigrated).toBool()) {
+        if (conf()->get(Config::proxy).toInt() == Config::Proxy::Tor
+                && conf()->get(Config::torPrivacyLevel).toInt() == Config::allTorExceptInitSync) {
+            conf()->set(Config::torPrivacyLevel, Config::allTor);
+        }
+        conf()->set(Config::torAllTrafficMigrated, true);
+    }
+
 #if defined(Q_OS_WIN)
     // Biscuit: after an update, Explorer may keep showing the old icon on shortcuts
     // and in the taskbar until the next restart. Tell it once that icons changed.

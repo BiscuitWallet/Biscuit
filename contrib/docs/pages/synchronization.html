@@ -1,0 +1,22 @@
+<html><body>
+<h1>Synchronization</h1>
+<p>To find your transactions, Biscuit downloads each new block from a node and checks it on your computer. Until it has caught up, recent payments don&rsquo;t show and your balance may be behind. The status bar says <b>Synchronized</b> once it&rsquo;s done.</p>
+  <h2>How long it takes</h2>
+  <p>A wallet opened every day catches up in seconds. One left closed for months needs to scan every block since: a few minutes, longer over Tor, where the data travels through three relays. Bitcoin and Litecoin sync separately and much faster: Biscuit asks an Electrum server about your addresses instead of scanning blocks.</p>
+  <p><b>Help &rsaquo; Debug info</b> shows the wallet height (the last block scanned), the node&rsquo;s height, and the restore height.</p>
+<a name="restore-height"></a>
+  <h2>The restore height</h2>
+  <p>The restore height is the block a wallet starts scanning from: nothing before it can belong to the wallet. A new wallet starts at today&rsquo;s block, so its first sync is instant.</p>
+  <ul>
+    <li>Polyseeds contain their creation date, so Biscuit knows the restore height.</li>
+    <li>For a 25-word seed or a hardware device, Biscuit asks for it. Don&rsquo;t know it? Enter the date you created the wallet, or an earlier one if unsure: Biscuit works out the height.</li>
+    <li>Too high, and payments before it are missed: the balance is wrong. Too low only makes the first sync longer.</li>
+  </ul>
+  <h2>If it seems stuck</h2>
+  <ul>
+    <li>Check the connection icon in the status bar. If the node stays disconnected, Biscuit moves to another one; you can also pick one in <b>Settings &rsaquo; Network &rsaquo; Node</b>.</li>
+    <li><b>Wallet &rsaquo; Advanced &rsaquo; Update balance</b> (Ctrl+U) refreshes the balance.</li>
+    <li>Still wrong once synchronized? See <a href="incorrect-balance.html">My balance looks wrong</a>.</li>
+  </ul>
+
+</body></html>

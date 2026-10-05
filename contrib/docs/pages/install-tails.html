@@ -1,0 +1,18 @@
+<html><body>
+<h1>Tails and Whonix</h1>
+<p>Biscuit recognizes Tails and Whonix by itself. On both, it uses the system&rsquo;s Tor instead of starting its own, and every connection goes through it, atomic swaps included.</p>
+  <h2>Tails</h2>
+  <ol>
+    <li>Turn on the <b>Persistent Storage</b> in Tails, if it isn&rsquo;t already.</li>
+    <li>Download the AppImage zip and <a href="verify.html">verify it</a>.</li>
+    <li>Unzip it into your <b>Persistent</b> folder, then make it executable: right-click &rsaquo; <b>Properties</b> &rsaquo; <b>Executable as Program</b>, or <code>chmod +x biscuit-*.AppImage</code>.</li>
+    <li>Double-click it.</li>
+  </ol>
+  <p>Biscuit keeps its wallets and settings in a <code>biscuit_data</code> folder next to the AppImage, so they survive a restart. Don&rsquo;t install a .deb with apt on Tails: it would be gone at the next start.</p>
+  <p>Tails needs glibc 2.34 for atomic swaps: Tails 6 and later have it.</p>
+  <h2>Whonix</h2>
+  <p>Run Biscuit in the Whonix Workstation, from the AppImage or the .deb. Biscuit uses the Workstation&rsquo;s Tor through the Gateway, and doesn&rsquo;t start a Tor of its own.</p>
+  <h2>Exchange swaps</h2>
+  <p>Exchange swaps don&rsquo;t work over Tor, so they&rsquo;re off on Tails and Whonix. <a href="atomic-swaps.html">Atomic swaps</a> work.</p>
+
+</body></html>

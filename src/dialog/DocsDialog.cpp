@@ -4,8 +4,10 @@
 #include "DocsDialog.h"
 #include "ui_DocsDialog.h"
 
+#include <QFile>
+#include <QHash>
+#include <QRegularExpression>
 #include <QScrollBar>
-#include <QDirIterator>
 
 #include "utils/Utils.h"
 #include "ColorScheme.h"
@@ -21,59 +23,34 @@ DocsDialog::DocsDialog(QWidget *parent)
 
     ui->splitter->setStretchFactor(1, 8);
 
-    QRegularExpression navTitleRe{R"(\[nav_title\]: # \((.+?)\)\n)"};
-    QRegularExpression categoryRe{R"(\[category\]: # \((.+?)\)\n)"};
-
-    QSet<QString> categories;
-
-    QDirIterator it(":/docs/", QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        QString resource = it.next();
-        QString docString = Utils::loadQrc(resource);
-
-        resource = "qrc" + resource;
-
-        // Extract navigation title from metadata
-        QRegularExpressionMatch navTitleMatch = navTitleRe.match(docString);
-        if (!navTitleMatch.hasMatch()) {
+    // Biscuit: the pages of biscuitwallet.com/docs, bundled (contrib/docs/pages). toc.txt
+    // lists the sections and their pages, in reading order: "Section", then "  slug|Title".
+    QTreeWidgetItem *section = nullptr;
+    const QStringList toc = Utils::loadQrc(":/docs/toc.txt").split("\n");
+    for (const QString &line : toc) {
+        if (line.trimmed().isEmpty()) {
             continue;
         }
-        QString navTitle = navTitleMatch.captured(1);
-        navTitle.replace("\\(", "(").replace("\\)", ")");
-
-        // Extract category from metadata
-        QRegularExpressionMatch categoryMatch = categoryRe.match(docString);
-        if (!categoryMatch.hasMatch()) {
+        if (!line.startsWith(" ")) {
+            section = new QTreeWidgetItem(ui->index, {line.trimmed()});
             continue;
         }
-        QString category = categoryMatch.captured(1);
-
-        m_categoryIndex[category].append(resource);
-        m_navTitleIndex[resource] = navTitle;
-
-        categories += category;
-
-        m_docs[resource] = docString.toLower();
-    }
-
-    // Add categories and docs to index
-    QList<QTreeWidgetItem *> items;
-    for (const auto& category : categories) {
-        auto *categoryWidget = new QTreeWidgetItem(static_cast<QTreeWidget *>(nullptr), {category});
-
-        QList<QTreeWidgetItem *> subItems;
-        for (const auto& resource : m_categoryIndex[category]) {
-            auto *docWidget = new QTreeWidgetItem(static_cast<QTreeWidget *>(nullptr), {m_navTitleIndex[resource]});
-            docWidget->setData(0, Qt::UserRole,resource);
-            subItems.append(docWidget);
-            m_items[resource] = docWidget;
+        const QString slug = line.trimmed().section('|', 0, 0);
+        const QString title = line.trimmed().section('|', 1);
+        const QString resource = "qrc:/docs/" + slug + ".html";
+        if (!section || !QFile::exists(":/docs/" + slug + ".html")) {
+            continue;
         }
+        auto *item = new QTreeWidgetItem(section, {title});
+        item->setData(0, Qt::UserRole, resource);
+        m_items[resource] = item;
 
-        categoryWidget->addChildren(subItems);
-        items.append(categoryWidget);
+        // Search looks in the text, not in the markup.
+        QString text = Utils::loadQrc(":/docs/" + slug + ".html");
+        text.remove(QRegularExpression("<[^>]*>"));
+        m_docs[resource] = text.toLower();
     }
-    ui->index->addTopLevelItems(items);
-    ui->index->sortItems(0, Qt::SortOrder::AscendingOrder);
+    ui->index->expandAll();
 
     connect(ui->index, &QTreeWidget::itemClicked, [this](QTreeWidgetItem *current, int column){
         if (ui->index->indexOfTopLevelItem(current) != -1) {
@@ -86,17 +63,12 @@ DocsDialog::DocsDialog(QWidget *parent)
     });
 
     connect(ui->textBrowser, &QTextBrowser::anchorClicked, [this](const QUrl &url){
-        QString doc = url.toString();
-
-        if (!doc.startsWith("qrc")) {
-            Utils::externalLinkWarning(this, doc);
-            this->showDoc(m_currentSource);
+        if (url.isRelative()) {
+            ui->textBrowser->setSource(QUrl(m_currentSource).resolved(url));
             return;
         }
-
-        doc.replace("-", "_");
-        doc += ".md";
-        this->showDoc(doc);
+        Utils::externalLinkWarning(this, url.toString());
+        this->showDoc(m_currentSource);
     });
 
     connect(ui->textBrowser, &QTextBrowser::sourceChanged, [this](const QUrl& source){
@@ -108,8 +80,9 @@ DocsDialog::DocsDialog(QWidget *parent)
         }
         m_currentSource = newSource;
 
-        if (m_items.contains(m_currentSource)) {
-            ui->index->setCurrentItem(m_items[m_currentSource]);
+        const QString page = source.toString(QUrl::RemoveFragment);
+        if (m_items.contains(page)) {
+            ui->index->setCurrentItem(m_items[page]);
         }
     });
 
@@ -140,7 +113,7 @@ DocsDialog::DocsDialog(QWidget *parent)
         closeButton->setAutoDefault(false);
     }
 
-    this->showDoc("report_an_issue");
+    this->showDoc("index");
 }
 
 void DocsDialog::filterIndex(const QString &text) {
@@ -181,14 +154,32 @@ void DocsDialog::showDoc(const QString &doc, const QString &highlight) {
     QString resource = doc;
 
     if (!resource.startsWith("qrc")) {
-        resource = "qrc:/docs/" + doc + ".md";
+        // Pages asked for under the names of Feather's documentation.
+        static const QHash<QString, QString> pages{
+            {"report_an_issue", "report-bug"},
+            {"seed_scheme", "seed-types"},
+            {"show_wallet_seed", "backups"},
+            {"wallet_files", "wallet-files"},
+            {"create_wallet_hardware_device", "hardware-wallets"},
+            {"restore_height", "synchronization#restore-height"},
+            {"synchronization", "synchronization"},
+            {"balance", "balance"},
+            {"offline_tx_signing", "offline-signing"},
+            {"pay_to_many", "pay-to-many"},
+            {"send_transaction", "send"},
+        };
+        const QString page = pages.value(doc, doc);
+        const QString slug = page.section('#', 0, 0);
+        const QString fragment = page.section('#', 1);
+        resource = "qrc:/docs/" + slug + ".html" + (fragment.isEmpty() ? "" : "#" + fragment);
     }
 
-    if (m_items.contains(resource)) {
-        ui->index->setCurrentItem(m_items[doc]);
+    const QString page = resource.section('#', 0, 0);
+    if (m_items.contains(page)) {
+        ui->index->setCurrentItem(m_items[page]);
     }
 
-    QString file = resource;
+    QString file = resource.section('#', 0, 0);
     file.remove("qrc");
     if (!QFile::exists(file)) {
         Utils::showError(this, "Unable to load document", "File does not exist");

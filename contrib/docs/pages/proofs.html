@@ -1,0 +1,26 @@
+<html><body>
+<h1>Payment proofs</h1>
+<p>Monero transactions are private, so the blockchain alone can&rsquo;t show that you paid someone. A proof can. Right-click a transaction in History &rsaquo; <b>Create Tx Proof</b>.</p>
+  <h2>The three kinds</h2>
+  <dl>
+    <dt>Prove payment to an address (OutProof)</dt><dd>Shows you sent a given amount to a given address. This is the one to use when someone says your payment never arrived.</dd>
+    <dt>Prove authorship of a transaction (SpendProof)</dt><dd>Shows you made the transaction, without saying to whom or how much.</dd>
+    <dt>Prove ownership of an output (InProof)</dt><dd>Shows you received an output of the transaction.</dd>
+  </dl>
+  <p>Add a message if you like, choose the address for an OutProof, then:</p>
+  <ul>
+    <li><b>Get Formatted Proof</b> gives one block of text with everything in it, easy to share. Biscuit and Feather read this format.</li>
+    <li><b>Get Signature</b> gives the signature alone, for other wallets. The other side then also needs the transaction ID, the address and your message.</li>
+  </ul>
+  <p>An OutProof needs the transaction key, which only the wallet that sent the payment has, in its files. After a restore from seed, older keys are gone. See <a href="backups.html">Seeds and backups</a>.</p>
+  <h2>The transaction key</h2>
+  <p>Some services ask for the &ldquo;transaction secret key&rdquo; instead. Right-click the payment &rsaquo; <b>Show details</b> &rsaquo; <b>Copy Tx Secret Key</b>. With it, the recipient can check the payment on a block explorer.</p>
+  <h2>Verifying a proof</h2>
+  <p><b>Tools &rsaquo; Verify transaction proof</b>:</p>
+  <ul>
+    <li><b>Formatted</b>: paste the whole block and click <b>Verify</b>. A valid one shows a green check and <b>Proof is valid</b>.</li>
+    <li><b>Manual</b>: choose the kind of proof, fill in the transaction ID, the address, the message and the signature, and click <b>Verify</b>.</li>
+  </ul>
+  <p>Reserve proofs, which prove a balance, aren&rsquo;t supported.</p>
+
+</body></html>

@@ -1,0 +1,24 @@
+<html><body>
+<h1>Coin control</h1>
+<p>Your Monero balance is made of outputs: one for each payment you received, and one for each change. Coin control lets you choose which ones a payment uses. Turn on <b>View &rsaquo; Coins</b> and pick Monero.</p>
+  <h2>The Coins tab</h2>
+  <p>Each line is an output, with its amount, the address that received it and its label. Outputs still locked show in green; hover one to see how many confirmations it still needs. Frozen ones show in blue. Tick <b>Show spent outputs</b> to see the ones already spent.</p>
+  <p>Select one or several (hold Ctrl, or &#8984; on a Mac) and right-click:</p>
+  <ul>
+    <li><b>Spend</b>: opens Send limited to these outputs.</li>
+    <li><b>Freeze</b> / <b>Thaw</b>: a frozen output is never spent, not even with Max, until you thaw it. It doesn&rsquo;t count in your balance meanwhile.</li>
+    <li><b>Sweep</b>: see below.</li>
+    <li><b>Edit Label</b>, and copy its details.</li>
+  </ul>
+  <h2>Why bother</h2>
+  <p>Spending several outputs together shows they belong to the same wallet. If some coins came from a source you&rsquo;d rather keep apart, from an exchange for example, freeze them, or spend them on their own.</p>
+<a name="sweep"></a>
+  <h2>Sweeping</h2>
+  <p>A sweep sends the whole value of the selected outputs, minus the fee, with no change. Right-click &rsaquo; <b>Sweep output</b>:</p>
+  <ul>
+    <li><b>Address</b>: where to send it. Or tick <b>Send to self (churn)</b> to send it to your own primary address.</li>
+    <li><b>Number of outputs</b>: split the total into up to 16 equal outputs. Having several outputs means less of your balance is locked each time you send.</li>
+  </ul>
+  <p>Sweeping is handy to move coins between accounts or wallets without leaving change behind. For everyday payments, use Send; to send everything, Max.</p>
+
+</body></html>

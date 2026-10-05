@@ -1,0 +1,24 @@
+<html><body>
+<h1>Balance</h1>
+<p>The status bar shows the balance of every coin, plus the total in your currency once prices have loaded. Click it for the details.</p>
+  <h2>The details</h2>
+  <p>The balance window lists Monero and each Bitcoin and Litecoin wallet, with what each holds and what it&rsquo;s worth:</p>
+  <dl>
+    <dt>Spendable</dt><dd>What you can send right now.</dd>
+    <dt>Unconfirmed</dt><dd>Payments not confirmed yet, and Monero that is still locked.</dd>
+    <dt>Total</dt><dd>Both together.</dd>
+  </dl>
+  <h2>Monero&rsquo;s 10 blocks</h2>
+  <p>Monero received can be spent after 10 confirmations, about 20 minutes. It&rsquo;s a rule of the Monero network, not a Biscuit setting. Until then it counts as unconfirmed.</p>
+  <p>It also applies to your change: when you send Monero, the rest of the coins you spent comes back to you as change, and is locked for 10 blocks too. That&rsquo;s why part of your balance shows as unconfirmed right after sending. Having your money in several outputs instead of one big one avoids it; <a href="coin-control.html#sweep">sweeping</a> can split an output.</p>
+  <p>Frozen coins don&rsquo;t count in any balance until you thaw them, see <a href="coin-control.html">Coin control</a>.</p>
+  <h2>Display settings</h2>
+  <ul>
+    <li><b>Settings &rsaquo; Appearance &rsaquo; Balance display</b>: show the total, spendable plus unconfirmed, or spendable only.</li>
+    <li><b>Fiat currency</b> and <b>Show fiat balance in statusbar</b>, on the same page.</li>
+    <li><b>Settings &rsaquo; Display &rsaquo; Hide balance</b>, if people can see your screen.</li>
+    <li><b>Amount precision</b> sets how many decimals are shown.</li>
+  </ul>
+  <p>Values in your currency need <a href="third-party-data.html">third-party data</a>. With it disabled, balances show in coins only. A balance that looks wrong? See <a href="incorrect-balance.html">My balance looks wrong</a>.</p>
+
+</body></html>

@@ -1,0 +1,28 @@
+<html><body>
+<h1>Prices and other data</h1>
+<p>Prices, currency rates, the Journal, Monero&rsquo;s crowdfunding proposals and update checks all come from one place: biscuitwallet.com. Biscuit never contacts CoinGecko or the other sources itself.</p>
+  <h2>Where it comes from</h2>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>Data</th><th>Source</th><th>Refreshed</th></tr></thead>
+    <tbody>
+      <tr><th>Coin prices</th><td>CoinGecko</td><td>Every 10 minutes</td></tr>
+      <tr><th>Currency rates</th><td>European Central Bank, through Frankfurter</td><td>Every hour (the bank publishes once a day)</td></tr>
+      <tr><th>Crowdfunding</th><td>ccs.getmonero.org</td><td>Every hour</td></tr>
+      <tr><th>Journal</th><td>biscuitwallet.com</td><td>Every 6 hours</td></tr>
+      <tr><th>Updates</th><td>biscuitwallet.com</td><td>Every 6 hours</td></tr>
+    </tbody>
+  </table>
+  <p>Our server fetches each source and serves the same copy to everyone. So those sources never see who uses Biscuit, every copy of Biscuit makes the same requests, and nothing about your wallet, balance or transactions is ever sent. Biscuit keeps the last copy, so prices and the Journal show the moment it opens.</p>
+  <h2>The setting</h2>
+  <p><b>Settings &rsaquo; Network &rsaquo; Public data &rsaquo; Obtain third-party data</b>:</p>
+  <dl>
+    <dt>Enabled</dt>
+    <dd>Fetched directly, or through Tor in Tor mode, from <a href="onion.html">our onion service</a>. If the onion can&rsquo;t be reached, from biscuitwallet.com, still through Tor.</dd>
+    <dt>Tor only</dt>
+    <dd>Always through Tor, even when Tor mode is off: Biscuit starts Tor just for this. Nothing is fetched until Tor is connected.</dd>
+    <dt>Disabled</dt>
+    <dd>Nothing is fetched. Balances show in coins only, the Home tab stays empty, and Biscuit doesn&rsquo;t check for updates.</dd>
+  </dl>
+  <p>With an I2P proxy, this data isn&rsquo;t fetched: our server isn&rsquo;t on I2P.</p>
+
+</body></html>

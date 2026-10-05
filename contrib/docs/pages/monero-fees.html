@@ -1,0 +1,22 @@
+<html><body>
+<h1>Fees and confirmations</h1>
+<p>Biscuit sets the Monero fee by itself from how busy the network is. The fee goes to the miner of the block; Biscuit takes nothing.</p>
+  <h2>Choosing the priority</h2>
+  <p>Turn on <b>Settings &rsaquo; Transactions &rsaquo; Manual fee-tier selection</b> and a choice appears on Send: <b>Automatic</b>, <b>Low</b>, <b>Normal</b>, <b>High</b> or <b>Highest</b>. A higher priority pays more to be included sooner when blocks are full. Most of the time, Automatic is right.</p>
+  <p><b>Subtract fee from outputs</b>, on the same page, adds a <b>Subtract fee from amount</b> option on Send: the recipient gets the amount minus the fee, instead of you paying it on top.</p>
+  <h2>Confirmations</h2>
+  <p>A Monero block comes about every two minutes. A payment usually gets its first confirmation within a few minutes, and the coins received can be spent after 10 confirmations, about 20 minutes. Your change is locked the same way: see <a href="balance.html">Balance</a>.</p>
+  <h2>A payment is slow</h2>
+  <p>Look it up on a block explorer: right-click it in History &rsaquo; <b>View on block explorer</b>.</p>
+  <ul>
+    <li>If it&rsquo;s there, waiting in the pool, it will be confirmed. Monero has no way to raise the fee of a sent payment; unless the network is under unusual load, it won&rsquo;t take long.</li>
+    <li>If it isn&rsquo;t there, the node didn&rsquo;t pass it on. See <a href="failed-transaction.html">A payment I sent failed</a>.</li>
+  </ul>
+  <h2>Other transaction settings</h2>
+  <dl>
+    <dt>Multibroadcast outgoing transactions</dt><dd>Sends each payment to several nodes, so it reaches the network even if one node is badly connected.</dd>
+    <dt>Always open advanced transaction dialog</dt><dd>Shows the inputs, outputs and ring members of every payment before you confirm it.</dd>
+    <dt>Require password to spend</dt><dd>Asks for your password before each payment.</dd>
+  </dl>
+
+</body></html>

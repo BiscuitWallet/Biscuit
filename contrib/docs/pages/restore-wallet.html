@@ -1,0 +1,25 @@
+<html><body>
+<h1>Restore a wallet</h1>
+<p>Lost your computer, or moving to a new one? Your seeds bring your coins back. Use <b>Restore wallet from&hellip;</b> in the menu, or <b>File &rsaquo; New/Restore</b> if a wallet is open.</p>
+  <h2>From your seeds</h2>
+  <ol>
+    <li>Choose <b>Restore wallet from&hellip; &rsaquo; Seed</b>, then your Monero seed type: 16 words (Polyseed, what Biscuit and Feather create), 25 words (Monero&rsquo;s classic seed) or 14 words (old Feather seeds).</li>
+    <li>Type the words with one space between each. For a 25-word seed, pick its language first.</li>
+    <li>If you added a passphrase to the seed, tick it under <b>Options</b>; Biscuit asks for it next.</li>
+    <li>For 25 and 14-word seeds, Biscuit asks when the wallet was created: a <a href="synchronization.html#restore-height">restore height</a>, or a date. If you don&rsquo;t know, enter an earlier date: it only makes the first sync longer. Polyseeds contain their date.</li>
+    <li>Choose a name and a password. The wallet opens and starts to <a href="synchronization.html">synchronize</a>.</li>
+  </ol>
+  <h2>Then Bitcoin and Litecoin</h2>
+  <p>Go to <b>Receive</b>, pick Bitcoin or Litecoin, and choose <b>Restore from seed</b>. Enter your 12 or 24 words, and the BIP39 passphrase if you used one (sometimes called the 25th word). Biscuit encrypts them with this wallet&rsquo;s password.</p>
+  <p>If you had added more Bitcoin or Litecoin wallets, each with its own seed, add them again with <b>Add wallet &rsaquo; Restore from seed</b>. Biscuit uses native SegWit addresses (bc1q&hellip;, ltc1q&hellip;): coins on older address types of the same seed don&rsquo;t show. See <a href="bitcoin-litecoin.html">Bitcoin and Litecoin</a>.</p>
+  <h2>What a seed doesn&rsquo;t bring back</h2>
+  <p>Your coins, your history and your addresses come back. Labels, contacts, transaction descriptions, transaction keys and swap history don&rsquo;t: they only live in your wallet files. Keep a copy of those too, see <a href="backups.html">Seeds and backups</a>.</p>
+  <h2>Other ways</h2>
+  <ul>
+    <li><b>Keys</b>: a Monero wallet from its primary address and secret keys. With the view key only, you get a <a href="view-only.html">view-only wallet</a>.</li>
+    <li><b>Hardware device</b>: a Ledger or Trezor, see <a href="hardware-wallets.html">Hardware wallets</a>.</li>
+    <li><b>Open wallet file</b>: a Monero wallet from Feather or another wallet opens directly in Biscuit. Add Bitcoin and Litecoin from the Receive tab.</li>
+    <li>A seed with a few words you can&rsquo;t read? See <a href="seed-types.html#damaged">recovering a damaged seed</a>.</li>
+  </ul>
+
+</body></html>

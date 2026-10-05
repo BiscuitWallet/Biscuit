@@ -1,0 +1,25 @@
+<html><body>
+<h1>Updates</h1>
+<p>Biscuit tells you when a new version is out, checks it against our signature, and installs it when you click. Nothing is installed without you.</p>
+  <h2>How Biscuit finds a new version</h2>
+  <p>Every 6 hours, Biscuit reads <code>biscuitwallet.com/updates.json</code>, the list of the latest version for each system. In Tor mode, it reads it from <a href="onion.html">our onion</a>. It follows the <a href="third-party-data.html">third-party data</a> setting: with it disabled, Biscuit doesn&rsquo;t look. <b>Help &rsaquo; Check for updates</b> checks at once.</p>
+  <p>When there&rsquo;s one, a button appears in the status bar. <b>Settings &rsaquo; Display &rsaquo; Hide update notifications</b> hides it.</p>
+  <h2>How it is checked</h2>
+  <ol>
+    <li>Biscuit downloads the release&rsquo;s list of SHA-256 checksums and checks its signature against the Biscuit release key, built into the app. A list signed by anyone else is refused.</li>
+    <li>It downloads the file for your system and compares its checksum with the list.</li>
+    <li>Only then does it offer to install.</li>
+  </ol>
+  <p>It&rsquo;s the same check as <a href="verify.html">verifying a download</a> by hand.</p>
+  <h2>How it is installed</h2>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <tbody>
+      <tr><th>AppImage, portable Windows, Linux tar.gz</th><td>The new version is written next to the current one, with the atomic swap helper, and started when you click <b>Restart</b>. Delete the old file once the new one works.</td></tr>
+      <tr><th>macOS</th><td>The app is replaced in place.</td></tr>
+      <tr><th>Windows installer</th><td>The new installer is saved in Downloads and started.</td></tr>
+      <tr><th>Linux packages</th><td>Biscuit tells you; update with your package manager, or install the new package from the <a href="https://biscuitwallet.com/download/">download page</a>.</td></tr>
+    </tbody>
+  </table>
+  <p>Your wallets aren&rsquo;t touched by an update. Keeping Biscuit up to date matters: Monero sometimes changes its rules, and old versions stop working.</p>
+
+</body></html>

@@ -1,0 +1,25 @@
+<html><body>
+<h1>Install on Linux</h1>
+<p>Biscuit runs on 64-bit Linux (x86_64) with glibc 2.31 or later. Atomic swaps need glibc 2.34 or later: Ubuntu 22.04, Debian 12, Fedora 35 and newer all have it. The <a href="https://biscuitwallet.com/download/">download page</a> also gives each command ready to paste.</p>
+  <h2>AppImage, for any distribution</h2>
+  <p>Unzip <code>biscuit-&lt;version&gt;-linux-appimage.zip</code> and run the <code>.AppImage</code>. On GNOME, right-click it and choose <b>Run as a Program</b>, or make it executable from a terminal:</p>
+  <pre><code>chmod +x biscuit-*.AppImage
+./biscuit-*.AppImage</code></pre>
+  <p>To add it to your applications menu, use <b>Tools &rsaquo; Create desktop entry</b> in Biscuit, or an AppImage manager such as Gear Lever. The AppImage <a href="updates.html">updates itself</a>.</p>
+  <h2>Packages</h2>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>Distribution</th><th>Command</th></tr></thead>
+    <tbody>
+      <tr><th>Debian, Ubuntu, Mint</th><td><code>sudo apt install ./biscuit_&lt;version&gt;-1_amd64.deb</code></td></tr>
+      <tr><th>Fedora</th><td><code>sudo dnf install ./biscuit-&lt;version&gt;-1.x86_64.rpm</code></td></tr>
+      <tr><th>openSUSE</th><td><code>sudo zypper install --allow-unsigned-rpm ./biscuit-&lt;version&gt;-1.x86_64.rpm</code></td></tr>
+      <tr><th>Arch, Manjaro</th><td><code>sudo pacman -U biscuit-&lt;version&gt;-1-x86_64.pkg.tar.zst</code></td></tr>
+    </tbody>
+  </table>
+  <p>A package adds Biscuit to your applications menu. Biscuit tells you when a new version is out; install the new package the same way to update. Installing a new package over an old one replaces it, so you never end up with two versions.</p>
+  <h2>Any distribution, without installing</h2>
+  <p>Unpack <code>biscuit-&lt;version&gt;-linux-x86_64.tar.gz</code> and run <code>biscuit</code>. Keep <code>biscuit-swapd</code> next to it: atomic swaps need it.</p>
+  <h2>Hardware wallets on Linux</h2>
+  <p>Linux needs udev rules before a program can talk to a Ledger or Trezor. See <a href="hardware-wallets.html">Hardware wallets</a>.</p>
+
+</body></html>

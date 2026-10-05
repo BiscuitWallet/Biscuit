@@ -23,6 +23,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         // General
         {Config::firstRun, {QS("firstRun"), true}},
         {Config::lastRunVersion, {QS("lastRunVersion"), ""}},
+        {Config::torAllTrafficMigrated, {QS("torAllTrafficMigrated"), false}},
         {Config::warnOnStagenet,{QS("warnOnStagenet"), true}},
         {Config::warnOnTestnet,{QS("warnOnTestnet"), true}},
         {Config::systemTorNotice,{QS("systemTorNotice"), true}},
@@ -120,7 +121,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
 
         // Tor
         {Config::proxy, {QS("proxy"), Config::Proxy::None}}, // Biscuit: Tor is opt-in
-        {Config::torPrivacyLevel, {QS("torPrivacyLevel"), 1}},
+        {Config::torPrivacyLevel, {QS("torPrivacyLevel"), Config::allTor}}, // Biscuit: Tor mode means every connection
         {Config::torOnlyAllowOnion, {QS("torOnlyAllowOnion"), false}},
         {Config::socks5Host, {QS("socks5Host"), "127.0.0.1"}},
         {Config::socks5Port, {QS("socks5Port"), "9050"}},

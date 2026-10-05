@@ -1,0 +1,11 @@
+<html><body>
+<h1>Silent payments</h1>
+<p>A silent payment address (<code>sp1&hellip;</code>, BIP-352) can be published once, on a donation page for example, without every payment to it showing up on the blockchain under that address.</p>
+  <h2>How it works</h2>
+  <p>When you pay a silent payment address, Biscuit works out a new Taproot address from it and from your own coins. Only the recipient can recognize that address as theirs. On the blockchain, the payment looks like any other, and two payments to the same <code>sp1&hellip;</code> address can&rsquo;t be linked.</p>
+  <h2>Paying one</h2>
+  <p>Paste the <code>sp1&hellip;</code> address in Send, or save it as a <a href="contacts.html">contact</a>. The confirmation shows both the silent payment address and the one-time address actually paid.</p>
+  <h2>Receiving</h2>
+  <p>Receiving silent payments isn&rsquo;t available in Biscuit yet: finding them needs a different kind of server than Electrum. Silent payments are Bitcoin only.</p>
+
+</body></html>

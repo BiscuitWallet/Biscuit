@@ -1,0 +1,38 @@
+<html><body>
+<h1>Monero seeds</h1>
+<p>Biscuit creates 16-word Monero seeds, called Polyseeds, and restores the older kinds too.</p>
+  <h2>Polyseed, 16 words</h2>
+  <p>Polyseed is the format Biscuit and Feather use. Compared to Monero&rsquo;s classic 25-word seed:</p>
+  <ul>
+    <li>it contains the wallet&rsquo;s creation date, so you never need a restore height;</li>
+    <li>it uses the BIP39 word list, with short and common words;</li>
+    <li>it&rsquo;s quicker to write down.</li>
+  </ul>
+  <p>Wallets that don&rsquo;t know Polyseed can still open your wallet: <b>Wallet &rsaquo; Seed &rsaquo; Show 25 word seed</b> gives the same wallet as a 25-word seed. Note the restore height shown with it. The other way round isn&rsquo;t possible: a 25-word seed can&rsquo;t become a Polyseed, because Polyseed derives the key in a way that can&rsquo;t be reversed.</p>
+  <h2>Older seeds</h2>
+  <dl>
+    <dt>25 words</dt><dd>Monero&rsquo;s classic seed, from the official wallets, Cake Wallet and many others. Biscuit restores it; pick its language.</dd>
+    <dt>14 words</dt><dd>Feather&rsquo;s seeds before version 2.0. Biscuit restores them too, with no need to move your coins.</dd>
+  </dl>
+  <p>12 or 24 words are not a Monero seed: they&rsquo;re a Bitcoin seed (BIP39 or Electrum). Biscuit uses 12 words for its <a href="bitcoin-litecoin.html">Bitcoin and Litecoin</a> wallets.</p>
+  <h2>Seed passphrase</h2>
+  <p>A Polyseed can be extended with a passphrase (<b>Options</b>, when creating or restoring). The seed alone then opens a different, empty wallet: you need both. It protects you if someone finds the paper, but if you forget the passphrase, the coins are gone. This is not your wallet password. If unsure, don&rsquo;t use one.</p>
+<a name="dice"></a>
+  <h2>Extra randomness from dice</h2>
+  <p>Your computer&rsquo;s random number generator makes the seed. If you&rsquo;d rather not rely on it alone, in a virtual machine or a live system for example, you can mix in dice rolls or coin flips. On the seed page of <b>Create new wallet</b>, press <b>Ctrl+K</b>.</p>
+  <ul>
+    <li>Dice: choose the number of sides. A D6 needs 59 rolls, a D12 42, a D20 36. The die must show 1 to N, with no 0 and no skipped numbers. Several dice at once is fine if they&rsquo;re the same kind: read them left to right, don&rsquo;t sort them, don&rsquo;t reroll.</li>
+    <li>Coins: click <b>Heads</b> or <b>Tails</b> for each flip.</li>
+  </ul>
+  <p>Biscuit mixes your rolls with the system&rsquo;s randomness, then fills in the new seed. Don&rsquo;t write the rolls down: they can&rsquo;t recreate the seed. Write the seed.</p>
+<a name="damaged"></a>
+  <h2>Recovering a damaged seed</h2>
+  <p>A word smudged, cut off, or missing, but you know where it goes? The recovery tool can try the possibilities. It works for 16-word Polyseeds only, and only if the words are in the right order.</p>
+  <ol>
+    <li>First, compare what you can read with the <a href="https://raw.githubusercontent.com/bitcoin/bips/master/bip-0039/english.txt">BIP39 word list</a>. Often that&rsquo;s enough.</li>
+    <li>Otherwise, choose <b>Restore wallet from&hellip; &rsaquo; Seed</b> and press <b>Ctrl+K</b>.</li>
+    <li>Enter each word you know in its box, and leave unknown ones empty. Partial words work as patterns: <code>his</code> for a word starting with his, <code>ory$</code> for one ending in ory, <code>^hi.*y$</code> for both, <code>history|victory</code> for either.</li>
+    <li>Click <b>Check</b>. Each missing word makes the search much longer. If it takes too long, click <b>Cancel</b>: with too many unknown words, recovery isn&rsquo;t possible.</li>
+  </ol>
+
+</body></html>
