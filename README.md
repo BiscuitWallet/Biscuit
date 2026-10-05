@@ -10,7 +10,8 @@
   <a href="https://biscuitwallet.com/download/">Download</a> ·
   <a href="https://biscuitwallet.com/docs/">Documentation</a> ·
   <a href="https://biscuitwallet.com/news/">Journal</a> ·
-  <a href="https://biscuitwallet.com/why/">Why Biscuit?</a>
+  <a href="https://biscuitwallet.com/features/">Features</a> ·
+  <a href="https://biscuitwallet.com/about/">About</a>
 </p>
 
 <p align="center">
@@ -61,7 +62,7 @@ Please report vulnerabilities privately, as described in [SECURITY.md](SECURITY.
 
 ## Support Biscuit
 
-Biscuit is made and looked after with a lot of love. If you've grown fond of it too, [donations](https://biscuitwallet.com/why/#donate) in Monero, Bitcoin or Litecoin help us keep going.
+Biscuit is made and looked after with a lot of love. If you've grown fond of it too, [donations](https://biscuitwallet.com/about/#donate) in Monero, Bitcoin or Litecoin help us keep going.
 
 ## Credits
 
