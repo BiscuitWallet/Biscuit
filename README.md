@@ -1,60 +1,74 @@
 <p align="center">
-  <img src="src/assets/images/appicons/256x256.png" width="128" height="128" alt="Biscuit">
+  <img src="src/assets/images/appicons/256x256.png" width="112" height="112" alt="Biscuit, a pixel-art bear holding a Monero coin">
 </p>
 
 <h1 align="center">Biscuit Wallet</h1>
 
 <p align="center">
-  <em>A light, private desktop wallet for Monero, Bitcoin and Litecoin.</em><br>
+  <em>A private and modern desktop wallet for Monero, Bitcoin and Litecoin.</em><br><br>
   <a href="https://biscuitwallet.com">Website</a> ·
   <a href="https://biscuitwallet.com/download/">Download</a> ·
   <a href="https://biscuitwallet.com/docs/">Documentation</a> ·
+  <a href="https://biscuitwallet.com/news/">Journal</a> ·
   <a href="https://biscuitwallet.com/why/">Why Biscuit?</a>
 </p>
 
----
+<p align="center">
+  <img src="https://biscuitwallet.com/img/gallery/atomic-search.png" width="760" alt="Biscuit looking for atomic swap makers over Tor, with offers to swap Bitcoin for Monero">
+</p>
 
-Biscuit keeps Monero, Bitcoin and Litecoin in one small desktop app. Swap between them without an account, turn on Tor with one click, and keep your keys where they belong: on your computer.
+Biscuit started as a fork of [Feather Wallet](https://featherwallet.org), which is about as good as a Monero wallet gets on a computer. We added everything we love: Bitcoin and Litecoin next to Monero, swaps between all three, atomic swaps with no exchange in the middle, Tor for the whole app, and lots of little details. It runs on Windows, macOS and Linux.
 
-It is built on [Feather Wallet](https://featherwallet.org) and keeps what makes Feather good: a native Qt app, keys that never leave your machine, and nothing that phones home. Biscuit adds Bitcoin and Litecoin wallets and built-in swaps.
+## What's inside
 
-## Features
-
-- **Three coins, one wallet.** Monero, Bitcoin and Litecoin behind a single password. Several Bitcoin and Litecoin wallets side by side.
-- **Exchange swaps.** XMR, BTC and LTC in any direction, with offers from many exchanges through [Trocador](https://trocador.app). Offers are ranked only by what you receive; no account, no identity checks (exchanges rated A only).
-- **Atomic swaps (beta).** Bitcoin to Monero directly with independent market makers, using the [eigenwallet](https://eigenwallet.org) protocol. Nobody holds your coins during the swap.
-- **Tor built in.** One switch routes every connection through Tor. On Tails and Whonix, Biscuit uses the system's Tor.
-- **Nothing phones home.** No accounts, no analytics, no crash reports. Prices come straight from public sources, with the same requests for everyone.
-- **Everything Feather does for Monero:** coin control, subaddresses, node management and more.
-
-## Privacy
-
-Your seeds, keys, balances and history stay on your computer, encrypted with your password. Exchange swaps go through a small Biscuit server that holds our partner key; what it records is described in the [privacy policy](https://biscuitwallet.com/privacy/). Atomic swaps do not use it.
+- **Monero**, the way Feather does it: subaddresses, coin control, transaction proofs, view-only wallets, Ledger and Trezor, offline signing with QR codes, your own node.
+- **Bitcoin and Litecoin**: light wallets over Electrum servers (public ones or your own), several wallets per coin under one password, coin control, coin freezing, fee bumping, silent payment sending, signed messages.
+- **Swaps**: any pair of XMR, BTC and LTC through [Trocador](https://trocador.app), offers from exchanges that ask for no identity checks, ranked only by what you receive.
+- **Atomic swaps** (beta): Bitcoin to Monero directly with a market maker, using the [eigenwallet](https://eigenwallet.org) protocol. No exchange holds your coins along the way.
+- **Tor**: built in, for every connection, or only for prices and news. On Tails and Whonix, Biscuit uses the system's Tor. In Tor mode, prices, the Journal and updates come from our onion service.
+- **No account, no analytics, no crash reports.** Wallet files are encrypted with your password and stay on your computer.
 
 ## Download
 
-Biscuit is not released yet. Builds for Linux (AppImage, Flatpak, Tails), macOS and Windows will be published on [biscuitwallet.com/download](https://biscuitwallet.com/download/), with checksums and a signature to [verify](https://biscuitwallet.com/docs/verify/) before you install.
+| System | Files |
+|---|---|
+| **Windows** 10 and later | installer or portable zip |
+| **macOS** 14 and later | Apple Silicon or Intel |
+| **Linux** x86_64 | AppImage (also for Tails), `.deb`, `.rpm`, Arch package, `.tar.gz` |
+
+Get them from **[biscuitwallet.com/download](https://biscuitwallet.com/download/)**, with the commands to install from a terminal. Biscuit updates itself after checking the release signature.
+
+Also over Tor: `biscuit6qpejzxfr7us7oibhjasvrozfeno7xonffzzoj4lmw6o3kbyd.onion`
+
+## Verifying a release
+
+Every release is signed with the Biscuit release key:
+
+```
+Biscuit Wallet releases
+D714 332E 6101 C1DA AC60  E644 202F 1FA3 98DE CEFA
+```
+
+Releases are built with [Guix](https://guix.gnu.org) from the published source archive, so anyone can rebuild them and compare. The steps, and the two exceptions (the macOS signature, the atomic swap helper), are in [Verifying your download](https://biscuitwallet.com/docs/verify/).
 
 ## Building
 
-See [BUILD.md](BUILD.md). Biscuit builds with CMake and Qt 6; macOS (Apple Silicon) is documented first, Linux and Windows follow.
+See [BUILD.md](BUILD.md) for a development build (CMake, Qt 6) and [RELEASE.md](RELEASE.md) for release builds.
 
-## Contact
+## Security
 
-[biscuitwallet@tutamail.com](mailto:biscuitwallet@tutamail.com)
+Please report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md). Nobody from Biscuit will ever ask for your seed, your password or your private keys.
 
-Nobody from Biscuit will ever ask for your seed, password or private keys.
+## Support Biscuit
+
+Biscuit is made and looked after with a lot of love. If you've grown fond of it too, [donations](https://biscuitwallet.com/why/#donate) in Monero, Bitcoin or Litecoin help us keep going.
 
 ## Credits
 
-Biscuit stands on the work of others:
-
-- [Feather Wallet](https://featherwallet.org), the foundation of this app
-- [The Monero Project](https://getmonero.org), for Monero and its wallet library
-- [eigenwallet](https://eigenwallet.org), for the BTC → XMR atomic swap protocol
-- [libwally-core](https://github.com/ElementsProject/libwally-core), for Bitcoin and Litecoin keys and transactions
-- [Trocador](https://trocador.app), for exchange swaps
+Biscuit stands on the work of others: [Feather Wallet](https://featherwallet.org), [The Monero Project](https://getmonero.org), [eigenwallet](https://eigenwallet.org) for atomic swaps, [libwally-core](https://github.com/ElementsProject/libwally-core) for Bitcoin and Litecoin, [Trocador](https://trocador.app) for exchange swaps, and [Tor](https://www.torproject.org).
 
 ## License
 
-Biscuit is free software, released under the BSD 3-Clause License inherited from Feather Wallet and Monero. See [LICENSE](LICENSE).
+Biscuit is free software under the BSD 3-Clause License inherited from Feather Wallet and Monero, see [LICENSE](LICENSE). Its atomic swap helper, biscuit-swapd, is under GPL-3.0; its source is published with every release.
+
+Contact: [biscuitwallet@tutamail.com](mailto:biscuitwallet@tutamail.com)
