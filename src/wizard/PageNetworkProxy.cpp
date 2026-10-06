@@ -40,8 +40,8 @@ void PageNetworkProxy::initializePage() {
     if (Utils::portOpen(host, port)) {
         ui->radio_tor->setChecked(true);
         ui->label_torSwaps->setText(QString("A Tor is already running on this computer (%1:%2): Biscuit will use it, "
-                                            "and your IP address stays hidden. Exchange swaps are off, because exchanges "
-                                            "refuse Tor connections. Atomic swaps still work, through Tor.").arg(host).arg(port));
+                                            "and your IP address stays hidden. Exchange swaps are off, because our swap "
+                                            "partner requires the IP address of each swap to be recorded. Atomic swaps still work, through Tor.").arg(host).arg(port));
     }
 }
 

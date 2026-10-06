@@ -29,7 +29,8 @@ public:
     // Key compiled into a development build, empty otherwise.
     static QString builtInApiKey();
 
-    // Trocador and its exchanges do not accept Tor connections. In Tor mode
+    // Trocador requires the IP address each swap is created from to be recorded, so the
+    // relay refuses to create swaps from Tor exits. In Tor mode
     // (any proxy enabled) exchange swaps are off, status checks included.
     static bool proxyActive();
 

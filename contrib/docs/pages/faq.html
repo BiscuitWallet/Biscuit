@@ -12,7 +12,7 @@
     <dt>Why does my Bitcoin address change after I get paid?</dt>
     <dd>So the people who pay you can&rsquo;t see your other payments on a block explorer. The old addresses keep working. Find them under <b>All addresses&hellip;</b> on Receive, or tick <b>Keep this address after payments</b> if you want one that never changes. See <a href="btc-addresses.html">Addresses</a>.</dd>
     <dt>Why are exchange swaps off in Tor mode?</dt>
-    <dd>The swap service doesn&rsquo;t accept connections from Tor. Atomic swaps do work over Tor, so use those instead. See <a href="atomic-swaps.html">Atomic swaps</a>.</dd>
+    <dd>Our swap partner, Trocador, requires us to record the IP address each exchange swap is created from, and a Tor address can&rsquo;t be traced to anyone. So our server refuses to create exchange swaps through Tor. Atomic swaps don&rsquo;t go through our server and work over Tor: see <a href="atomic-swaps.html">Atomic swaps</a>, and the <a href="https://biscuitwallet.com/privacy/">privacy policy</a> for what is recorded.</dd>
     <dt>Why does Windows or macOS warn me before opening Biscuit?</dt>
     <dd>Biscuit isn&rsquo;t signed with a Microsoft certificate or notarized by Apple, so both systems are cautious the first time. <a href="verify.html">Verify the file</a>, then open it as described for <a href="install-windows.html">Windows</a> and <a href="install-macos.html">macOS</a>.</dd>
     <dt>My antivirus flags Biscuit as a coin miner.</dt>

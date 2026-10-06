@@ -97,7 +97,7 @@
    <item>
     <widget class="QLabel" name="label_torSwaps">
      <property name="text">
-      <string>Your IP address stays hidden; Biscuit starts Tor for you. Exchange swaps are off, because exchanges refuse Tor connections. Atomic swaps still work, through Tor.</string>
+      <string>Your IP address stays hidden; Biscuit starts Tor for you. Exchange swaps are off, because our swap partner requires the IP address of each swap to be recorded. Atomic swaps still work, through Tor.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
