@@ -58,7 +58,7 @@ See [BUILD.md](BUILD.md) for a development build (CMake, Qt 6) and [RELEASE.md](
 
 ## Contributing
 
-Biscuit is open source so that anyone can read the code, verify our builds and build it themselves. It is made by a small team, so we don't take pull requests and can't answer questions or support requests on GitHub. You're welcome to fork it under the terms of the license.
+Pull requests are welcome, especially small and focused ones: bug fixes, translations, documentation. We're a small team, so we can't promise when we'll review them, and for anything bigger please write to us first. Bug reports and questions: [biscuitwallet@tutamail.com](mailto:biscuitwallet@tutamail.com). Security issues: see [SECURITY.md](SECURITY.md).
 
 ## Security
 
