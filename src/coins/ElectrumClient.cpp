@@ -5,8 +5,9 @@
 
 #include <QCryptographicHash>
 #include <QNetworkProxy>
-#include <QRegularExpression>
 #include <QSslCertificate>
+
+#include "utils/LocalHost.h"
 
 namespace biscuit::coins {
 
@@ -45,8 +46,7 @@ ElectrumClient::~ElectrumClient() {
 }
 
 bool ElectrumServer::isLocal() const {
-    static const QRegularExpression localNetwork(R"(^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.))");
-    return host == QLatin1String("localhost") || host.endsWith(QLatin1String(".local")) || localNetwork.match(host).hasMatch();
+    return Utils::isLocalHost(host);
 }
 
 std::optional<ElectrumServer> ElectrumServer::parse(const QString &text, QString *error) {

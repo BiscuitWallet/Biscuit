@@ -37,6 +37,17 @@ private slots:
         QVERIFY((ElectrumServer{"172.20.0.1", 50001, true}.isLocal()));
         QVERIFY((ElectrumServer{"localhost", 50001, true}.isLocal()));
 
+        // Hostnames that only look like private addresses are public: they
+        // must go through the proxy and cannot use unencrypted TCP.
+        for (const char *name : {"10.example.org", "127.0.0.1.example.org", "192.168.1.20.example.org",
+                                 "localhost.example.org", "172.16.example.org"}) {
+            QVERIFY2(!(ElectrumServer{name, 50001, true}.isLocal()), name);
+        }
+        QVERIFY(!ElectrumServer::parse(QString("tcp://10.example.org:50001")));
+        QVERIFY((ElectrumServer{"127.0.0.1", 50001, true}.isLocal()));
+        QVERIFY((ElectrumServer{"::1", 50001, true}.isLocal()));
+        QVERIFY(!(ElectrumServer{"8.8.8.8", 50001, true}.isLocal()));
+
         // Malformed.
         for (const char *bad : {"", "example.org", "example.org:0", "example.org:70000", "example.org:abc",
                                 "https://example.org/path:50002", ":50002"}) {

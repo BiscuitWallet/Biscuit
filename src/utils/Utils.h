@@ -12,6 +12,7 @@
 #include <QMetaEnum>
 
 #include "networktype.h"
+#include "utils/LocalHost.h"
 
 class SubaddressIndex;
 

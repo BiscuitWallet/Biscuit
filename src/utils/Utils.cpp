@@ -605,8 +605,7 @@ QFont relativeFont(int delta) {
 }
 
 bool isLocalUrl(const QUrl &url) {
-    QRegularExpression localNetwork(R"((^127\.)|(^10\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.168\.))");
-    return (localNetwork.match(url.host()).hasMatch() || url.host() == "localhost");
+    return isLocalHost(url.host());
 }
 
 void showError(QWidget *parent, const QString &title, const QString &description, const QStringList &helpItems, const QString &doc, const QString &highlight, const QString &link) {

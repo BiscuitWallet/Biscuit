@@ -12,6 +12,7 @@ add_executable(electrumprobe main.cpp
         ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/CoinWallet.h
         )
 target_include_directories(electrumprobe PRIVATE
+        ${CMAKE_SOURCE_DIR_BISCUIT}/src
         ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins
         ${CMAKE_SOURCE_DIR_BISCUIT}/src/coins/core
         ${BISCUIT_BUILD}/libwally-src/include)
