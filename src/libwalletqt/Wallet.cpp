@@ -406,13 +406,15 @@ void Wallet::setDaemonLogin(const QString &daemonUsername, const QString &daemon
 void Wallet::initAsync(const QString &daemonAddress, bool trustedDaemon, quint64 upperTransactionLimit, const QString &proxyAddress)
 {
     qDebug() << "initAsync: " + daemonAddress;
-    const auto future = m_scheduler.run([this, daemonAddress, trustedDaemon, upperTransactionLimit, proxyAddress] {
+    // Capture the login and SSL setting now: by the time the task runs, the
+    // user may have picked another node and they would belong to that one.
+    const auto future = m_scheduler.run([this, daemonAddress, daemonUsername = m_daemonUsername, daemonPassword = m_daemonPassword, useSSL = m_useSSL, trustedDaemon, upperTransactionLimit, proxyAddress] {
         // Beware! This code does not run in the GUI thread.
 
         bool success;
         {
             QMutexLocker locker(&m_proxyMutex);
-            success = m_walletImpl->init(daemonAddress.toStdString(), upperTransactionLimit, m_daemonUsername.toStdString(), m_daemonPassword.toStdString(), m_useSSL, false, proxyAddress.toStdString());
+            success = m_walletImpl->init(daemonAddress.toStdString(), upperTransactionLimit, daemonUsername.toStdString(), daemonPassword.toStdString(), useSSL, false, proxyAddress.toStdString());
         }
 
         setTrustedDaemon(trustedDaemon);

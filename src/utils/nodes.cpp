@@ -223,9 +223,9 @@ void Nodes::connectToNode(const FeatherNode &node) {
 
     qInfo() << QString("Attempting to connect to %1 (%2)").arg(node.toAddress(), node.custom ? "custom" : "ws");
 
-    if (!node.url.userName().isEmpty() && !node.url.password().isEmpty()) {
-        m_wallet->setDaemonLogin(node.url.userName(), node.url.password());
-    }
+    // Always set the login, even an empty one: a node must never receive
+    // the credentials of the node we were connected to before.
+    m_wallet->setDaemonLogin(node.url.userName(), node.url.password());
 
     // Don't use SSL over Tor/i2p
     m_wallet->setUseSSL(!node.isAnonymityNetwork());
