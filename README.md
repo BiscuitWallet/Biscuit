@@ -56,6 +56,10 @@ Releases are built with [Guix](https://guix.gnu.org) from the published source a
 
 See [BUILD.md](BUILD.md) for a development build (CMake, Qt 6) and [RELEASE.md](RELEASE.md) for release builds.
 
+## Contributing
+
+Biscuit is open source so that anyone can read the code, verify our builds and build it themselves. It is made by a small team, so we don't take pull requests and can't answer questions or support requests on GitHub. You're welcome to fork it under the terms of the license.
+
 ## Security
 
 Please report vulnerabilities privately, as described in [SECURITY.md](SECURITY.md). Nobody from Biscuit will ever ask for your seed, your password or your private keys.
