@@ -32,7 +32,8 @@ void WebsocketNotifier::onWSMessage(const QJsonObject &msg) {
         return;
     }
 
-    m_lastMessageReceived = QDateTime::currentDateTimeUtc();
+    m_received[cmd] = msg.contains("time") ? QDateTime::fromSecsSinceEpoch(qint64(msg.value("time").toDouble()))
+                                           : QDateTime::currentDateTimeUtc();
     m_cache[cmd] = msg;
 
     if (cmd == "blockheights") {
@@ -74,8 +75,9 @@ void WebsocketNotifier::emitCache() {
     }
 }
 
-bool WebsocketNotifier::stale(int minutes) {
-    return m_lastMessageReceived < QDateTime::currentDateTimeUtc().addSecs(-(minutes*60));
+qint64 WebsocketNotifier::secondsSince(const QString &cmd) const {
+    const QDateTime received = m_received.value(cmd);
+    return received.isValid() ? received.secsTo(QDateTime::currentDateTimeUtc()) : -1;
 }
 
 void WebsocketNotifier::onWSNodes(const QJsonArray &nodes) {

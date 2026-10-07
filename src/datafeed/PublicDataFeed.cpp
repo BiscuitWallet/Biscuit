@@ -142,7 +142,9 @@ bool PublicDataFeed::fetch(Source &source, bool viaOnion) {
             schedule(*src, 60 * 1000);
             return;
         }
-        emit message(*msg);
+        QJsonObject fresh = *msg;
+        fresh["time"] = double(QDateTime::currentSecsSinceEpoch());
+        emit message(fresh);
         if (!src->cacheKey.isEmpty()) {
             saveCache(src->cacheKey, *msg);
         }
@@ -170,9 +172,12 @@ void PublicDataFeed::loadCache() {
         if (source.cacheKey.isEmpty() || msg.isEmpty() || now - time > source.cacheDays * 24 * 3600 || time > now) {
             continue;
         }
-        // After start() returns: listeners are connected by then.
-        QTimer::singleShot(0, this, [this, msg] {
-            if (m_running) emit message(msg);
+        // After start() returns: listeners are connected by then. The copy keeps
+        // the time it was fetched, so it is never mistaken for fresh data.
+        QJsonObject cached = msg;
+        cached["time"] = double(time);
+        QTimer::singleShot(0, this, [this, cached] {
+            if (m_running) emit message(cached);
         });
     }
 }

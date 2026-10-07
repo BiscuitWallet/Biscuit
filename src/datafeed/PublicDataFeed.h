@@ -30,6 +30,8 @@ public:
     static bool allowedByProxySettings();
 
 signals:
+    // A Feather websocket message, plus "time": when its data was fetched
+    // (seconds since the epoch; earlier for a copy loaded from the cache).
     void message(const QJsonObject &message);
 
 private:

@@ -158,8 +158,9 @@ void CalcWidget::updateStatus() {
         ui->label_warning->setText("Waiting on exchange data.");
         ui->frame_warning->show();
     }
-    else if (websocketNotifier()->stale(10)) {
-        ui->label_warning->setText("No new exchange rates received for over 10 minutes.");
+    else if (websocketNotifier()->secondsSince("crypto_rates") > 30 * 60) {
+        // Biscuit fetches crypto prices every 10 minutes: three missed in a row.
+        ui->label_warning->setText("No new exchange rates for over 30 minutes.");
         ui->frame_warning->show();
     }
     else {

@@ -5,6 +5,8 @@
 #define FEATHER_WEBSOCKETNOTIFIER_H
 
 #include <QObject>
+#include <QDateTime>
+#include <QHash>
 #include <QMap>
 
 #include "WebsocketClient.h"
@@ -25,7 +27,8 @@ public:
     static WebsocketNotifier* instance();
     void emitCache();
 
-    bool stale(int minutes);
+    // How old the last data of this kind is, in seconds (-1: none yet).
+    qint64 secondsSince(const QString &cmd) const;
 
 signals:
     void BlockHeightsReceived(int mainnet, int stagenet);
@@ -46,7 +49,7 @@ private:
 
     QStringList m_pluginSubscriptions;
     QHash<QString, QJsonObject> m_cache;
-    QDateTime m_lastMessageReceived;
+    QHash<QString, QDateTime> m_received;
 };
 
 inline WebsocketNotifier* websocketNotifier()
