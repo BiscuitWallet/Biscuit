@@ -53,6 +53,36 @@ private slots:
         }
         QVERIFY(refused);
     }
+
+    // The same signature claiming SHA-512 instead of SHA-256: refused before
+    // any verification, the updater only accepts SHA-256 signatures.
+    void otherHashAlgorithmRefused() {
+        const QString sample = QString::fromStdString(read(BISCUIT_TEST_DATA_DIR "/release-signature-sample.asc"));
+        const int begin = sample.indexOf("-----BEGIN PGP SIGNATURE-----");
+        QVERIFY(begin >= 0);
+        QByteArray base64;
+        bool body = false;
+        for (const QString &line : sample.mid(begin).split('\n')) {
+            const QString trimmed = line.trimmed();
+            if (!body) {
+                body = trimmed.isEmpty();  // armor headers end with a blank line
+                continue;
+            }
+            if (trimmed.startsWith('=') || trimmed.startsWith("-----")) {
+                break;                     // checksum or END line
+            }
+            base64 += trimmed.toLatin1();
+        }
+        QByteArray packet = QByteArray::fromBase64(base64);
+
+        // Version 4, canonical text, RSA, then the hash algorithm (8 = SHA-256).
+        const int at = packet.indexOf(QByteArray("\x04\x01\x01\x08", 4));
+        QVERIFY(at >= 0);
+        openpgp::signature_rsa::from_base64(packet.toBase64().toStdString());  // unchanged: parses
+        packet[at + 3] = 10;  // SHA-512
+        QVERIFY_THROWS_EXCEPTION(std::runtime_error,
+                                 openpgp::signature_rsa::from_base64(packet.toBase64().toStdString()));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestReleaseSignature)
