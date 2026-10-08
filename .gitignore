@@ -36,3 +36,6 @@ contrib/macdeploy/Info.plist
 # Wallets Biscuit : ne jamais committer (sur macOS ~/Biscuit et ~/biscuit sont le même dossier)
 /wallets/
 *.keys
+
+# Editor caches (clangd)
+.cache/
