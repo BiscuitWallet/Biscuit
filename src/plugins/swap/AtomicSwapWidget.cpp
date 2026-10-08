@@ -126,16 +126,8 @@ AtomicSwapWidget::~AtomicSwapWidget() = default;
 void AtomicSwapWidget::showEvent(QShowEvent *event) {
     QWidget::showEvent(event);
     // Tor may have been switched on or off in the settings meanwhile.
+    // Nothing is searched before the user clicks Find makers.
     updateTorOption();
-
-    // Opening the tab means the user wants offers: start searching once per
-    // session, but only through Tor. Without Tor it waits for the click and
-    // the IP warning.
-    const bool tor = torEnabledInSettings() || ui->check_tor->isChecked();
-    if (!m_autoStarted && tor && !m_daemon->isRunning() && !AtomicSwapDaemon::helperPath().isEmpty()) {
-        m_autoStarted = true;
-        onDiscover();
-    }
 }
 
 void AtomicSwapWidget::updateTorOption() {
