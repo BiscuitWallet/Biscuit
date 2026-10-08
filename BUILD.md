@@ -1,18 +1,18 @@
-# Compiler Biscuit
+# Building Biscuit
 
-Biscuit est un fork de Feather 2.9.1. Les services en ligne de Feather sont coupés
-par défaut (option CMake `WITH_FEATHER_SERVICES=OFF`). Les instructions détaillées d'origine sont dans
-`HACKING.md`. Ce fichier résume ce qui a été testé.
+Biscuit is a fork of Feather 2.9.1. Feather's online services are off (CMake option
+`WITH_FEATHER_SERVICES=OFF`). The general developer instructions are in
+[HACKING.md](HACKING.md); this file sums up what has been tested.
 
-## macOS (Apple Silicon, testé sur macOS 27.2)
+## macOS (Apple Silicon, tested on macOS 27.2)
 
-Pré-requis : Xcode Command Line Tools et [Homebrew](https://brew.sh).
+Requirements: the Xcode Command Line Tools and [Homebrew](https://brew.sh).
 
 ```bash
 brew install qt libsodium libzip qrencode unbound cmake boost hidapi openssl expat \
              libunwind-headers protobuf pkgconfig zxing-cpp tor
 
-git clone <url-du-depot> biscuit
+git clone https://github.com/BiscuitWallet/Biscuit.git biscuit
 cd biscuit
 git submodule update --init --recursive
 
@@ -24,16 +24,16 @@ cmake --build . -j "$(sysctl -n hw.ncpu)"
 open bin/biscuit.app
 ```
 
-Remarques :
-- `zxing-cpp` est disponible dans Homebrew : pas besoin de le compiler (scanner QR actif).
-- Les avertissements `ld: warning: building for macOS-26.5 ... built for newer version`
-  sont sans conséquence pour un build de développement.
-- Tor : sur macOS, le Tor de Homebrew (`brew install tor`) est copié automatiquement dans
-  `Biscuit.app/Contents/bin` avec ses bibliothèques (script `contrib/macdeploy/bundle-tor.sh`).
-  Dans l'app, « Tor » fonctionne alors en un clic, sans rien configurer. Pour une version
-  publique, utiliser un Tor compilé en statique (`-DBISCUIT_TOR_BIN=/chemin/vers/tor`).
+Notes:
+- `zxing-cpp` comes from Homebrew: no need to build it (the QR scanner is on).
+- Warnings like `ld: warning: building for macOS-26.5 ... built for newer version`
+  don't matter for a development build.
+- Tor: on macOS, Homebrew's Tor (`brew install tor`) is copied into
+  `Biscuit.app/Contents/bin` with its libraries (`contrib/macdeploy/bundle-tor.sh`),
+  so Tor mode works in one click. Another Tor binary can be given with
+  `-DBISCUIT_TOR_BIN=/path/to/tor`.
 
-## Tests unitaires
+## Unit tests
 
 ```bash
 cmake .. -DBUILD_TESTS=ON
@@ -41,90 +41,89 @@ cmake --build . -j "$(sysctl -n hw.ncpu)"
 ctest --test-dir tests --output-on-failure
 ```
 
-## Trocador : relais (builds officiels) ou clé (développement)
+## Trocador: the relay (official builds) or a key (development)
 
-Les builds officiels passent par le relais Biscuit, qui garde la clé Trocador côté
-serveur (dépôt privé `BiscuitWallet/biscuit-relay`). La clé n'est alors jamais compilée dans l'app.
-Créer `secrets.cmake` à la racine (ignoré par git) :
+Official builds go through Biscuit's relay, which keeps the Trocador partner key on the
+server ([BiscuitWallet/biscuit-relay](https://github.com/BiscuitWallet/biscuit-relay)):
+the key is never compiled into the app. Create `secrets.cmake` at the root (ignored by git):
 
 ```cmake
 set(BISCUIT_TROCADOR_RELAY_URL "https://relay.example.org/api/")
 ```
 
-Pour le développement seulement, l'app peut appeler Trocador directement avec la clé :
+For development only, the app can call Trocador directly with a key:
 
 ```cmake
-set(BISCUIT_TROCADOR_API_KEY "votre-cle")
+set(BISCUIT_TROCADOR_API_KEY "your-key")
 ```
 
-Pour tester avec un relais local : `-DBISCUIT_TROCADOR_RELAY_URL=http://127.0.0.1:8080/api/`.
+To test with a local relay: `-DBISCUIT_TROCADOR_RELAY_URL=http://127.0.0.1:8080/api/`.
 
-Sans relais ni clé, l'onglet Swap fonctionne en **mode démo** : offres simulées, aucun
-échange réel, aucun envoi possible. CMake affiche le mode utilisé à la configuration.
+With neither a relay nor a key, the Swap tab runs in **demo mode**: simulated offers,
+no real exchange, nothing can be sent. CMake says which mode is used when it configures.
 
-## Swaps atomiques : le programme biscuit-swapd
+## Atomic swaps: the biscuit-swapd helper
 
-Les swaps atomiques (BTC → XMR) passent par `biscuit-swapd`, dans le sous-module
-`external/biscuit-swapd` (dépôt `BiscuitWallet/biscuit-swapd`, fork d'eigenwallet,
-GPL-3.0). Rust est installé par le `rustup` de Homebrew, dont `cargo` n'est pas
-dans le PATH :
+Atomic swaps (BTC → XMR) go through `biscuit-swapd`, in the `external/biscuit-swapd`
+submodule ([BiscuitWallet/biscuit-swapd](https://github.com/BiscuitWallet/biscuit-swapd),
+a fork of eigenwallet, GPL-3.0). Rust comes from Homebrew's `rustup`, whose `cargo` is not
+in the PATH:
 
 ```sh
 export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
 git submodule update --init external/biscuit-swapd
 cd external/biscuit-swapd
-cargo build --release -p biscuit-swapd      # 10 à 20 min (LTO complète)
-strip target/release/biscuit-swapd          # environ 15 Mo
+cargo build --release -p biscuit-swapd      # 10 to 20 min (full LTO)
+strip target/release/biscuit-swapd          # about 15 MB
 ```
 
-Ne pas rediriger la sortie de la compilation (`| tail`…) : une étape peut poser
-une question et rester bloquée sans rien afficher.
+Don't pipe the build's output (`| tail`…): a step may ask a question and wait without
+showing anything.
 
-CMake trouve ensuite `external/biscuit-swapd/target/release/biscuit-swapd` tout
-seul et le copie à côté de l'exécutable à chaque build (relancer `cmake ..` après
-la première compilation). Un autre binaire peut être donné explicitement :
+CMake then finds `external/biscuit-swapd/target/release/biscuit-swapd` by itself and copies
+it next to the executable at every build (run `cmake ..` again after the first build).
+Another binary can be given explicitly:
 
 ```sh
-cmake .. -DBISCUIT_SWAPD_BINARY=/chemin/vers/biscuit-swapd
+cmake .. -DBISCUIT_SWAPD_BINARY=/path/to/biscuit-swapd
 ```
 
-Pour modifier biscuit-swapd : travailler dans `external/biscuit-swapd` (branche
-`main`), pousser, puis committer le nouveau commit du sous-module dans Biscuit.
+To change biscuit-swapd: work in `external/biscuit-swapd` (branch `main`), push, then commit
+the new submodule commit in Biscuit.
 
-Sans cette option, l'onglet du swap atomique indique que le programme manque.
+Without the helper, the atomic swap tab says it is missing.
 
 ## Linux
 
-### Builds de release (Guix)
+### Release builds (Guix)
 
-Sur une machine Linux x86_64 avec Guix installé (le portable Fedora) :
+On a Linux x86_64 machine with Guix installed (see [RELEASE.md](RELEASE.md) for the whole release):
 
 ```sh
-# 1. biscuit-swapd, hors Guix (conteneur Ubuntu 22.04, podman)
-contrib/biscuit-swapd/build.sh linux      # ou: build.sh windows
-# vérifier / mettre à jour contrib/biscuit-swapd/SHA256SUMS, committer
+# 1. biscuit-swapd, outside Guix (Ubuntu 22.04 container, podman)
+contrib/biscuit-swapd/build.sh linux      # or: build.sh windows
+# check / update contrib/biscuit-swapd/SHA256SUMS, commit
 
-# 2. AppImage + binaire + archive des sources, reproductibles
+# 2. AppImage + binary + source archive, reproducible
 HOSTS="x86_64-linux-gnu" ./contrib/guix/guix-build
 
-# 3. Paquets .deb, .rpm, Arch et .tar.gz à partir du binaire Guix (podman, nfpm)
+# 3. .deb, .rpm, Arch and .tar.gz packages from the Guix binary (podman, nfpm)
 contrib/packaging/build-packages.sh guix/guix-build-<version>/output/x86_64-linux-gnu [VERSION]
 ```
 
-La première compilation Guix prend plusieurs heures (chaîne de compilation, Qt…),
-les suivantes réutilisent le cache. L'arbre git doit être propre (sous-modules compris).
-Une release taguée refuse de se construire sans biscuit-swapd. Sans VERSION, les
-paquets s'appellent `0.0.0~git<commit>`.
+The first Guix build takes hours (toolchain, Qt…); later ones reuse the cache. The git tree
+must be clean (submodules included). A tagged release refuses to build without biscuit-swapd.
+Without VERSION, the packages are named `0.0.0~git<commit>`.
 
-Les paquets ont été testés dans des conteneurs Debian 12, Ubuntu 22.04, Fedora et
-Arch. biscuit-swapd demande glibc 2.34 ou plus récent.
+The packages were tested in Debian 12, Ubuntu 22.04, Fedora and Arch containers.
+biscuit-swapd needs glibc 2.34 or later.
 
-### Build de développement
+### Development build
 
-Voir `HACKING.md`. Sur Fedora 44 (GCC 16), la compilation de biscuit-swapd a besoin
-d'alias `x86_64-linux-gnu-*` vers les outils du système (gcc avec `-std=gnu17`).
+See [HACKING.md](HACKING.md). On Fedora 44 (GCC 16), building biscuit-swapd needs
+`x86_64-linux-gnu-*` aliases to the system tools (gcc with `-std=gnu17`).
 
 ## Windows
 
-À documenter. Feather ne supporte pas le développement sous Windows, les binaires
-Windows sont produits par compilation croisée (voir `contrib/guix`).
+Development on Windows isn't supported: Windows builds are cross-compiled with Guix
+(see [RELEASE.md](RELEASE.md)).
