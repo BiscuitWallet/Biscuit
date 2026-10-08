@@ -61,7 +61,9 @@ private:
     void clearOffers();
     void onMax();
     void updateWalletRows();
-    void updateWalletChoices();   // "My … wallet" or another address, Max
+    void updateWalletChoices();
+    void updateScanIcons();
+    void changeEvent(QEvent *event) override;   // "My … wallet" or another address, Max
     void showOffers();
     void showOffersRows(bool visible);
     void showOffersMenu(const QPoint &pos);
@@ -90,6 +92,8 @@ private:
     QPointer<Wallet> m_wallet;
     biscuit::swap::SwapManager *m_manager;
     biscuit::coins::CoinSendController *m_coins;
+    QPushButton *m_scanReceive = nullptr;   // QR code of an address, with the webcam
+    QPushButton *m_scanRefund = nullptr;
     QPushButton *m_btnMax = nullptr;
     // Which Bitcoin/Litecoin wallet sends, and which one receives.
     QWidget *m_fromWalletRow = nullptr;

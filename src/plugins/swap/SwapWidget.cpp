@@ -34,6 +34,7 @@
 #include "libwalletqt/Subaddress.h"
 #include "libwalletqt/Wallet.h"
 #include "libwalletqt/WalletManager.h"
+#include "utils/ColorScheme.h"
 #include "utils/Icons.h"
 #include "WindowManager.h"
 #include "utils/Utils.h"
@@ -141,6 +142,26 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     m_btnMax->setToolTip("Everything available in the selected wallet, network fee deducted.");
     ui->layout_send->insertWidget(1, m_btnMax);
     connect(m_btnMax, &QPushButton::clicked, this, &SwapWidget::onMax);
+
+    // Scan the address to receive at, or to be refunded to, as in Send: a
+    // payment link (bitcoin:, monero:, ethereum:…) gives its address.
+    auto addScan = [this](QHBoxLayout *layout, QLineEdit *line) {
+        auto *button = new QPushButton(this);
+        button->setToolTip("Scan a QR code with your webcam");
+        button->setAutoDefault(false);
+        layout->addWidget(button);
+        connect(button, &QPushButton::clicked, this, [this, line] {
+            const QString data = Utils::scanQrCode(this);
+            if (!data.isEmpty()) {
+                line->setText(Utils::addressFromPaymentText(data));
+                line->setCursorPosition(0);
+            }
+        });
+        return button;
+    };
+    m_scanReceive = addScan(ui->layout_receive, ui->line_receive);
+    m_scanRefund = addScan(ui->layout_refund, ui->line_refund);
+    updateScanIcons();
 
     // "From wallet" under "You send", "To wallet" under "Receive at": the
     // Bitcoin/Litecoin wallet used, with its balance (as in Receive and Send).
@@ -445,6 +466,8 @@ void SwapWidget::updateWalletChoices() {
     m_btnMax->setVisible(!fixedRate() && walletHolds(from));
     ui->line_receive->setVisible(ui->combo_receiveMode->currentIndex() != ModeNewWalletAddress);
     ui->line_refund->setVisible(ui->combo_refundMode->currentIndex() != ModeNewWalletAddress);
+    m_scanReceive->setVisible(ui->line_receive->isVisibleTo(this));
+    m_scanRefund->setVisible(ui->line_refund->isVisibleTo(this));
     updateWalletRows();
 }
 
@@ -764,6 +787,20 @@ QString SwapWidget::walletTicker(const Asset &asset) {
         if (asset.ticker == QLatin1String("usdc")) return "USDC";
     }
     return {};
+}
+
+void SwapWidget::updateScanIcons() {
+    const QIcon icon = icons()->icon(ColorScheme::hasDarkBackground(this) ? "camera_white.png" : "camera_dark.png");
+    for (QPushButton *button : {m_scanReceive, m_scanRefund}) {
+        if (button) button->setIcon(icon);
+    }
+}
+
+void SwapWidget::changeEvent(QEvent *event) {
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange) {
+        updateScanIcons();   // light or dark theme
+    }
 }
 
 bool SwapWidget::walletHolds(const Asset &asset) const {

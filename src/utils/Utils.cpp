@@ -3,6 +3,14 @@
 
 #include "Utils.h"
 
+#include <QUrl>
+#include <QUrlQuery>
+#if defined(WITH_SCANNER)
+#include <QCameraDevice>
+#include <QMediaDevices>
+#include "qrcode/scanner/QrCodeScanDialog.h"
+#endif
+
 #include <QApplication>
 #include <QMessageBox>
 #include <QClipboard>
@@ -264,6 +272,49 @@ bool readJsonFile(QIODevice &device, QSettings::SettingsMap &map) {
 bool writeJsonFile(QIODevice &device, const QSettings::SettingsMap &map) {
     device.write(QJsonDocument(QJsonObject::fromVariantMap(map)).toJson(QJsonDocument::Indented));
     return true;
+}
+
+QString scanQrCode(QWidget *parent) {
+#if defined(WITH_SCANNER)
+    if (QMediaDevices::videoInputs().empty()) {
+        showError(parent, "Can't open QR scanner", "No available cameras found");
+        return {};
+    }
+    QrCodeScanDialog dialog(parent, false);
+    dialog.exec();
+    return dialog.decodedString();
+#else
+    showError(parent, "Can't open QR scanner", "Biscuit was built without webcam QR scanner support");
+    return {};
+#endif
+}
+
+QString addressFromPaymentText(const QString &text) {
+    const QString t = text.trimmed();
+    const qsizetype colon = t.indexOf(':');
+    const QString scheme = colon > 0 ? t.left(colon).toLower() : QString();
+    if (!QStringList{"monero", "bitcoin", "litecoin", "ethereum"}.contains(scheme)) {
+        return t;
+    }
+    QString rest = t.mid(colon + 1);
+    if (rest.startsWith("//")) rest.remove(0, 2);
+    const qsizetype q = rest.indexOf('?');
+    QString path = q < 0 ? rest : rest.left(q);
+    const QUrlQuery query(q < 0 ? QString() : rest.mid(q + 1));
+    // Bitcoin and Litecoin QR codes are often in capitals (a smaller code):
+    // the same address, given in lower case as people and services expect.
+    if ((scheme == "bitcoin" || scheme == "litecoin") && path == path.toUpper()) {
+        path = path.toLower();
+    }
+    if (scheme == "ethereum") {
+        // EIP-681: a token transfer pays the "address" parameter, not the contract.
+        if (path.contains("/transfer") && query.hasQueryItem("address")) {
+            return query.queryItemValue("address").trimmed();
+        }
+        path = path.section('/', 0, 0).section('@', 0, 0);   // without "@1" (the chain)
+        if (path.startsWith("pay-")) path.remove(0, 4);
+    }
+    return path.trimmed();
 }
 
 void copyToClipboard(const QString &string){

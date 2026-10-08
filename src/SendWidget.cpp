@@ -382,16 +382,11 @@ void SendWidget::fillAddress(const QString &address) {
 
 void SendWidget::scanClicked() {
 #if defined(WITH_SCANNER)
-    auto cameras = QMediaDevices::videoInputs();
-    if (cameras.empty()) {
+    if (QMediaDevices::videoInputs().empty()) {
         Utils::showError(this, "Can't open QR scanner", "No available cameras found");
         return;
     }
-
-    auto dialog = new QrCodeScanDialog(this, false);
-    dialog->exec();
-    this->onDataFromQR(dialog->decodedString());
-    dialog->deleteLater();
+    this->onDataFromQR(Utils::scanQrCode(this));
 #else
     Utils::showError(this, "Can't open QR scanner", "Biscuit was built without webcam QR scanner support");
 #endif
@@ -706,12 +701,50 @@ void SendWidget::onDataFromQR(const QString &data) {
             auto amount = WalletManager::amountFromString(amountStr);
             ui->lineAmount->setText(WalletManager::displayAmount(amount, false));
         } else {
-            ui->lineAddress->setText(data);
+            this->fillFromPaymentLink(data);
         }
     }
     else {
         Utils::showError(this, "Unable to decode QR code", "No QR code found.");
     }
+}
+
+// Biscuit: another coin's payment link, read the way Send expects it.
+void SendWidget::fillFromPaymentLink(const QString &data) {
+    const QString text = data.trimmed();
+    const QString scheme = text.section(':', 0, 0).toLower();
+    const qsizetype q = text.indexOf('?');
+    if (scheme == "bitcoin" || scheme == "litecoin") {
+        // Kept as a link, so that Send also reads its amount; the address in
+        // lower case (QR codes are often in capitals).
+        ui->lineAddress->setText(scheme + ":" + Utils::addressFromPaymentText(text) + (q < 0 ? QString() : text.mid(q)));
+        return;
+    }
+    if (scheme != "ethereum") {
+        ui->lineAddress->setText(text);
+        return;
+    }
+    // Ethereum: a USDT or USDC payment request opens that tab, if it is added;
+    // otherwise say so, rather than letting ETH go to someone expecting a token.
+    const QString address = Utils::addressFromPaymentText(text);
+    const QString path = text.mid(scheme.size() + 1).section('?', 0, 0);
+    if (path.contains("/transfer")) {
+        const QString contract = path.section('/', 0, 0).section('@', 0, 0).remove("pay-");
+        const auto bytes = biscuit::coins::eth::parseAddress(contract);
+        const auto *token = bytes ? biscuit::coins::eth::tokenByContract(*bytes) : nullptr;
+        if (!token) {
+            Utils::showError(this, "Unknown token", "This QR code asks for a token Biscuit doesn't hold. Only USDT and USDC on Ethereum can be sent.");
+            return;
+        }
+        const int index = m_coinPicker->indexOf(token->symbol);
+        if (index < 0 || !m_coinPicker->isCoinVisible(index)) {
+            Utils::showError(this, QString("%1 isn't in this wallet").arg(token->symbol),
+                             QString("This QR code asks for %1. Add %1 with + first, then scan it again.").arg(token->symbol));
+            return;
+        }
+        m_coinPicker->setCurrentIndex(index);   // before the address: it then stays on this tab
+    }
+    ui->lineAddress->setText(address);
 }
 
 void SendWidget::setupComboBox() {

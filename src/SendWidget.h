@@ -61,6 +61,7 @@ private:
     // Biscuit: Bitcoin/Litecoin destinations are detected from the address.
     void updateCoinMode();
     void updateCoinFeeLabel();
+    void fillFromPaymentLink(const QString &data);
 
     biscuit::coins::CoinSendController *m_coinSend = nullptr;
     const biscuit::coins::CoinParams *m_coin = nullptr;   // nullptr = Monero
