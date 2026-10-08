@@ -78,6 +78,8 @@ private:
     // Biscuit's ticker for a swap coin: "BTC", "ETH", "USDT"… (empty: Monero
     // or a coin Biscuit does not hold).
     static QString walletTicker(const biscuit::swap::Asset &asset);
+    // The same coin on both sides: picks another one in `combo`.
+    void moveAway(QComboBox *combo);
     void validateTypedAddresses(QList<QPair<biscuit::swap::Asset, QString>> addresses, std::function<void()> done);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);

@@ -3,6 +3,7 @@
 
 #include "CoinSendController.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <QApplication>
@@ -19,9 +20,36 @@
 #include "CoinVault.h"
 #include "CoinWallet.h"
 #include "libwalletqt/Wallet.h"
+#include "utils/AppData.h"
 #include "utils/Utils.h"
+#include "utils/config.h"
 
 namespace biscuit::coins {
+
+QString fiatAmount(const QString &ticker, const QString &amount) {
+    const QString fiat = conf()->get(Config::preferredFiatCurrency).toString();
+    if (!appData()->prices.canConvert(ticker, fiat)) {
+        return {};
+    }
+    const double value = appData()->prices.convert(ticker, fiat, amount.toDouble());
+    // Below a cent, say so rather than "€0.00".
+    return value > 0 && value < 0.01 ? QString("less than %1").arg(Utils::amountToCurrencyString(0.01, fiat))
+                                     : Utils::amountToCurrencyString(value, fiat);
+}
+
+QString fiatValue(const QString &ticker, const QString &amount) {
+    const QString value = fiatAmount(ticker, amount);
+    return value.isEmpty() ? QString() : QString(" ≈ %1").arg(value);
+}
+
+QString shortAmount(const QString &amount) {
+    const double value = amount.toDouble();
+    if (value <= 0) {
+        return "0";
+    }
+    const int decimals = std::clamp(int(std::ceil(-std::log10(value))) + 1, 2, 18);
+    return QString::number(value, 'f', decimals);
+}
 
 std::optional<CoinDestination> detectCoinDestination(const QString &text) {
     const QString trimmed = text.trimmed();
@@ -182,6 +210,15 @@ std::optional<QPair<QString, QString>> CoinSendController::ethereumFee(const QSt
                      eth::formatAmount(gas * fees->maxFeePerGas, eth::etherDecimals));
 }
 
+std::optional<double> CoinSendController::ethereumGwei() const {
+    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
+    const auto fees = eth ? eth->fees() : std::nullopt;
+    if (!fees) {
+        return std::nullopt;
+    }
+    return double(fees->baseFee + fees->priorityFee) / 1e9;
+}
+
 void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, const QString &address,
                                       const QString &amountText) {
     if (!ensureReady(parent, ethereum())) {
@@ -209,22 +246,32 @@ void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, con
             return;
         }
         const int decimals = EthWallet::decimals(plan->asset);
-        const QString amount = QString("%1 %2").arg(eth::formatAmount(plan->amount, decimals), plan->asset);
-        const QString maxFee = QString("%1 ETH").arg(eth::formatAmount(plan->maxFee, eth::etherDecimals));
+        const QString amountValue = eth::formatAmount(plan->amount, decimals);
+        const QString amount = QString("%1 %2").arg(amountValue, plan->asset);
+        const QString maxFeeValue = eth::formatAmount(plan->maxFee, eth::etherDecimals);
+        const QString maxFee = QString("%1 ETH%2").arg(maxFeeValue, fiatValue("ETH", maxFeeValue));
 
         // Explicit confirmation: nothing is signed or sent before this.
         QMessageBox box(guard);
         box.setWindowTitle(QString("Send %1").arg(plan->asset));
         box.setIcon(QMessageBox::Question);
-        box.setText(QString("Send %1?").arg(amount));
+        box.setText(QString("Send %1?").arg(amount + fiatValue(plan->asset, amountValue)));
+        // Everything can be selected and copied (e.g. into the converter).
+        box.setTextInteractionFlags(Qt::TextSelectableByMouse);
         const auto entries = m_vault->wallets(ethereum());
         QString details = entries.size() > 1
                           ? QString("From: Ethereum wallet \"%1\"\n").arg(m_vault->selectedName(ethereum())) : QString();
         details += QString("To: %1\n").arg(eth::checksumAddress(plan->recipient));
         details += plan->asset == "ETH" ? QString("Network: Ethereum\n") : QString("Network: Ethereum (ERC-20)\n");
         details += QString("Network fee: at most %1, usually less").arg(maxFee);
+        if (const auto fees = wallet->fees()) {
+            const double gwei = double(fees->baseFee + fees->priorityFee) / 1e9;
+            details += QString(" (%1 gwei%2)").arg(QString::number(gwei, 'f', gwei < 10 ? 2 : 1),
+                                                   gwei >= 6 ? QString(", very busy right now") : QString());
+        }
         if (plan->asset == "ETH") {
-            details += QString("\nTotal: at most %1 ETH").arg(eth::formatAmount(plan->amount + plan->maxFee, eth::etherDecimals));
+            const QString total = eth::formatAmount(plan->amount + plan->maxFee, eth::etherDecimals);
+            details += QString("\nTotal: at most %1 ETH%2").arg(total, fiatValue("ETH", total));
         }
         box.setInformativeText(details);
         box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);

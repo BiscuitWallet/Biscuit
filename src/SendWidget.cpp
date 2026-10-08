@@ -145,8 +145,15 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
 
     m_coinUnit = new QLabel(this);
     ui->horizontalLayout_2->addWidget(m_coinUnit);
-    // Ethereum fees follow the node: the estimate follows them.
+    // Ethereum fees follow the node: the estimate follows them, and its value
+    // follows the preferred currency.
     connect(vault, &biscuit::coins::CoinVault::walletUpdated, this, &SendWidget::updateCoinFeeLabel);
+    connect(conf(), &Config::changed, this, [this](Config::ConfigKey key) {
+        if (key == Config::preferredFiatCurrency) {
+            this->updateCoinFeeLabel();
+            this->updateConversionLabel();
+        }
+    });
 
     m_coinFeeTitle = new QLabel("Network fee", this);
     m_coinFee = new QComboBox(this);
@@ -156,11 +163,13 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     m_coinFee->setCurrentIndex(1);
     m_coinFeeRate = new QLabel(this);
     m_coinFeeRate->setTextFormat(Qt::RichText);   // the "not enough ETH" line
+    m_coinFeeRate->setTextInteractionFlags(Qt::TextSelectableByMouse);   // to copy the fee
+    m_coinFeeRate->setWordWrap(true);   // the gas line can be long when the network is busy
+    m_coinFeeRate->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);   // the whole width, not a column
     auto *feeRow = new QHBoxLayout;
     feeRow->setSpacing(12);
     feeRow->addWidget(m_coinFee);
-    feeRow->addWidget(m_coinFeeRate);
-    feeRow->addStretch();
+    feeRow->addWidget(m_coinFeeRate, 1);   // the text takes the rest of the row
     ui->formLayout->getWidgetPosition(ui->label_Amount, &row, &role);
     ui->formLayout->insertRow(row + 1, m_coinFeeTitle, feeRow);
     connect(m_coinFee, &QComboBox::currentIndexChanged, this, &SendWidget::updateCoinFeeLabel);
@@ -270,7 +279,27 @@ void SendWidget::updateCoinFeeLabel() {
     }
     if (m_coin->ethereum) {
         const auto fee = m_coinSend->ethereumFee(m_asset);
-        QString text = fee ? QString("about %1 ETH, at most %2 ETH").arg(fee->first, fee->second) : QString();
+        QString text, tip;
+        if (fee) {
+            // Money first, the ETH amount short; the exact figures in the tooltip.
+            using biscuit::coins::fiatAmount;
+            using biscuit::coins::shortAmount;
+            const QString about = fiatAmount("ETH", fee->first), most = fiatAmount("ETH", fee->second);
+            text = !about.isEmpty() ? QString("≈ %1 (%2 ETH) · at most %3").arg(about, shortAmount(fee->first), most)
+                                    : QString("about %1 ETH · at most %2 ETH").arg(shortAmount(fee->first), shortAmount(fee->second));
+            tip = QString("About %1 ETH, at most %2 ETH.\nYou usually pay about the first; the second is the most it can "
+                          "cost if fees rise before the transaction is in a block.").arg(fee->first, fee->second);
+        }
+        // How busy Ethereum is: most days of 2026 stay under 1 gwei.
+        if (const auto gwei = m_coinSend->ethereumGwei()) {
+            const QString value = QString::number(*gwei, 'f', *gwei < 10 ? 2 : 1);
+            text += "<br>" + (*gwei >= 6 ? QString("<span style=\"color: #c0392b;\"><b>%1 gwei · very busy</b> · waiting is often cheaper</span>").arg(value)
+                              : *gwei >= 2 ? QString("<span style=\"color: #d35400;\">%1 gwei · busy</span>").arg(value)
+                                           : QString("<span style=\"color: gray;\">%1 gwei · calm</span>").arg(value));
+            tip += QString("\n\nGas price now: %1 gwei. On most days Ethereum stays under 1 gwei; when it is busy, "
+                           "fees can be 10 times higher for a few hours.").arg(value);
+        }
+        m_coinFeeRate->setToolTip(tip);
         // A token with no ETH to pay its fee: said plainly, before trying.
         const auto *eth = biscuit::coins::CoinVault::forWallet(m_wallet)->ethereum();
         if (fee && eth && m_asset != "ETH"

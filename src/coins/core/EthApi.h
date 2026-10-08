@@ -38,10 +38,10 @@ namespace rpc {
     std::optional<QJsonValue> batchResult(const QJsonArray &replies, int id, QString *error = nullptr);
 }
 
-// Fees of the next block, from eth_feeHistory(5 blocks, "latest", [50]).
+// Fees of the next block, from eth_feeHistory(5 blocks, "latest", [percentile]).
 struct Fees {
     u128 baseFee = 0;          // of the next block
-    u128 priorityFee = 0;      // tip: median of the recent blocks' medians
+    u128 priorityFee = 0;      // tip: median over the recent blocks of the percentile asked
     u128 maxFeePerGas = 0;     // 2 x base fee + tip: still enough after 6 full blocks
 };
 std::optional<Fees> parseFeeHistory(const QJsonValue &result);

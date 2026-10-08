@@ -22,6 +22,7 @@
 #include "libwalletqt/WalletManager.h"
 #include "utils/Icons.h"
 #include "utils/Utils.h"
+#include "utils/config.h"
 #include "widgets/PixelIcons.h"
 
 namespace biscuit::coins {
@@ -113,6 +114,10 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged, &CoinVault::walletUpdated}) {
         connect(m_vault, signal, this, &CoinHistorySwitcher::refresh);
     }
+    // Fee values in the tooltips: in the preferred currency.
+    connect(conf(), &Config::changed, this, [this](Config::ConfigKey key) {
+        if (key == Config::preferredFiatCurrency) refresh();
+    });
     refresh();
 }
 
@@ -224,7 +229,8 @@ void CoinHistorySwitcher::fillEthereumTrees() {
                 item->setText(ColAmount, amount);
                 item->setTextAlignment(ColAmount, Qt::AlignRight | Qt::AlignVCenter);
                 if (!e.incoming && e.fee > 0) {
-                    item->setToolTip(ColAmount, QString("Network fee: %1 ETH").arg(eth::formatAmount(e.fee, eth::etherDecimals)));
+                    const QString fee = eth::formatAmount(e.fee, eth::etherDecimals);
+                    item->setToolTip(ColAmount, QString("Network fee: %1 ETH%2").arg(fee, fiatValue("ETH", fee)));
                 }
                 item->setText(ColStatus, status);
                 item->setText(ColTx, hash);

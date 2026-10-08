@@ -349,15 +349,23 @@ void SwapWidget::onFromChanged() {
         return;
     }
     m_updating = true;
-    const Asset from = assetOf(ui->combo_from);
-    const Asset to = assetOf(ui->combo_to);
-    if (from != xmr() && to != xmr()) {
-        selectAsset(ui->combo_to, xmr());
-    } else if (from == xmr() && to == xmr()) {
-        ui->combo_to->setCurrentIndex(ui->combo_to->currentIndex() == 0 ? 1 : 0);
+    // Any two different coins (BTC → ETH, USDT → LTC…). The same coin on
+    // both sides: the other side moves away from it.
+    if (assetOf(ui->combo_from) == assetOf(ui->combo_to)) {
+        moveAway(ui->combo_to);
     }
     m_updating = false;
     updateForm();
+}
+
+void SwapWidget::moveAway(QComboBox *combo) {
+    // XMR if possible, otherwise the first other coin.
+    const Asset same = assetOf(combo);
+    if (same != xmr()) {
+        selectAsset(combo, xmr());
+        return;
+    }
+    combo->setCurrentIndex(combo->currentIndex() == 0 ? 1 : 0);
 }
 
 void SwapWidget::onToChanged() {
@@ -365,12 +373,8 @@ void SwapWidget::onToChanged() {
         return;
     }
     m_updating = true;
-    const Asset from = assetOf(ui->combo_from);
-    const Asset to = assetOf(ui->combo_to);
-    if (from != xmr() && to != xmr()) {
-        selectAsset(ui->combo_from, xmr());
-    } else if (from == xmr() && to == xmr()) {
-        ui->combo_from->setCurrentIndex(ui->combo_from->currentIndex() == 0 ? 1 : 0);
+    if (assetOf(ui->combo_from) == assetOf(ui->combo_to)) {
+        moveAway(ui->combo_from);
     }
     m_updating = false;
     updateForm();
@@ -473,6 +477,14 @@ void SwapWidget::onGetOffers() {
     }
     if ((fixedRate() ? receivesXmr() : sendsXmr()) && !amount::toAtomic(amountText, moneroDecimals)) {
         Utils::showError(this, "Invalid amount", "Monero amounts have at most 12 decimals.");
+        return;
+    }
+    // ETH has 18 decimals, USDT and USDC 6: more could not be sent.
+    const QString typedTicker = walletTicker(fixedRate() ? to : from);
+    if (biscuit::coins::coinOfTicker(typedTicker) == &biscuit::coins::ethereum()
+        && !biscuit::coins::eth::parseAmount(amountText, biscuit::coins::EthWallet::decimals(typedTicker))) {
+        Utils::showError(this, "Invalid amount", QString("%1 amounts have at most %2 decimals.")
+                                                 .arg(typedTicker).arg(biscuit::coins::EthWallet::decimals(typedTicker)));
         return;
     }
 

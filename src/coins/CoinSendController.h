@@ -30,6 +30,15 @@ struct CoinDestination {
 };
 std::optional<CoinDestination> detectCoinDestination(const QString &text);
 
+// "€0.05": an amount of a coin in the preferred currency ("less than €0.01"
+// below a cent), empty while prices are unknown.
+QString fiatAmount(const QString &ticker, const QString &amount);
+// The same as " ≈ €0.05", to follow an amount. For fees with many decimals,
+// which say little alone.
+QString fiatValue(const QString &ticker, const QString &amount);
+// "0.00083582512052" -> "0.00084": two significant digits, to be read at a glance.
+QString shortAmount(const QString &amount);
+
 struct FeeLevel {
     QString label;
     int targetBlocks;
@@ -57,6 +66,8 @@ public:
     void sendEthereum(QWidget *parent, const QString &asset, const QString &address, const QString &amountText);
     // Network fee of a typical send of `asset` now, in ETH: about / at most.
     std::optional<QPair<QString, QString>> ethereumFee(const QString &asset) const;
+    // Gas price now (base fee + tip), in gwei.
+    std::optional<double> ethereumGwei() const;
 
     // Replace-by-fee: asks for a higher fee rate, shows the new fee, and
     // replaces the unconfirmed transaction after confirmation.

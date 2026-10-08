@@ -277,7 +277,9 @@ void EthWallet::refreshNode() {
         if (value) state->balances.insert("ETH", *value); else state->ok = false;
         finish();
     });
-    call("eth_feeHistory", {"0x5", "latest", QJsonArray{50}}, [state, finish](auto result, auto) {
+    // Tips of the cheaper quarter of each block: enough to be included, and
+    // nothing more is paid than needed (the base fee is the bulk anyway).
+    call("eth_feeHistory", {"0x5", "latest", QJsonArray{25}}, [state, finish](auto result, auto) {
         state->fees = result ? parseFeeHistory(*result) : std::nullopt;
         finish();
     });
