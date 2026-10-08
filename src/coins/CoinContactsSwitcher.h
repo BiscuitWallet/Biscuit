@@ -43,8 +43,10 @@ private:
     QStackedWidget *m_pages;
     QTreeWidget *m_btc;
     QTreeWidget *m_ltc;
+    QTreeWidget *m_eth;   // one book for ETH, USDT and USDC: same addresses
     QLabel *m_btcStatus;
     QLabel *m_ltcStatus;
+    QLabel *m_ethStatus;
 };
 
 }

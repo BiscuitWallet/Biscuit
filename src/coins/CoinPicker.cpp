@@ -113,15 +113,17 @@ void CoinPicker::paintEvent(QPaintEvent *event) {
     QStylePainter(this).drawPrimitive(QStyle::PE_FrameTabBarBase, base);
 }
 
-void addWalletCoins(CoinPicker *picker, bool ethereum) {
+void addWalletCoins(CoinPicker *picker, bool ethereum, bool tokens) {
     picker->addCoin(PixelIcons::icon("monero"), "Monero", "XMR");
     picker->addCoin(icons()->icon("bitcoin.png"), "Bitcoin", bitcoin().ticker);
     picker->addCoin(icons()->icon("litecoin.png"), "Litecoin", litecoin().ticker);
     if (ethereum) {
         // The tokens on Ethereum get their own tab: they are what people send.
         picker->addCoin(PixelIcons::icon("ethereum"), "Ethereum", coins::ethereum().ticker);
-        picker->addCoin(PixelIcons::icon("tether"), "USDT", "USDT");
-        picker->addCoin(PixelIcons::icon("usdc"), "USDC", "USDC");
+        if (tokens) {
+            picker->addCoin(PixelIcons::icon("tether"), "USDT", "USDT");
+            picker->addCoin(PixelIcons::icon("usdc"), "USDC", "USDC");
+        }
     }
 }
 
