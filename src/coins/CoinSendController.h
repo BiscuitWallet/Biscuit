@@ -18,6 +18,7 @@ class Wallet;
 namespace biscuit::coins {
 
 class CoinWallet;
+class EthWallet;
 
 class CoinVault;
 
@@ -68,6 +69,9 @@ public:
     std::optional<QPair<QString, QString>> ethereumFee(const QString &asset) const;
     // Gas price now (base fee + tip), in gwei.
     std::optional<double> ethereumGwei() const;
+    // Speed up a pending Ethereum send of `eth`: shows the higher fee, sends
+    // the replacement once confirmed.
+    void speedUpEthereum(QWidget *parent, EthWallet *eth, const QByteArray &hash);
 
     // Replace-by-fee: asks for a higher fee rate, shows the new fee, and
     // replaces the unconfirmed transaction after confirmation.

@@ -33,6 +33,38 @@ namespace {
 
     QString amountText(u128 value) { return formatAmount(value, 0); }
 
+    QJsonObject txToJson(const Transaction &tx) {
+        return {{"chain", QString::number(tx.chainId)}, {"nonce", QString::number(tx.nonce)},
+                {"tip", amountText(tx.maxPriorityFeePerGas)}, {"max", amountText(tx.maxFeePerGas)},
+                {"gas", QString::number(tx.gasLimit)}, {"to", QString::fromLatin1(tx.to.toHex())},
+                {"value", amountText(tx.value)}, {"data", QString::fromLatin1(tx.data.toHex())}};
+    }
+
+    std::optional<Transaction> txFromJson(const QJsonObject &o) {
+        Transaction tx;
+        bool ok1 = false, ok2 = false, ok3 = false;
+        tx.chainId = o.value("chain").toString().toULongLong(&ok1);
+        tx.nonce = o.value("nonce").toString().toULongLong(&ok2);
+        tx.gasLimit = o.value("gas").toString().toULongLong(&ok3);
+        const auto tip = parseAmount(o.value("tip").toString(), 0);
+        const auto max = parseAmount(o.value("max").toString(), 0);
+        const auto value = parseAmount(o.value("value").toString(), 0);
+        tx.to = QByteArray::fromHex(o.value("to").toString().toLatin1());
+        tx.data = QByteArray::fromHex(o.value("data").toString().toLatin1());
+        if (!ok1 || !ok2 || !ok3 || !tip || !max || !value || tx.to.size() != 20) {
+            return std::nullopt;
+        }
+        tx.maxPriorityFeePerGas = *tip;
+        tx.maxFeePerGas = *max;
+        tx.value = *value;
+        return tx;
+    }
+
+    // At least 12.5% more than `old` (nodes ask for 10%), and never less than `now`.
+    u128 raised(u128 old, u128 now) {
+        return std::max(old + old / 8 + 1, now);
+    }
+
     QJsonObject toJson(const HistoryEntry &e) {
         return {{"hash", QString::fromLatin1(e.hash.toHex())}, {"asset", e.asset}, {"in", e.incoming},
                 {"amount", amountText(e.amount)}, {"fee", amountText(e.fee)},
@@ -80,6 +112,10 @@ EthWallet::EthWallet(Account account, const QJsonObject &cache, QObject *parent)
     }
     for (const QJsonValue &v : cache.value("sent").toArray()) {
         if (const auto e = fromJson(v.toObject())) m_sent.insert(historyKey(*e), *e);
+    }
+    const QJsonObject pending = cache.value("pending").toObject();
+    for (auto it = pending.begin(); it != pending.end(); ++it) {
+        if (const auto tx = txFromJson(it.value().toObject())) m_pending.insert(it.key(), *tx);
     }
 
     m_timer.setInterval(refreshIntervalMs);
@@ -267,7 +303,14 @@ void EthWallet::refreshNode() {
         emit cacheChanged();
     };
 
-    state->remaining = 3 + int(tokens().size());
+    state->remaining = 4 + int(tokens().size());
+    call("eth_getTransactionCount", {me, "latest"}, [this, state, finish, generation](auto result, auto) {
+        const auto mined = result ? parseQuantity(result->toString()) : std::nullopt;
+        if (mined && generation == m_generation && *mined <= std::numeric_limits<quint64>::max()) {
+            prunePending(quint64(*mined));
+        }
+        finish();
+    });
     call("eth_chainId", {}, [state, finish](auto result, auto) {
         state->ok = state->ok && result && result->toString() == toQuantity(mainnetChainId);   // never another chain
         finish();
@@ -296,7 +339,34 @@ void EthWallet::refreshNode() {
     }
 }
 
+void EthWallet::prunePending(quint64 minedNonce) {
+    bool changed = false;
+    for (auto it = m_pending.begin(); it != m_pending.end();) {
+        if (it.value().nonce >= minedNonce) {
+            ++it;
+            continue;
+        }
+        // Its nonce is used by a mined transaction: this one is in a block, or
+        // was replaced (sped up) and will never be. Blockscout shows the real one.
+        const QByteArray hash = QByteArray::fromHex(it.key().toLatin1());
+        for (auto s = m_sent.begin(); s != m_sent.end();) {
+            s = s.value().hash == hash ? m_sent.erase(s) : std::next(s);
+        }
+        it = m_pending.erase(it);
+        changed = true;
+    }
+    if (changed) {
+        emit updated();
+        emit cacheChanged();
+    }
+}
+
 void EthWallet::refreshHistory() {
+    // "Onion services only": the history too, or not at all.
+    if (conf()->get(Config::proxy).toInt() == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool()
+        && !QUrl(blockscout()).host().endsWith(".onion")) {
+        return;
+    }
     struct Pending {
         int remaining = 0;
         QList<HistoryEntry> entries;
@@ -501,7 +571,8 @@ void EthWallet::broadcast(const Plan &plan, std::function<void(const QString &, 
             --state->remaining;
             continue;
         }
-        connect(reply, &QNetworkReply::finished, this, [this, reply, id, state, hash, pending, done] {
+        const Transaction tx = plan.tx;
+        connect(reply, &QNetworkReply::finished, this, [this, reply, id, state, hash, pending, done, tx] {
             reply->deleteLater();
             QString err;
             const auto result = rpc::result(QJsonDocument::fromJson(reply->readAll()).object(), id, &err);
@@ -510,6 +581,19 @@ void EthWallet::broadcast(const Plan &plan, std::function<void(const QString &, 
                                   || err.contains("already known", Qt::CaseInsensitive);
             if (accepted && !state->answered) {
                 state->answered = true;
+                // Same nonce as a pending send: this one replaces it (speed up).
+                for (auto it = m_pending.begin(); it != m_pending.end();) {
+                    if (it.value().nonce != tx.nonce) {
+                        ++it;
+                        continue;
+                    }
+                    const QByteArray old = QByteArray::fromHex(it.key().toLatin1());
+                    for (auto s = m_sent.begin(); s != m_sent.end();) {
+                        s = s.value().hash == old ? m_sent.erase(s) : std::next(s);
+                    }
+                    it = m_pending.erase(it);
+                }
+                m_pending.insert(QString::fromLatin1(pending.hash.toHex()), tx);
                 m_sent.insert(historyKey(pending), pending);
                 emit updated();
                 emit cacheChanged();
@@ -536,7 +620,75 @@ QJsonObject EthWallet::cache() const {
     QJsonArray history, sent;
     for (const HistoryEntry &e : m_history) history.append(toJson(e));
     for (const HistoryEntry &e : m_sent) sent.append(toJson(e));
-    return {{"balances", balances}, {"history", history}, {"sent", sent}};
+    QJsonObject pending;
+    for (auto it = m_pending.cbegin(); it != m_pending.cend(); ++it) pending.insert(it.key(), txToJson(it.value()));
+    return {{"balances", balances}, {"history", history}, {"sent", sent}, {"pending", pending}};
+}
+
+bool EthWallet::canSpeedUp(const QByteArray &hash) const {
+    return m_pending.contains(QString::fromLatin1(hash.toHex()));
+}
+
+std::optional<u128> EthWallet::pendingMaxFee(const QByteArray &hash) const {
+    const auto it = m_pending.constFind(QString::fromLatin1(hash.toHex()));
+    if (it == m_pending.cend()) {
+        return std::nullopt;
+    }
+    return u128(it->gasLimit) * it->maxFeePerGas;
+}
+
+void EthWallet::planSpeedUp(const QByteArray &hash, std::function<void(std::optional<Plan>, const QString &)> done) {
+    const auto it = m_pending.constFind(QString::fromLatin1(hash.toHex()));
+    if (it == m_pending.cend()) {
+        done(std::nullopt, "This transaction is no longer waiting: it is in a block, or was replaced.");
+        return;
+    }
+    if (!m_fees) {
+        done(std::nullopt, "Wait until Ethereum is synchronized, then try again.");
+        return;
+    }
+    const Transaction old = *it;
+    // Still waiting? Its nonce is free as long as no transaction of ours with
+    // it is in a block.
+    call("eth_getTransactionCount", {addressText(), "latest"}, [this, old, done](auto result, const QString &err) {
+        const auto mined = result ? parseQuantity(result->toString()) : std::nullopt;
+        if (!mined) {
+            done(std::nullopt, err.isEmpty() ? QString("The Ethereum node did not answer.") : err);
+            return;
+        }
+        if (*mined > old.nonce) {
+            prunePending(quint64(*mined));
+            done(std::nullopt, "This transaction is already in a block: nothing to speed up.");
+            return;
+        }
+        const Fees fees = *m_fees;
+        Plan plan;
+        plan.tx = old;
+        plan.tx.maxPriorityFeePerGas = raised(old.maxPriorityFeePerGas, fees.priorityFee);
+        plan.tx.maxFeePerGas = raised(old.maxFeePerGas, 2 * fees.baseFee + plan.tx.maxPriorityFeePerGas);
+        if (plan.tx.maxFeePerGas > maxSaneFeePerGas) {
+            done(std::nullopt, "The network fee given by the Ethereum node is abnormally high. Try again later.");
+            return;
+        }
+        plan.maxFee = u128(plan.tx.gasLimit) * plan.tx.maxFeePerGas;
+        // What it sends, read from the transaction itself.
+        if (const auto transfer = decodeErc20Transfer(old.data); transfer && tokenByContract(old.to)) {
+            plan.asset = tokenByContract(old.to)->symbol;
+            plan.recipient = transfer->first;
+            plan.amount = transfer->second;
+        } else {
+            plan.asset = "ETH";
+            plan.recipient = old.to;
+            plan.amount = old.value;
+        }
+        // The balance of the last block: the waiting send is not taken from it yet.
+        const u128 needed = plan.maxFee + (plan.asset == "ETH" ? plan.amount : 0);
+        if (needed > balance("ETH")) {
+            done(std::nullopt, QString("Not enough ETH for the higher fee (up to %1 ETH).").arg(formatAmount(plan.maxFee, etherDecimals)));
+            return;
+        }
+        done(plan, {});
+    });
 }
 
 }

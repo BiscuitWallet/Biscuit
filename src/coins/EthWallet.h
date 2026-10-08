@@ -68,6 +68,14 @@ public:
     // the plan says, and sends them to every node.
     void broadcast(const Plan &plan, std::function<void(const QString &txHash, const QString &error)> done);
 
+    // Speed up: one of our sends still waiting for a block, sent again with
+    // the same nonce and a higher fee (at least 12.5% more, as nodes require
+    // to replace it). The network keeps only one of the two.
+    bool canSpeedUp(const QByteArray &hash) const;
+    void planSpeedUp(const QByteArray &hash, std::function<void(std::optional<Plan> plan, const QString &error)> done);
+    // The fee of a pending send: the most it can cost now.
+    std::optional<eth::u128> pendingMaxFee(const QByteArray &hash) const;
+
     QJsonObject cache() const;
 
 signals:
@@ -103,6 +111,10 @@ private:
     std::optional<eth::Fees> m_fees;
     QHash<QString, eth::HistoryEntry> m_history;   // key: hash + asset
     QHash<QString, eth::HistoryEntry> m_sent;      // broadcast here, not seen by Blockscout yet
+    // Our sends not in a block yet (key: hash hex), to speed them up; dropped
+    // once their nonce is used by a mined transaction (theirs or a replacement).
+    QHash<QString, eth::Transaction> m_pending;
+    void prunePending(quint64 minedNonce);
 };
 
 }

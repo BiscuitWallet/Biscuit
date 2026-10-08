@@ -239,6 +239,49 @@ void Settings::setupNetworkTab() {
     coinLayout->addStretch();
     ui->tabWidget_network->addTab(coinServers, "Bitcoin && Litecoin");
 
+    // Biscuit: the user's own Ethereum node, and Blockscout for the history.
+    auto *ethServers = new QWidget(this);
+    auto *ethLayout = new QVBoxLayout(ethServers);
+    auto *ethIntro = new QLabel("By default Biscuit uses public Ethereum nodes, and Blockscout for the history. Set your "
+                                "own node (Geth, Nethermind, Erigon… on Umbrel, Start9 or a machine of yours) and Biscuit "
+                                "reads balances and sends transactions only through it.", ethServers);
+    ethIntro->setWordWrap(true);
+    ethLayout->addWidget(ethIntro);
+    auto *ethForm = new QFormLayout;
+    for (auto [key, label, placeholder] : {std::tuple{Config::ethereumNode, "Ethereum node:", "Public nodes (e.g. http://umbrel.local:8545)"},
+                                           std::tuple{Config::ethereumBlockscout, "History:", "eth.blockscout.com (or your own Blockscout)"}}) {
+        auto *edit = new QLineEdit(conf()->get(key).toString(), ethServers);
+        edit->setPlaceholderText(placeholder);
+        edit->setClearButtonEnabled(true);
+        ethForm->addRow(label, edit);
+        const auto configKey = key;
+        connect(edit, &QLineEdit::editingFinished, this, [this, edit, configKey] {
+            const QString text = edit->text().trimmed();
+            const QUrl url(text);
+            // Encrypted, except for an .onion address or the local network.
+            const bool plainOk = url.host().endsWith(".onion") || Utils::isLocalUrl(url);
+            if (!text.isEmpty() && (!url.isValid() || url.host().isEmpty()
+                                    || !(url.scheme() == "https" || (url.scheme() == "http" && plainOk)))) {
+                Utils::showError(this, "Invalid address",
+                                 "Use https://… (http:// only for an .onion address or a machine on your local network).");
+                return;
+            }
+            if (conf()->get(configKey).toString() != text) {
+                conf()->set(configKey, text);
+                emit coinServersChanged();
+            }
+        });
+    }
+    ethLayout->addLayout(ethForm);
+    auto *ethHelp = new QLabel("Your node's JSON-RPC address, usually port 8545. In Tor mode with \"onion services "
+                               "only\", Ethereum works only with .onion addresses here. Leave empty for the public "
+                               "nodes and eth.blockscout.com.", ethServers);
+    ethHelp->setWordWrap(true);
+    ethHelp->setStyleSheet("color: gray;");
+    ethLayout->addWidget(ethHelp);
+    ethLayout->addStretch();
+    ui->tabWidget_network->addTab(ethServers, "Ethereum");
+
     // Websocket
     // [Obtain third-party data]
     // Biscuit: Enabled, Tor only (through Tor even outside Tor mode, like

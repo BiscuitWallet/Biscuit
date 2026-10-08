@@ -831,9 +831,15 @@ void CoinVault::applyNetworkSettings() {
         w->setConnection(networkProxy, server);   // reconnects if anything changed
         if (!w->isRunning()) w->start();
     }
-    // Ethereum follows the same settings by itself (Tor, offline mode).
+    // Ethereum follows the same settings by itself (Tor, offline mode), with
+    // the user's own node and Blockscout if set.
     for (const Entry &e : m_entries) {
-        if (e.eth) e.eth->isRunning() ? e.eth->refresh() : e.eth->start();
+        if (!e.eth) {
+            continue;
+        }
+        e.eth->setCustomNode(conf()->get(Config::ethereumNode).toString());
+        e.eth->setCustomBlockscout(conf()->get(Config::ethereumBlockscout).toString());
+        e.eth->isRunning() ? e.eth->refresh() : e.eth->start();
     }
 }
 

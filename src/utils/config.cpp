@@ -84,6 +84,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::dataTorOnly, {QS("dataTorOnly"), false}},
         {Config::electrumServerBTC, {QS("electrumServerBTC"), ""}},
         {Config::electrumServerLTC, {QS("electrumServerLTC"), ""}},
+        {Config::ethereumNode, {QS("ethereumNode"), ""}},
+        {Config::ethereumBlockscout, {QS("ethereumBlockscout"), ""}},
         {Config::offlineMode, {QS("offlineMode"), false}},
 
         // Transactions

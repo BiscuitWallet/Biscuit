@@ -139,7 +139,19 @@ QTreeWidget *CoinHistorySwitcher::makeTree(bool withCoinColumn) {
         const QString txid = item->text(ColTx);
         const QString ticker = item->data(ColDate, TickerRole).toString();
         QMenu menu(this);
-        if (item->data(ColDate, BumpableRole).toBool()) {
+        if (item->data(ColDate, BumpableRole).toBool() && coinOfTicker(ticker) == &ethereum()) {
+            // Ethereum: same nonce, higher fee.
+            const QString walletId = item->data(ColDate, WalletIdRole).toString();
+            const QByteArray hash = QByteArray::fromHex(txid.mid(2).toLatin1());
+            menu.addAction("Speed up (raise the fee)…", [this, walletId, hash] {
+                for (const auto &entry : m_vault->wallets(ethereum())) {
+                    if (entry.id == walletId) {
+                        CoinSendController(m_wallet).speedUpEthereum(this, entry.eth, hash);
+                    }
+                }
+            });
+            menu.addSeparator();
+        } else if (item->data(ColDate, BumpableRole).toBool()) {
             const QString walletId = item->data(ColDate, WalletIdRole).toString();
             const CoinParams *params = ticker == bitcoin().ticker ? &bitcoin() : &litecoin();
             menu.addAction("Speed up (raise the fee)…", [this, params, walletId, txid] {
@@ -234,6 +246,8 @@ void CoinHistorySwitcher::fillEthereumTrees() {
                 }
                 item->setText(ColStatus, status);
                 item->setText(ColTx, hash);
+                item->setData(ColDate, WalletIdRole, entry.id);
+                item->setData(ColDate, BumpableRole, e.block == 0 && entry.eth->canSpeedUp(e.hash));
             }
         }
     }

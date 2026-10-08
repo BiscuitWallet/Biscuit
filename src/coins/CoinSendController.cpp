@@ -219,6 +219,53 @@ std::optional<double> CoinSendController::ethereumGwei() const {
     return double(fees->baseFee + fees->priorityFee) / 1e9;
 }
 
+void CoinSendController::speedUpEthereum(QWidget *parent, EthWallet *eth, const QByteArray &hash) {
+    if (!eth) {
+        return;
+    }
+    QPointer<QWidget> guard(parent);
+    QPointer<EthWallet> wallet(eth);
+    const auto oldFee = eth->pendingMaxFee(hash);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    eth->planSpeedUp(hash, [this, guard, wallet, oldFee](std::optional<EthWallet::Plan> plan, const QString &error) {
+        QApplication::restoreOverrideCursor();
+        if (!guard || !wallet) {
+            return;
+        }
+        if (!plan) {
+            Utils::showError(guard, "Unable to speed up", error);
+            return;
+        }
+        const QString newFee = eth::formatAmount(plan->maxFee, eth::etherDecimals);
+        const QString was = oldFee ? eth::formatAmount(*oldFee, eth::etherDecimals) : QString();
+        QMessageBox box(guard);
+        box.setWindowTitle("Speed up");
+        box.setIcon(QMessageBox::Question);
+        box.setText(QString("Send %1 %2 again with a higher fee?")
+                    .arg(eth::formatAmount(plan->amount, EthWallet::decimals(plan->asset)), plan->asset));
+        box.setTextInteractionFlags(Qt::TextSelectableByMouse);
+        QString details = QString("To: %1\nNetwork fee: at most %2 ETH%3, usually less")
+                          .arg(eth::checksumAddress(plan->recipient), newFee, fiatValue("ETH", newFee));
+        if (!was.isEmpty()) {
+            details += QString("\nWas: at most %1 ETH%2").arg(was, fiatValue("ETH", was));
+        }
+        details += "\n\nThe same payment replaces the waiting one: only one of the two can ever go through.";
+        box.setInformativeText(details);
+        box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        box.setDefaultButton(QMessageBox::Cancel);
+        if (box.exec() != QMessageBox::Yes || !wallet) {
+            return;
+        }
+        wallet->broadcast(*plan, [guard](const QString &newHash, const QString &error) {
+            if (!error.isEmpty()) {
+                Utils::showError(guard, "Not sped up", error);
+                return;
+            }
+            Utils::showInfo(guard, "Sped up", QString("New transaction hash: %1").arg(newHash));
+        });
+    });
+}
+
 void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, const QString &address,
                                       const QString &amountText) {
     if (!ensureReady(parent, ethereum())) {
