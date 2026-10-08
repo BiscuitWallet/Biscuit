@@ -372,8 +372,10 @@ void AtomicSwapWidget::onSwap() {
     CoinVault *vault = CoinVault::forWallet(m_wallet);
     CoinWallet *btc = vault && vault->isUnlocked() ? vault->bitcoin() : nullptr;
     if (!btc) {
-        Utils::showError(this, "Bitcoin wallet not open",
-                         "Open or set up your Bitcoin wallet first (Receive → Bitcoin): the swap pays from it.");
+        const bool added = vault && vault->coinState(bitcoin()) != CoinVault::CoinState::NotAdded;
+        Utils::showError(this, added ? "Bitcoin wallet not open" : "Bitcoin not in this wallet",
+                         added ? "Open your Bitcoin wallet first (Receive → Bitcoin): the swap pays from it."
+                               : "An atomic swap pays from the Bitcoin wallet of Biscuit. Add Bitcoin first, with + in Receive.");
         return;
     }
     if (btc->status() != CoinWallet::Status::Synchronized) {

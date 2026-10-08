@@ -72,12 +72,13 @@ CoinTab::CoinTab(Wallet *wallet, const CoinParams &params, QWidget *parent)
         menu.exec(ui->tree_history->viewport()->mapToGlobal(pos));
     });
 
-    connect(ui->btn_create, &QPushButton::clicked, this, [this] {
-        CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Create, this).exec();
-    });
-    connect(ui->btn_restore, &QPushButton::clicked, this, [this] {
-        CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Restore, this).exec();
-    });
+    // Not in this wallet: one button, which asks for a seed only if there is none yet.
+    ui->label_setupTitle->setText(params.name);
+    ui->label_setupText->setText(QString("%1 is not in this wallet. Monero works without it: add %1 only if you "
+                                         "want to receive and send it here.").arg(params.name));
+    ui->btn_create->setText(QString("Add %1…").arg(params.name));
+    ui->btn_restore->hide();
+    connect(ui->btn_create, &QPushButton::clicked, this, [this] { addCoinToWallet(m_vault, m_params, this); });
     connect(ui->btn_unlock, &QPushButton::clicked, this, &CoinTab::unlock);
     connect(ui->line_password, &QLineEdit::returnPressed, this, &CoinTab::unlock);
     connect(ui->btn_showSeed, &QPushButton::clicked, this, [this] { showCoinSeed(m_vault, this); });
@@ -94,18 +95,26 @@ CoinTab::CoinTab(Wallet *wallet, const CoinParams &params, QWidget *parent)
 
     connect(m_vault, &CoinVault::unlocked, this, &CoinTab::updatePage);
     connect(m_vault, &CoinVault::locked, this, &CoinTab::updatePage);
+    connect(m_vault, &CoinVault::walletsChanged, this, &CoinTab::updatePage);
     updatePage();
 }
 
 CoinTab::~CoinTab() = default;
 
 void CoinTab::updatePage() {
-    if (m_vault->isUnlocked()) {
-        ui->stack->setCurrentIndex(PageWallet);
-        bindWallet();
-    } else {
-        m_coin = nullptr;
-        ui->stack->setCurrentIndex(m_vault->exists() ? PageUnlock : PageSetup);
+    switch (m_vault->coinState(m_params)) {
+        case CoinVault::CoinState::Ready:
+            ui->stack->setCurrentIndex(PageWallet);
+            bindWallet();
+            break;
+        case CoinVault::CoinState::Locked:
+            m_coin = nullptr;
+            ui->stack->setCurrentIndex(PageUnlock);
+            break;
+        case CoinVault::CoinState::NotAdded:
+            m_coin = nullptr;
+            ui->stack->setCurrentIndex(PageSetup);
+            break;
     }
 }
 

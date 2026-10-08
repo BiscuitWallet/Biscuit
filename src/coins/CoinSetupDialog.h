@@ -25,7 +25,7 @@ QPlainTextEdit *seedWordsView(const QString &mnemonic, QWidget *parent);
 // `count` distinct word positions (0-based, sorted) to type back.
 QList<int> randomWordIndexes(int wordCount, int count);
 
-// Sets up the Bitcoin/Litecoin seed of a wallet:
+// Sets up the main Bitcoin/Litecoin seed of a wallet, for `coins`:
 //  - create: shows 12 new words, asks for 3 of them to make sure they were
 //    written down, then the wallet password;
 //  - restore: words (+ optional BIP39 passphrase), then the wallet password.
@@ -37,12 +37,14 @@ class CoinSetupDialog : public QDialog
 
 public:
     enum class Mode { Create, Restore };
-    CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent = nullptr) : CoinSetupDialog(vault, mode, parent, nullptr) {}
+    CoinSetupDialog(CoinVault *vault, Mode mode, const QList<const CoinParams *> &coins, QWidget *parent = nullptr)
+        : CoinSetupDialog(vault, mode, parent, coins, nullptr) {}
     CoinSetupDialog(CoinVault *vault, Mode mode, const CoinParams &addTo, QWidget *parent = nullptr);
     ~CoinSetupDialog() override;
 
 private:
-    CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent, const CoinParams *addTo);
+    CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent, const QList<const CoinParams *> &coins,
+                    const CoinParams *addTo);
     void next();
     void finish();
     QWidget *pageShowWords();
@@ -50,10 +52,11 @@ private:
     QWidget *pageRestore();
     QWidget *pagePassword();
     void addNameField(QWidget *page, QVBoxLayout *layout);
-    QString coinsText() const;   // "Bitcoin and Litecoin" or the added coin
+    QString coinsText() const;   // "Bitcoin and Litecoin", "Bitcoin" or the added coin
 
     CoinVault *m_vault;
     Mode m_mode;
+    QList<const CoinParams *> m_coins;   // main seed: the coins it is for
     const CoinParams *m_addTo = nullptr;
     QWidget *m_restorePage = nullptr;
     QLineEdit *m_name = nullptr;
@@ -69,6 +72,11 @@ private:
     QLineEdit *m_password = nullptr;
     QLabel *m_error = nullptr;
 };
+
+// Adds a coin to the wallet, asking only what is needed: a new or restored
+// seed when there is none yet, the password when locked, or a confirmation to
+// use the existing seed. True once the coin is in the wallet.
+bool addCoinToWallet(CoinVault *vault, const CoinParams &params, QWidget *parent);
 
 // Shows a Bitcoin/Litecoin seed after asking the wallet password again: the
 // main seed, or with `id` the seed of an added wallet.

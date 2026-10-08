@@ -43,6 +43,7 @@ CoinReceiveSwitcher::CoinReceiveSwitcher(Wallet *wallet, QWidget *moneroPage, QW
     layout->addWidget(m_pages);
 
     connect(m_coin, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    showWalletCoins(m_coin, m_vault, 0, true);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged, &CoinVault::walletUpdated}) {
         connect(m_vault, signal, this, &CoinReceiveSwitcher::refresh);
     }
@@ -54,27 +55,19 @@ QWidget *CoinReceiveSwitcher::coinPage(const CoinParams &params) {
     w.params = &params;
     w.state = new QStackedWidget(this);
 
-    // Not set up (or locked): one button, the same flow as from Send.
+    // Not in this wallet (or locked): one button, the same flow as from Send.
     auto *setup = new QWidget(w.state);
     auto *setupLayout = new QVBoxLayout(setup);
-    auto *setupText = new QLabel(QString("%1 is not set up in this wallet yet. Bitcoin and Litecoin share one seed "
-                                         "phrase (BIP39), separate from your Monero seed.").arg(params.name), setup);
-    setupText->setWordWrap(true);
-    setupLayout->addWidget(setupText);
+    w.setupText = new QLabel(setup);
+    w.setupText->setWordWrap(true);
+    setupLayout->addWidget(w.setupText);
     auto *buttons = new QHBoxLayout;
-    auto *btnCreate = new QPushButton("Create new seed", setup);
-    auto *btnRestore = new QPushButton("Restore from seed", setup);
-    buttons->addWidget(btnCreate);
-    buttons->addWidget(btnRestore);
+    w.setupButton = new QPushButton(setup);
+    buttons->addWidget(w.setupButton);
     buttons->addStretch();
     setupLayout->addLayout(buttons);
     setupLayout->addStretch();
-    connect(btnCreate, &QPushButton::clicked, this, [this] {
-        CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Create, this).exec();
-    });
-    connect(btnRestore, &QPushButton::clicked, this, [this] {
-        CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Restore, this).exec();
-    });
+    connect(w.setupButton, &QPushButton::clicked, this, [this, p = &params] { addCoinToWallet(m_vault, *p, this); });
     w.state->addWidget(setup);
 
     // Address page, same layout as the other receive screens.
@@ -154,6 +147,12 @@ void CoinReceiveSwitcher::refresh() {
         CoinWallet *coin = this->coin(*w.params);
         w.state->setCurrentIndex(coin ? 1 : 0);
         if (!coin) {
+            const bool locked = m_vault->coinState(*w.params) == CoinVault::CoinState::Locked;
+            const QString name = w.params->name;
+            w.setupText->setText(locked ? QString("Enter the password of this wallet to open %1.").arg(name)
+                                        : QString("%1 is not in this wallet. Monero works without it: add %1 only "
+                                                  "if you want to receive and send it here.").arg(name));
+            w.setupButton->setText(locked ? QString("Unlock…") : QString("Add %1…").arg(name));
             continue;
         }
         const bool keep = coin->keepsReceiveAddress();

@@ -52,6 +52,7 @@ CoinContactsSwitcher::CoinContactsSwitcher(Wallet *wallet, QWidget *moneroPage, 
     layout->addWidget(m_pages);
 
     connect(m_picker, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    showWalletCoins(m_picker, m_vault, 0, false);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::contactsChanged}) {
         connect(m_vault, signal, this, &CoinContactsSwitcher::refresh);
     }
@@ -115,7 +116,8 @@ void CoinContactsSwitcher::refresh() {
         const bool unlocked = m_vault->isUnlocked();
         tree->setEnabled(unlocked);
         if (!unlocked) {
-            status->setText(QString("Unlock %1 to see its contacts.").arg(params->name));
+            status->setText(m_vault->exists() ? QString("Unlock %1 to see its contacts.").arg(params->name)
+                                              : QString("%1 is not in this wallet. Add it with + in Receive.").arg(params->name));
             tree->setSortingEnabled(true);
             continue;
         }

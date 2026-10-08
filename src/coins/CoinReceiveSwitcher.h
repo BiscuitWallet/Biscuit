@@ -41,7 +41,9 @@ private:
 
     struct CoinWidgets {
         const CoinParams *params = nullptr;
-        QStackedWidget *state = nullptr;   // 0 = not set up, 1 = address
+        QStackedWidget *state = nullptr;   // 0 = not added or locked, 1 = address
+        QLabel *setupText = nullptr;
+        QPushButton *setupButton = nullptr;
         QLineEdit *address = nullptr;
         QLabel *qr = nullptr;
         QCheckBox *keep = nullptr;

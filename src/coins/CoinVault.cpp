@@ -22,7 +22,8 @@
 namespace biscuit::coins {
 
 namespace {
-    // 1: main seed only. 2: adds "extra" wallets and "selected".
+    // 1: main seed only. 2: adds "extra" wallets and "selected". Later
+    // optional key: "mainCoins" (without it, both Bitcoin and Litecoin).
     constexpr int fileVersion = 2;
     constexpr char mainName[] = "Main";
 
@@ -45,6 +46,27 @@ namespace {
     QJsonObject parseContent(const QByteArray &content) {
         return QJsonDocument::fromJson(content).object();
     }
+
+    QJsonArray tickers(const QStringList &list) {
+        QJsonArray array;
+        for (const QString &ticker : list) array.append(ticker);
+        return array;
+    }
+}
+
+const QList<const CoinParams *> &walletCoins() {
+    static const QList<const CoinParams *> list{&coins::bitcoin(), &coins::litecoin()};
+    return list;
+}
+
+QString coinNames(const QList<const CoinParams *> &coins) {
+    QStringList names;
+    for (const CoinParams *params : coins) names << params->name;
+    if (names.size() < 2) {
+        return names.join(QString());
+    }
+    const QString last = names.takeLast();
+    return QString("%1 and %2").arg(names.join(", "), last);
 }
 
 CoinVault *CoinVault::forWallet(Wallet *wallet) {
@@ -78,7 +100,12 @@ bool CoinVault::exists() const {
     return QFile::exists(path());
 }
 
-bool CoinVault::setUp(const QString &mnemonic, const QString &passphrase, const QString &password, QString *error) {
+bool CoinVault::setUp(const QString &mnemonic, const QString &passphrase, const QString &password,
+                      const QList<const CoinParams *> &coins, QString *error) {
+    if (coins.isEmpty()) {
+        if (error) *error = "No coin chosen";
+        return false;
+    }
     if (!m_wallet || !m_wallet->verifyPassword(password)) {
         if (error) *error = "Wrong password (use the password of this Monero wallet)";
         return false;
@@ -103,6 +130,14 @@ bool CoinVault::setUp(const QString &mnemonic, const QString &passphrase, const 
         {"mnemonic", bip39::normalizeMnemonic(mnemonic)},
         {"passphrase", passphrase},
         {"created", m_created},
+        {"mainCoins", tickers([&coins] {
+            QStringList list;
+            for (const CoinParams *params : walletCoins()) {
+                const bool chosen = std::any_of(coins.begin(), coins.end(), [params](const CoinParams *c) { return *c == *params; });
+                if (chosen) list << params->ticker;
+            }
+            return list;
+        }())},
         {"coins", QJsonObject{}},
         {"extra", QJsonArray{}},
     }).toJson(QJsonDocument::Compact);
@@ -155,9 +190,21 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
     const QJsonObject caches = obj.value("coins").toObject();
     QByteArray seedBytes = *seed;
     bool ok = true;
+    // Coins on the main seed. Files written before coins became optional
+    // have no list: both Bitcoin and Litecoin.
+    m_mainCoins.clear();
+    const QJsonArray mainCoins = obj.value("mainCoins").toArray();
+    for (const CoinParams *params : walletCoins()) {
+        if (!obj.contains("mainCoins") || mainCoins.contains(params->ticker)) {
+            m_mainCoins << params->ticker;
+        }
+    }
     // The main wallets' names, if renamed ("mainNames": {"BTC": ..., "LTC": ...}).
     const QJsonObject mainNames = obj.value("mainNames").toObject();
-    for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
+    for (const CoinParams *params : walletCoins()) {
+        if (!m_mainCoins.contains(params->ticker)) {
+            continue;
+        }
         const QString name = mainNames.value(params->ticker).toString(mainName);
         ok = ok && addEntry(mainId(*params), name, true, *params, seedBytes,
                             caches.value(params->ticker).toObject(), error);
@@ -196,11 +243,11 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
     }
 
     const QJsonObject selected = obj.value("selected").toObject();
-    for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
+    for (const CoinParams *params : walletCoins()) {
         const QString id = selected.value(params->ticker).toString();
         const auto list = wallets(*params);
         const bool known = std::any_of(list.begin(), list.end(), [&id](const Entry &e) { return e.id == id; });
-        m_selected[params->ticker] = known ? id : mainId(*params);
+        m_selected[params->ticker] = known ? id : list.isEmpty() ? mainId(*params) : list.first().id;
     }
     applyNetworkSettings();   // sets the proxy and starts the wallets
     return true;
@@ -226,6 +273,7 @@ void CoinVault::clearWallets() {
         delete e.wallet;
     }
     m_entries.clear();
+    m_mainCoins.clear();
     m_selected.clear();
     m_contacts.clear();   // they live in the encrypted file only
     m_coinSelection.clear();
@@ -312,6 +360,63 @@ std::optional<QPair<QString, QString>> CoinVault::revealMnemonic(const QString &
     }
     if (error) *error = "This wallet is no longer in the file.";
     return std::nullopt;
+}
+
+CoinVault::CoinState CoinVault::coinState(const CoinParams &params) const {
+    if (!exists()) {
+        return CoinState::NotAdded;
+    }
+    if (!isUnlocked()) {
+        return CoinState::Locked;
+    }
+    return wallets(params).isEmpty() ? CoinState::NotAdded : CoinState::Ready;
+}
+
+QList<const CoinParams *> CoinVault::mainSeedCoins() const {
+    QList<const CoinParams *> list;
+    for (const CoinParams *params : walletCoins()) {
+        if (!isUnlocked() || m_mainCoins.contains(params->ticker)) list << params;
+    }
+    return list;
+}
+
+QString CoinVault::mainSeedCoinsText() const {
+    return coinNames(mainSeedCoins());
+}
+
+bool CoinVault::addCoin(const CoinParams &params, QString *error) {
+    if (!m_session) {
+        if (error) *error = "Bitcoin and Litecoin are locked";
+        return false;
+    }
+    if (!wallets(params).isEmpty()) {
+        if (error) *error = QString("%1 is already in this wallet.").arg(params.name);
+        return false;
+    }
+    auto seed = bip39Seed(mainId(params), error);
+    if (!seed) {
+        return false;
+    }
+    QStringList mainCoins;
+    for (const CoinParams *p : walletCoins()) {
+        if (m_mainCoins.contains(p->ticker) || *p == params) mainCoins << p->ticker;
+    }
+    QString name = mainName;
+    const bool written = rewrite([&](QJsonObject &obj) {
+        name = obj.value("mainNames").toObject().value(params.ticker).toString(mainName);
+        obj["mainCoins"] = tickers(mainCoins);
+    }, error);
+    const bool added = written && addEntry(mainId(params), name, true, params, *seed, {}, error);
+    walletfile::wipe(*seed);
+    if (!added) {
+        return false;
+    }
+    m_mainCoins = mainCoins;
+    m_selected[params.ticker] = mainId(params);
+    applyNetworkSettings();   // starts it
+    scheduleSave();
+    emit walletsChanged();
+    return true;
 }
 
 CoinWallet *CoinVault::wallet(const CoinParams &params) const {

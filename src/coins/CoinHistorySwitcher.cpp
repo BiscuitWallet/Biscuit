@@ -87,6 +87,7 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
     layout->addWidget(m_pages);
 
     connect(m_filter, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    showWalletCoins(m_filter, m_vault, 1, false);
     connect(m_wallet->history(), &TransactionHistory::refreshFinished, this, &CoinHistorySwitcher::refresh);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged, &CoinVault::walletUpdated}) {
         connect(m_vault, signal, this, &CoinHistorySwitcher::refresh);

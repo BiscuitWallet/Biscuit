@@ -78,6 +78,7 @@ CoinCoinsSwitcher::CoinCoinsSwitcher(Wallet *wallet, QWidget *moneroPage, QWidge
     layout->addWidget(m_pages);
 
     connect(m_picker, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    showWalletCoins(m_picker, m_vault, 0, false);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged,
                         &CoinVault::walletUpdated, &CoinVault::coinSelectionChanged}) {
         connect(m_vault, signal, this, &CoinCoinsSwitcher::refresh);
@@ -144,7 +145,9 @@ void CoinCoinsSwitcher::fillTree(QTreeWidget *tree, QLabel *summary, const CoinP
     tree->clear();
     CoinWallet *coin = m_vault->isUnlocked() ? m_vault->wallet(params) : nullptr;
     if (!coin) {
-        summary->setText(QString("Unlock %1 to see its coins.").arg(params.name));
+        summary->setText(m_vault->coinState(params) == CoinVault::CoinState::Locked
+                         ? QString("Unlock %1 to see its coins.").arg(params.name)
+                         : QString("%1 is not in this wallet. Add it with + in Receive.").arg(params.name));
         tree->setSortingEnabled(true);
         return;
     }

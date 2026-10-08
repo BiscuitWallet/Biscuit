@@ -68,48 +68,22 @@ CoinSendController::CoinSendController(Wallet *wallet, QObject *parent)
 }
 
 std::optional<double> CoinSendController::feeRate(const CoinParams &params, int targetBlocks) const {
-    if (!m_vault || !m_vault->isUnlocked()) {
+    CoinWallet *coin = m_vault && m_vault->isUnlocked() ? m_vault->wallet(params) : nullptr;
+    if (!coin) {
         return std::nullopt;
     }
-    return m_vault->wallet(params)->feeRate(targetBlocks);
+    return coin->feeRate(targetBlocks);
 }
 
-bool CoinSendController::ensureReady(QWidget *parent) {
+bool CoinSendController::ensureReady(QWidget *parent, const CoinParams &params) {
     if (!m_vault) {
         return false;
     }
-    if (!m_vault->exists()) {
-        QMessageBox box(parent);
-        box.setWindowTitle("Bitcoin and Litecoin");
-        box.setIcon(QMessageBox::Information);
-        box.setText("Bitcoin and Litecoin are not set up in this wallet yet.");
-        box.setInformativeText("They use one seed phrase (BIP39), separate from your Monero seed, "
-                               "encrypted with the password of this wallet.");
-        auto *create = box.addButton("Create new seed", QMessageBox::AcceptRole);
-        auto *restore = box.addButton("Restore from seed", QMessageBox::AcceptRole);
-        box.addButton(QMessageBox::Cancel);
-        box.exec();
-        if (box.clickedButton() == create) {
-            CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Create, parent).exec();
-        } else if (box.clickedButton() == restore) {
-            CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Restore, parent).exec();
-        }
-        return false;   // the user sends again once the wallet is synchronized
+    if (m_vault->hasCoin(params)) {
+        return true;
     }
-    if (!m_vault->isUnlocked()) {
-        bool ok = false;
-        const QString password = QInputDialog::getText(parent, "Bitcoin and Litecoin", "Password of this wallet:",
-                                                       QLineEdit::Password, {}, &ok);
-        if (!ok) {
-            return false;
-        }
-        QString error;
-        if (!m_vault->unlock(password, &error)) {
-            Utils::showError(parent, "Unable to unlock", error);
-        }
-        return false;   // unlocking starts the synchronization
-    }
-    return true;
+    addCoinToWallet(m_vault, params, parent);
+    return false;   // the user sends again once the wallet is synchronized
 }
 
 void CoinSendController::send(QWidget *parent, const CoinParams &params, const QString &address,
@@ -130,7 +104,7 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
         }
         amount = *parsed;
     }
-    if (!ensureReady(parent)) {
+    if (!ensureReady(parent, params)) {
         return;
     }
 
@@ -191,7 +165,7 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
 }
 
 void CoinSendController::bumpFee(QWidget *parent, const CoinParams &params, CoinWallet *coin, const QString &txid) {
-    if (!coin || !ensureReady(parent)) {
+    if (!coin || !ensureReady(parent, params)) {
         return;
     }
     if (coin->status() != CoinWallet::Status::Synchronized) {

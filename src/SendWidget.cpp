@@ -116,6 +116,7 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
                         &biscuit::coins::CoinVault::walletsChanged}) {
         connect(vault, signal, this, &SendWidget::updateCoinMode);
     }
+    biscuit::coins::showWalletCoins(m_coinPicker, vault, 0, true);
 
     m_coinHint = new QLabel(this);
     m_coinHint->setStyleSheet("color: gray;");
@@ -178,7 +179,8 @@ void SendWidget::updateCoinMode() {
     } else if (WalletManager::addressValid(ui->lineAddress->text().trimmed(), constants::networkType)) {
         detected = 0;
     }
-    if (detected >= 0 && m_coinPicker->currentIndex() != detected) {
+    // Not a coin of this wallet: stays on Monero, which refuses the address.
+    if (detected >= 0 && m_coinPicker->currentIndex() != detected && m_coinPicker->isCoinVisible(detected)) {
         QSignalBlocker blocker(m_coinPicker);
         m_coinPicker->setCurrentIndex(detected);
     }
@@ -210,8 +212,12 @@ void SendWidget::updateCoinMode() {
 
     if (coinMode) {
         const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-        m_coinHint->setText(vault->isUnlocked() ? QString("Sent from your %1 wallet \"%2\"").arg(m_coin->ticker, vault->selectedName(*m_coin))
-                                                : QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name));
+        const auto state = vault->coinState(*m_coin);
+        m_coinHint->setText(state == biscuit::coins::CoinVault::CoinState::Ready
+                                ? QString("Sent from your %1 wallet \"%2\"").arg(m_coin->ticker, vault->selectedName(*m_coin))
+                            : state == biscuit::coins::CoinVault::CoinState::Locked
+                                ? QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name)
+                                : QString("%1 is not in this wallet yet: add it with + above.").arg(m_coin->name));
         m_coinUnit->setText(m_coin->ticker);
         // Times follow the coin's blocks.
         const auto levels = biscuit::coins::feeLevels(*m_coin);

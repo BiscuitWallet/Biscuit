@@ -73,21 +73,23 @@ QList<int> randomWordIndexes(int wordCount, int count) {
 }
 
 CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, const CoinParams &addTo, QWidget *parent)
-    : CoinSetupDialog(vault, mode, parent, &addTo)
+    : CoinSetupDialog(vault, mode, parent, {&addTo}, &addTo)
 {
 }
 
-CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent, const CoinParams *addTo)
+CoinSetupDialog::CoinSetupDialog(CoinVault *vault, Mode mode, QWidget *parent, const QList<const CoinParams *> &coins,
+                                 const CoinParams *addTo)
     : QDialog(parent)
     , m_vault(vault)
     , m_mode(mode)
+    , m_coins(coins)
     , m_addTo(addTo)
 {
     if (m_addTo) {
         setWindowTitle(mode == Mode::Create ? QString("New %1 wallet").arg(m_addTo->name)
                                             : QString("Add a %1 wallet").arg(m_addTo->name));
     } else {
-        setWindowTitle(mode == Mode::Create ? "New Bitcoin and Litecoin seed" : "Restore Bitcoin and Litecoin");
+        setWindowTitle(mode == Mode::Create ? QString("New %1 seed").arg(coinsText()) : QString("Restore %1").arg(coinsText()));
     }
     auto *layout = new QVBoxLayout(this);
     m_pages = new QStackedWidget(this);
@@ -136,8 +138,16 @@ QWidget *CoinSetupDialog::pageShowWords() {
     l->addWidget(intro);
     if (m_addTo) addNameField(page, l);
     l->addWidget(seedWordsView(m_mnemonic, page));
-    auto *note = new QLabel(m_addTo ? QString("This seed is separate from your other seeds: back it up too.")
-                                    : QString("This seed is separate from your Monero seed: back up both."), page);
+    QString noteText = m_addTo ? QString("This seed is separate from your other seeds: back it up too.")
+                               : QString("This seed is separate from your Monero seed: back up both.");
+    QList<const CoinParams *> later;
+    for (const CoinParams *params : walletCoins()) {
+        if (!m_addTo && !m_coins.contains(params)) later << params;
+    }
+    if (!later.isEmpty()) {
+        noteText += QString(" If you add %1 later, it will use these same words.").arg(coinNames(later));
+    }
+    auto *note = new QLabel(noteText, page);
     note->setWordWrap(true);
     l->addWidget(note);
     m_checkWritten = new QCheckBox("I have written down these 12 words", page);
@@ -202,13 +212,13 @@ void CoinSetupDialog::addNameField(QWidget *page, QVBoxLayout *layout) {
 }
 
 QString CoinSetupDialog::coinsText() const {
-    return m_addTo ? m_addTo->name : QString("Bitcoin and Litecoin");
+    return m_addTo ? m_addTo->name : coinNames(m_coins);
 }
 
 QWidget *CoinSetupDialog::pagePassword() {
     auto *page = new QWidget(this);
     auto *l = new QVBoxLayout(page);
-    auto *intro = new QLabel("Enter the password of this wallet. Bitcoin and Litecoin are encrypted with it.", page);
+    auto *intro = new QLabel(QString("Enter the password of this wallet. Your %1 seed is encrypted with it.").arg(coinsText()), page);
     intro->setWordWrap(true);
     l->addWidget(intro);
     auto *form = new QFormLayout;
@@ -274,7 +284,7 @@ void CoinSetupDialog::finish() {
     if (m_addTo) {
         ok = m_vault->addWallet(*m_addTo, m_name->text(), m_mnemonic, passphrase, &error);
     } else {
-        ok = m_vault->setUp(m_mnemonic, passphrase, m_password->text(), &error);
+        ok = m_vault->setUp(m_mnemonic, passphrase, m_password->text(), m_coins, &error);
         m_password->clear();
     }
     m_btnNext->setEnabled(true);
@@ -285,12 +295,71 @@ void CoinSetupDialog::finish() {
     accept();
 }
 
+bool addCoinToWallet(CoinVault *vault, const CoinParams &params, QWidget *parent) {
+    if (!vault) {
+        return false;
+    }
+    if (!vault->exists()) {
+        QMessageBox box(parent);
+        box.setWindowTitle(QString("Add %1").arg(params.name));
+        box.setIcon(QMessageBox::Information);
+        box.setText(QString("Add %1 to this wallet?").arg(params.name));
+        box.setInformativeText(QString("%1 uses its own 12 words (BIP39), separate from your Monero seed and compatible "
+                                       "with other %1 wallets. Create a new seed, or restore one you already have.")
+                               .arg(params.name));
+        auto *create = box.addButton("Create new seed", QMessageBox::AcceptRole);
+        auto *restore = box.addButton("Restore from seed", QMessageBox::AcceptRole);
+        box.addButton(QMessageBox::Cancel);
+        box.exec();
+        if (box.clickedButton() != create && box.clickedButton() != restore) {
+            return false;
+        }
+        CoinSetupDialog(vault, box.clickedButton() == create ? CoinSetupDialog::Mode::Create : CoinSetupDialog::Mode::Restore,
+                        QList<const CoinParams *>{&params}, parent).exec();
+        return vault->hasCoin(params);
+    }
+    if (!vault->isUnlocked()) {
+        bool ok = false;
+        const QString password = QInputDialog::getText(parent, params.name, "Password of this wallet:",
+                                                       QLineEdit::Password, {}, &ok);
+        if (!ok) {
+            return false;
+        }
+        QString error;
+        if (!vault->unlock(password, &error)) {
+            QMessageBox::warning(parent, params.name, error);
+            return false;
+        }
+    }
+    if (vault->hasCoin(params)) {
+        return true;
+    }
+    QMessageBox box(parent);
+    box.setWindowTitle(QString("Add %1").arg(params.name));
+    box.setIcon(QMessageBox::Question);
+    box.setText(QString("Add %1 to this wallet?").arg(params.name));
+    box.setInformativeText(QString("It uses the same 12 words as your %1, so your paper backup already covers it.")
+                           .arg(vault->mainSeedCoinsText()));
+    auto *add = box.addButton(QString("Add %1").arg(params.name), QMessageBox::AcceptRole);
+    box.addButton(QMessageBox::Cancel);
+    box.exec();
+    if (box.clickedButton() != add) {
+        return false;
+    }
+    QString error;
+    if (!vault->addCoin(params, &error)) {
+        QMessageBox::warning(parent, QString("Add %1").arg(params.name), error);
+        return false;
+    }
+    return true;
+}
+
 void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
     // Which seed: the main one (Bitcoin and Litecoin), or an added wallet (one coin).
     const CoinParams *coin = nullptr;
     QString name;
     if (!id.isEmpty()) {
-        for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
+        for (const CoinParams *params : walletCoins()) {
             for (const auto &entry : vault->wallets(*params)) {
                 if (entry.id == id && !entry.mainSeed) {
                     coin = params;
@@ -314,19 +383,22 @@ void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
     }
 
     QDialog dialog(parent);
-    dialog.setWindowTitle(coin ? QString("Seed of \"%1\"").arg(name) : QString("Bitcoin and Litecoin seed"));
+    const QString mainCoins = vault->mainSeedCoinsText();
+    dialog.setWindowTitle(coin ? QString("Seed of \"%1\"").arg(name) : QString("%1 seed").arg(mainCoins));
     auto *l = new QVBoxLayout(&dialog);
     auto *intro = new QLabel(coin ? QString("Never share these words. Anyone who has them can take the %1 in \"%2\".").arg(coin->name, name)
-                                  : QString("Never share these words. Anyone who has them can take your Bitcoin and Litecoin."), &dialog);
+                                  : QString("Never share these words. Anyone who has them can take your %1.").arg(mainCoins), &dialog);
     intro->setWordWrap(true);
     l->addWidget(intro);
     l->addWidget(seedWordsView(seed->first, &dialog));
     if (!seed->second.isEmpty()) {
         l->addWidget(new QLabel("This seed also uses a passphrase.", &dialog));
     }
-    auto *paths = new QLabel(coin == &bitcoin()    ? QString("BIP39 · native SegWit (BIP84) · Bitcoin m/84'/0'/0'")
-                             : coin == &litecoin() ? QString("BIP39 · native SegWit (BIP84) · Litecoin m/84'/2'/0'")
-                             : QString("BIP39 · native SegWit (BIP84) · Bitcoin m/84'/0'/0' · Litecoin m/84'/2'/0'"), &dialog);
+    QStringList pathText{"BIP39 · native SegWit (BIP84)"};
+    for (const CoinParams *params : coin ? QList<const CoinParams *>{coin} : vault->mainSeedCoins()) {
+        pathText << QString("%1 m/84'/%2'/0'").arg(params->name).arg(params->bip44CoinType);
+    }
+    auto *paths = new QLabel(pathText.join(" · "), &dialog);
     paths->setStyleSheet("color: gray;");
     l->addWidget(paths);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
@@ -339,8 +411,8 @@ void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
 
 
 void addCoinSeedActions(QMenu *menu, CoinVault *vault, QWidget *parent) {
-    menu->addAction("Bitcoin and Litecoin seed…", parent, [vault, parent] { showCoinSeed(vault, parent); });
-    for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
+    menu->addAction(QString("%1 seed…").arg(vault->mainSeedCoinsText()), parent, [vault, parent] { showCoinSeed(vault, parent); });
+    for (const CoinParams *params : walletCoins()) {
         for (const auto &entry : vault->wallets(*params)) {
             if (entry.mainSeed) {
                 continue;

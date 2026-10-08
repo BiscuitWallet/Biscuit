@@ -56,9 +56,11 @@ public:
     // replaces the unconfirmed transaction after confirmation.
     void bumpFee(QWidget *parent, const CoinParams &params, CoinWallet *coin, const QString &txid);
 
-    // Makes sure Bitcoin/Litecoin are set up and unlocked, asking the user if needed.
+    // True if this coin is in the wallet and unlocked. Otherwise offers to
+    // add it or asks the password, and returns false: the coin may be ready
+    // afterwards (check CoinVault::hasCoin), but not synchronized yet.
     // Also used by Swap to receive into this wallet.
-    bool ensureReady(QWidget *parent);
+    bool ensureReady(QWidget *parent, const CoinParams &params);
 
 signals:
     void sent(const QString &txid);

@@ -399,6 +399,17 @@ void MainWindow::initMenu() {
         ui->actionSeed->setText("Monero seed");
         // A submenu, filled when opened: the main seed and each added wallet.
         auto *coinSeeds = new QMenu("Bitcoin and Litecoin seeds", this);
+        // Named after the coins in this wallet ("Bitcoin seeds"…).
+        auto *seedsVault = biscuit::coins::CoinVault::forWallet(m_wallet);
+        auto renameSeeds = [coinSeeds, seedsVault] {
+            coinSeeds->setTitle(seedsVault->exists() ? QString("%1 seeds").arg(seedsVault->mainSeedCoinsText())
+                                                     : QString("Bitcoin and Litecoin seeds"));
+        };
+        for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
+                            &biscuit::coins::CoinVault::walletsChanged}) {
+            connect(seedsVault, signal, coinSeeds, renameSeeds);
+        }
+        renameSeeds();
         QAction *coinSeedsAction = coinSeeds->menuAction();
         ui->menuWallet->insertAction(ui->actionSeed, coinSeedsAction);
         ui->menuWallet->removeAction(ui->actionSeed);
@@ -409,7 +420,7 @@ void MainWindow::initMenu() {
             if (vault->exists()) {
                 biscuit::coins::addCoinSeedActions(coinSeeds, vault, this);
             } else {
-                coinSeeds->addAction("Not set up yet: go to Receive › Bitcoin or Litecoin")->setEnabled(false);
+                coinSeeds->addAction("Not added to this wallet: use + in Receive")->setEnabled(false);
             }
         });
     }
@@ -734,10 +745,15 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
     double balanceFiatAmount = appData()->prices.convert("XMR", fiatCurrency, balance / constants::cdiv);
     auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
     if (vault->isUnlocked() && !hide) {
-        // All the Bitcoin (or Litecoin) wallets of this wallet together.
-        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+        // All the Bitcoin (or Litecoin) wallets of this wallet together; a coin
+        // not added to this wallet is not shown.
+        for (const auto *params : biscuit::coins::walletCoins()) {
+            const auto entries = vault->wallets(*params);
+            if (entries.isEmpty()) {
+                continue;
+            }
             quint64 total = 0;
-            for (const auto &entry : vault->wallets(*params)) {
+            for (const auto &entry : entries) {
                 total += entry.wallet->balance().total();
             }
             balance_str += QString(" · %1 %2").arg(biscuit::swap::amount::fromAtomic(total, params->decimals), params->ticker);

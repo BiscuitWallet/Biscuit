@@ -20,12 +20,18 @@ class Wallet;
 
 namespace biscuit::coins {
 
+// Coins a wallet can hold besides Monero, in the order they are shown.
+const QList<const CoinParams *> &walletCoins();
+// "Bitcoin", "Bitcoin and Litecoin"…
+QString coinNames(const QList<const CoinParams *> &coins);
+
 // The BTC/LTC side of a Monero wallet: a companion file "<wallet>.btcltc"
 // next to the Monero wallet, encrypted with the same password.
 //
-// It holds the main BTC/LTC seed (one Bitcoin and one Litecoin wallet) and any
-// other Bitcoin or Litecoin wallet the user added from its own seed. One
-// wallet per coin is selected: Receive, Send, History and Swap use it.
+// It holds the main BTC/LTC seed, with a wallet for each coin the user added
+// to it (Bitcoin, Litecoin or both: none is required, Monero works alone),
+// and any other Bitcoin or Litecoin wallet the user added from its own seed.
+// One wallet per coin is selected: Receive, Send, History and Swap use it.
 //
 // The seed words are never kept in memory: only the derived keys are. They
 // are shown again only after the password is typed again (revealMnemonic).
@@ -40,9 +46,11 @@ public:
     bool exists() const;
     bool isUnlocked() const { return m_session.has_value(); }
 
-    // Creates the file from a new or restored BIP39 seed. `password` must be
-    // the Monero wallet password (checked).
-    bool setUp(const QString &mnemonic, const QString &passphrase, const QString &password, QString *error);
+    // Creates the file from a new or restored BIP39 seed, with a wallet for
+    // each of `coins` (at least one). `password` must be the Monero wallet
+    // password (checked).
+    bool setUp(const QString &mnemonic, const QString &passphrase, const QString &password,
+               const QList<const CoinParams *> &coins, QString *error);
     bool unlock(const QString &password, QString *error);
     void lock();
 
@@ -60,6 +68,18 @@ public:
     // unlocked). For the atomic swap helper, which spends from that wallet.
     // The caller wipes it (walletfile::wipe) once handed over.
     std::optional<QByteArray> bip39Seed(const QString &id, QString *error) const;
+
+    // Whether a coin is in this wallet. While the file is locked, which coins
+    // it holds is not known (the list is encrypted too).
+    enum class CoinState { NotAdded, Locked, Ready };
+    CoinState coinState(const CoinParams &params) const;
+    bool hasCoin(const CoinParams &params) const { return coinState(params) == CoinState::Ready; }
+    // Adds a coin on the main seed (vault unlocked): same words, so the
+    // user's paper backup already covers it.
+    bool addCoin(const CoinParams &params, QString *error);
+    // Coins on the main seed, e.g. "Bitcoin and Litecoin" (every coin while locked).
+    QString mainSeedCoinsText() const;
+    QList<const CoinParams *> mainSeedCoins() const;
 
     struct Entry {
         QString id;          // "main-BTC", "main-LTC" or a random id
@@ -133,6 +153,7 @@ private:
     QPointer<Wallet> m_wallet;
     std::optional<walletfile::Session> m_session;
     QList<Entry> m_entries;
+    QStringList m_mainCoins;              // tickers on the main seed
     QHash<QString, QString> m_selected;   // ticker -> entry id
     struct CoinSelection { QString walletId; QStringList coinKeys; };
     QHash<QString, CoinSelection> m_coinSelection;   // ticker -> chosen coins

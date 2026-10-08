@@ -61,6 +61,7 @@ private:
     void clearOffers();
     void onMax();
     void updateWalletRows();
+    void updateWalletChoices();   // "My … wallet" or another address, Max
     void showOffers();
     void showOffersRows(bool visible);
     void showOffersMenu(const QPoint &pos);
@@ -71,6 +72,9 @@ private:
     // was told why, or cancelled).
     QString coinWalletAddress(const biscuit::swap::Asset &asset);
     QString coinWalletLabel(const biscuit::swap::Asset &asset) const;
+    // XMR always; BTC or LTC only once added to this wallet (locked counts:
+    // the password is asked when needed). Otherwise only other addresses.
+    bool walletHolds(const biscuit::swap::Asset &asset) const;
     void validateTypedAddresses(QList<QPair<biscuit::swap::Asset, QString>> addresses, std::function<void()> done);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);
