@@ -23,6 +23,8 @@ using namespace eth;
 
 namespace {
     constexpr int refreshIntervalMs = 30 * 1000;
+    // First sync of a wallet: up to 10 pages of 50 per source (ETH, USDT, USDC).
+    constexpr int deepSyncPages = 10;
     // A node asking for more than this per gas is wrong or lying: refused
     // (1000 gwei, 50 times the busiest days of 2026).
     constexpr u128 maxSaneFeePerGas = u128(1000) * 1000000000;
@@ -113,6 +115,7 @@ EthWallet::EthWallet(Account account, const QJsonObject &cache, QObject *parent)
     for (const QJsonValue &v : cache.value("sent").toArray()) {
         if (const auto e = fromJson(v.toObject())) m_sent.insert(historyKey(*e), *e);
     }
+    m_historyComplete = cache.value("historyComplete").toBool();
     const QJsonObject pending = cache.value("pending").toObject();
     for (auto it = pending.begin(); it != pending.end(); ++it) {
         if (const auto tx = txFromJson(it.value().toObject())) m_pending.insert(it.key(), *tx);
@@ -361,11 +364,69 @@ void EthWallet::prunePending(quint64 minedNonce) {
     }
 }
 
-void EthWallet::refreshHistory() {
+bool EthWallet::historyAllowed() const {
     // "Onion services only": the history too, or not at all.
-    if (conf()->get(Config::proxy).toInt() == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool()
-        && !QUrl(blockscout()).host().endsWith(".onion")) {
+    return !(conf()->get(Config::proxy).toInt() == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool()
+             && !QUrl(blockscout()).host().endsWith(".onion"));
+}
+
+void EthWallet::fetchPages(const QString &path, const QString &query, int pagesLeft,
+                           std::function<void(const QJsonValue &)> page, std::function<void(bool)> done) {
+    fetchJson(blockscout() + blockscout::withQuery(path, query), [this, path, pagesLeft, page, done](auto reply) {
+        if (!reply || !m_running) {
+            done(false);
+            return;
+        }
+        page(*reply);
+        const QString next = blockscout::nextPageQuery(*reply);
+        if (next.isEmpty() || pagesLeft <= 1) {
+            done(true);   // the oldest page, or enough of them
+            return;
+        }
+        fetchPages(path, next, pagesLeft - 1, page, done);
+    });
+}
+
+void EthWallet::startDeepSync() {
+    struct Pending {
+        int remaining = 0;
+        bool ok = true;
+        QList<HistoryEntry> entries;
+        QHash<QByteArray, u128> fees;
+    };
+    auto state = std::make_shared<Pending>();
+    m_deepSyncRunning = true;
+    auto finish = [this, state](bool ok) {
+        state->ok = state->ok && ok;
+        if (--state->remaining > 0) {
+            return;
+        }
+        m_deepSyncRunning = false;
+        mergeHistory(state->entries, state->fees);
+        if (state->ok) {
+            m_historyComplete = true;   // otherwise: again at the next refresh
+            emit cacheChanged();
+        }
+    };
+    state->remaining = 1 + int(tokens().size());
+    fetchPages(blockscout::transactionsPath(m_address), {}, deepSyncPages, [this, state](const QJsonValue &reply) {
+        const auto list = blockscout::parseTransactions(reply, m_address, &state->fees);
+        if (list) state->entries << *list; else state->ok = false;
+    }, finish);
+    for (const Token &token : tokens()) {
+        fetchPages(blockscout::tokenTransfersPath(m_address, token), {}, deepSyncPages, [this, state, token](const QJsonValue &reply) {
+            const auto list = blockscout::parseTokenTransfers(reply, m_address, token);
+            if (list) state->entries << *list; else state->ok = false;
+        }, finish);
+    }
+}
+
+void EthWallet::refreshHistory() {
+    if (!historyAllowed()) {
         return;
+    }
+    if (!m_historyComplete && !m_deepSyncRunning) {
+        startDeepSync();
     }
     struct Pending {
         int remaining = 0;
@@ -622,7 +683,8 @@ QJsonObject EthWallet::cache() const {
     for (const HistoryEntry &e : m_sent) sent.append(toJson(e));
     QJsonObject pending;
     for (auto it = m_pending.cbegin(); it != m_pending.cend(); ++it) pending.insert(it.key(), txToJson(it.value()));
-    return {{"balances", balances}, {"history", history}, {"sent", sent}, {"pending", pending}};
+    return {{"balances", balances}, {"history", history}, {"sent", sent}, {"pending", pending},
+            {"historyComplete", m_historyComplete}};
 }
 
 bool EthWallet::canSpeedUp(const QByteArray &hash) const {

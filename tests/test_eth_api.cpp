@@ -157,6 +157,21 @@ private slots:
         QCOMPARE(formatAmount(list->at(1).amount, token.decimals), QString("2.5"));
     }
 
+    void nextPages() {
+        // Real next_page_params of eth.blockscout.com: the query of the next page.
+        const auto reply = json(R"({"items":[],"next_page_params":{"index":144,"value":"0",
+            "hash":"0xc06f6b742d2c9b41da01cf5029e6a5b4b9a9eb8a200defbb7275daf1354aca2c",
+            "inserted_at":"2026-08-13T12:05:09.839507Z","block_number":25745981,"fee":"5096173567464","items_count":50}})");
+        const QString query = blockscout::nextPageQuery(reply);
+        QCOMPARE(query, QString("block_number=25745981&fee=5096173567464"
+                                "&hash=0xc06f6b742d2c9b41da01cf5029e6a5b4b9a9eb8a200defbb7275daf1354aca2c"
+                                "&index=144&inserted_at=2026-08-13T12:05:09.839507Z&items_count=50&value=0"));
+        QVERIFY(blockscout::nextPageQuery(json(R"({"items":[],"next_page_params":null})")).isEmpty());   // last page
+        QCOMPARE(blockscout::withQuery("/a/transactions", "index=1"), QString("/a/transactions?index=1"));
+        QCOMPARE(blockscout::withQuery("/a/token-transfers?type=ERC-20", "index=1"), QString("/a/token-transfers?type=ERC-20&index=1"));
+        QCOMPARE(blockscout::withQuery("/a/transactions", {}), QString("/a/transactions"));
+    }
+
     void refusesMalformedPages() {
         // Anything that does not look like Blockscout refuses the page, rather
         // than showing a wrong amount.

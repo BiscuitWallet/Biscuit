@@ -71,6 +71,12 @@ namespace blockscout {
     // (hash -> fee) for the matching token transfer.
     std::optional<QList<HistoryEntry>> parseTransactions(const QJsonValue &reply, const QByteArray &address,
                                                          QHash<QByteArray, u128> *fees = nullptr);
+    // The query of the next, older page ("block_number=…&index=…"), from the
+    // reply's next_page_params; empty on the last page.
+    QString nextPageQuery(const QJsonValue &reply);
+    // `path` with that query appended.
+    QString withQuery(const QString &path, const QString &query);
+
     // Transfers of `token` (/token-transfers). Anything from another contract,
     // however it is named, is ignored: fake USDT never shows up.
     std::optional<QList<HistoryEntry>> parseTokenTransfers(const QJsonValue &reply, const QByteArray &address,

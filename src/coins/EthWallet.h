@@ -94,6 +94,13 @@ private:
     void setStatus(Status status);
     void refreshNode();
     void refreshHistory();
+    bool historyAllowed() const;
+    // First sync: older pages too, once (then only the newest page).
+    void startDeepSync();
+    // Pages of `path`, older and older, `pagesLeft` at most; each reply goes
+    // to `page`, then `done(ok)` (false if a page did not come).
+    void fetchPages(const QString &path, const QString &query, int pagesLeft,
+                    std::function<void(const QJsonValue &)> page, std::function<void(bool)> done);
     void mergeHistory(const QList<eth::HistoryEntry> &entries, const QHash<QByteArray, eth::u128> &fees);
 
     eth::Account m_account;
@@ -114,6 +121,8 @@ private:
     // Our sends not in a block yet (key: hash hex), to speed them up; dropped
     // once their nonce is used by a mined transaction (theirs or a replacement).
     QHash<QString, eth::Transaction> m_pending;
+    bool m_historyComplete = false;   // the older pages were read once
+    bool m_deepSyncRunning = false;
     void prunePending(quint64 minedNonce);
 };
 

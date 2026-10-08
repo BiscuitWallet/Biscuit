@@ -5,6 +5,9 @@
 
 #include <algorithm>
 
+#include <QUrl>
+#include <QUrlQuery>
+
 namespace biscuit::coins::eth {
 
 namespace {
@@ -139,6 +142,23 @@ QString transactionsPath(const QByteArray &address) {
 QString tokenTransfersPath(const QByteArray &address, const Token &token) {
     return QString("/api/v2/addresses/%1/token-transfers?type=ERC-20&token=%2")
             .arg(checksumAddress(address), checksumAddress(token.contract));
+}
+
+QString nextPageQuery(const QJsonValue &reply) {
+    const QJsonObject params = reply.toObject().value("next_page_params").toObject();
+    QUrlQuery query;
+    QStringList keys = params.keys();
+    keys.sort();   // the same reply, the same query
+    for (const QString &key : keys) {
+        const QJsonValue v = params.value(key);
+        const QString text = v.isString() ? v.toString() : v.isDouble() ? QString::number(qint64(v.toDouble())) : QString();
+        if (!text.isEmpty()) query.addQueryItem(key, text);
+    }
+    return query.toString(QUrl::FullyEncoded);
+}
+
+QString withQuery(const QString &path, const QString &query) {
+    return query.isEmpty() ? path : path + (path.contains('?') ? "&" : "?") + query;
 }
 
 std::optional<QList<HistoryEntry>> parseTransactions(const QJsonValue &reply, const QByteArray &address,
