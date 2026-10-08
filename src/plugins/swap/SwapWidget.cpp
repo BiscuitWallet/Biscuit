@@ -649,12 +649,8 @@ void SwapWidget::onMax() {
             Utils::showInfo(this, "Not synchronized", "Wait until your Ethereum wallet is synchronized.");
             return;
         }
-        eth::u128 available = eth->balance(ticker);
-        if (ticker == "ETH") {
-            const auto fee = m_coins->ethereumFee("ETH");
-            const eth::u128 maxFee = fee ? eth::parseAmount(fee->second, eth::etherDecimals).value_or(0) : 0;
-            available = available > maxFee ? available - maxFee : 0;
-        }
+        // ETH: as Max in Send, with the narrow fee reserve (almost nothing left).
+        const eth::u128 available = ticker == "ETH" ? eth->sendableEther() : eth->balance(ticker);
         if (available == 0) {
             Utils::showInfo(this, "Nothing to send", QString("Your Ethereum wallet \"%1\" has no %2 to send.")
                                                      .arg(vault->selectedName(*params), ticker));

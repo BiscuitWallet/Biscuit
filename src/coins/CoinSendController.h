@@ -73,6 +73,12 @@ public:
     // the replacement once confirmed.
     void speedUpEthereum(QWidget *parent, EthWallet *eth, const QByteArray &hash);
 
+    // Combines coins of the selected Bitcoin/Litecoin wallet into one, sent to
+    // a new address of that wallet at the slow fee: `selected` (two or more),
+    // or every coin that isn't frozen. Coins worth less than their fee are
+    // left out. Shows the cost and the privacy trade-off before sending.
+    void consolidate(QWidget *parent, const CoinParams &params, const QStringList &selected);
+
     // Replace-by-fee: asks for a higher fee rate, shows the new fee, and
     // replaces the unconfirmed transaction after confirmation.
     void bumpFee(QWidget *parent, const CoinParams &params, CoinWallet *coin, const QString &txid);

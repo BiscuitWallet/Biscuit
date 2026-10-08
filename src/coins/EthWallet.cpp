@@ -550,8 +550,23 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
             // A plain transfer uses exactly 21000; anything else gets 20% of margin
             // (unused gas is not paid).
             plan.tx.gasLimit = *gas == transferGas ? transferGas : quint64(*gas * 6 / 5);
-            plan.maxFee = u128(plan.tx.gasLimit) * plan.tx.maxFeePerGas;
+            // The fee ceiling: 2 x base fee + tip, enough for about six full
+            // blocks. Sending all the ETH, or when the ETH is just enough, it
+            // comes down to as little as 1.25 x base fee + tip (two full
+            // blocks): almost nothing is left behind, and a send that waits
+            // can be sped up.
             const u128 eth = balance("ETH");
+            if (m_fees) {
+                const u128 narrow = narrowFeePerGas();
+                const u128 gasLimit = plan.tx.gasLimit;
+                const u128 spent = token ? 0 : plan.amount;
+                if (!token && all) {
+                    plan.tx.maxFeePerGas = std::min(plan.tx.maxFeePerGas, narrow);
+                } else if (spent + gasLimit * plan.tx.maxFeePerGas > eth && eth > spent && (eth - spent) / gasLimit >= narrow) {
+                    plan.tx.maxFeePerGas = (eth - spent) / gasLimit;
+                }
+            }
+            plan.maxFee = u128(plan.tx.gasLimit) * plan.tx.maxFeePerGas;
             const QString maxFeeText = formatAmount(plan.maxFee, etherDecimals);
             if (token) {
                 if (plan.amount == 0 || plan.amount > balance(plan.asset)) {
@@ -685,6 +700,19 @@ QJsonObject EthWallet::cache() const {
     for (auto it = m_pending.cbegin(); it != m_pending.cend(); ++it) pending.insert(it.key(), txToJson(it.value()));
     return {{"balances", balances}, {"history", history}, {"sent", sent}, {"pending", pending},
             {"historyComplete", m_historyComplete}};
+}
+
+u128 EthWallet::narrowFeePerGas() const {
+    if (!m_fees) {
+        return 0;
+    }
+    return m_fees->baseFee + m_fees->baseFee / 4 + std::max(m_fees->priorityFee, minimumPriorityFee);
+}
+
+u128 EthWallet::sendableEther() const {
+    const u128 reserve = u128(transferGas) * narrowFeePerGas();
+    const u128 eth = balance("ETH");
+    return m_fees && eth > reserve ? eth - reserve : 0;
 }
 
 bool EthWallet::canSpeedUp(const QByteArray &hash) const {

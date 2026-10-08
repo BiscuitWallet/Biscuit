@@ -152,6 +152,15 @@ void CoinWalletBar::rebuild() {
         connect(button, &QWidget::customContextMenuRequested, this,
                 [this, button, id, name = entry.name, mainSeed = entry.mainSeed](const QPoint &pos) {
             QMenu menu(this);
+            // Its address, to pay it from another wallet without going to Receive.
+            menu.addAction("Copy address", [this, id] {
+                for (const auto &e : m_vault->wallets(m_params)) {
+                    if (e.id != id) continue;
+                    const QString address = e.eth ? e.eth->addressText() : e.wallet->receiveAddress();
+                    if (!address.isEmpty()) Utils::copyToClipboard(address);
+                }
+            });
+            menu.addSeparator();
             menu.addAction("Rename…", [this, id, name] { rename(id, name); });
             menu.addAction("Show seed…", [this, id, mainSeed] { showCoinSeed(m_vault, this, mainSeed ? QString() : id); });
             if (m_params.ethereum && m_asset != "ETH") {

@@ -57,6 +57,12 @@ inline constexpr quint64 dustLimit = 546;
 // outputs with the given scriptPubKey sizes (worst-case signature length).
 int estimateVsize(int inputs, const QList<int> &outputScriptSizes);
 
+// What spending one native SegWit coin adds to a transaction's fee at
+// `feeRate` (sat/vB): 68 vB. A coin worth no more than that is dust: it
+// costs more to move than it brings.
+quint64 inputCost(double feeRate);
+inline bool isDust(quint64 value, double feeRate) { return value <= inputCost(feeRate); }
+
 // Chooses coins and computes fee and change.
 //  - sendAll: spends every coin, amount = total - fee;
 //  - otherwise prefers a single coin (fewer links between addresses), else

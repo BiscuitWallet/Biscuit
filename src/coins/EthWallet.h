@@ -43,6 +43,11 @@ public:
     // Newest first, pending ones on top.
     QList<eth::HistoryEntry> history() const;
     std::optional<eth::Fees> fees() const { return m_fees; }
+    // The lowest fee ceiling Biscuit uses (1.25 x base fee + tip: two full
+    // blocks), for sends of all or nearly all the ETH.
+    eth::u128 narrowFeePerGas() const;
+    // ETH that a plain transfer of "everything" sends, that ceiling kept apart.
+    eth::u128 sendableEther() const;
 
     // Empty = the built-in nodes / explorer.
     void setCustomNode(const QString &url);

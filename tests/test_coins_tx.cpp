@@ -209,6 +209,17 @@ private slots:
         QVERIFY(!signTransaction(plan, acc, 0).has_value());
         QVERIFY(!signTransaction(TxPlan{}, acc, 0).has_value());
     }
+
+    void dust() {
+        // A native SegWit input is 68 vB: at 5 sat/vB it costs 340 sats.
+        QCOMPARE(inputCost(5.0), quint64(340));
+        QCOMPARE(inputCost(1.0), quint64(68));
+        QCOMPARE(inputCost(1.5), quint64(102));
+        QVERIFY(isDust(340, 5.0));      // worth exactly its cost: nothing gained
+        QVERIFY(!isDust(341, 5.0));
+        QVERIFY(isDust(546, 10.0));     // the dust limit itself, on a busy day
+        QVERIFY(!isDust(546, 1.0));
+    }
 };
 
 QTEST_APPLESS_MAIN(TestCoinsTx)
