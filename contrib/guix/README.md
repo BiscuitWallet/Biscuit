@@ -1,6 +1,8 @@
-# Bootstrappable Feather Wallet Builds
+# Bootstrappable Biscuit Builds
 
-This directory contains the files necessary to perform [bootstrappable](https://bootstrappable.org) Feather Wallet builds.
+This directory contains the files necessary to perform [bootstrappable](https://bootstrappable.org) Biscuit builds.
+They come from Feather Wallet, which Biscuit is a fork of. For the whole process of reproducing a Biscuit release,
+start with [RELEASE.md](../../RELEASE.md).
 
 Bootstrappability allows us to _audit and reproduce_ our toolchain instead of blindly _trusting_ binary downloads.
 Our build environment can be built from source, [all the way down](https://guix.gnu.org/en/blog/2023/the-full-source-bootstrap-building-from-source-all-the-way-down/).
@@ -13,10 +15,10 @@ Guix allows us to modify any detail about our build environment with ease.
 Unlike [Gitian](https://github.com/devrandom/gitian-builder), we are not limited to the package set of a particular Ubuntu version.
 With Guix, we can configure our toolchains to use the latest compilers while still targeting older versions of glibc.
 We drastically reduce our supply chain attack surface by only including the package we need in our build environment, and nothing else.
-Packages that are not available in Guix can easily be defined in the [manifest](https://github.com/feather-wallet/feather/blob/master/contrib/guix/manifest.scm) or upstreamed.
+Packages that are not available in Guix can easily be defined in the [manifest](manifest.scm) or upstreamed.
 
-Feather releases are independently reproduced and cryptographically attested to by multiple contributors.
-You can submit attestations to the [feather-sigs](https://github.com/feather-wallet/feather-sigs) repo.
+Biscuit doesn't collect attestations in a shared repository yet. If you reproduce a release, or can't, please tell us:
+open an issue or write to us from https://biscuitwallet.com/contact/.
 
 # Requirements
 
@@ -42,9 +44,13 @@ If Guix is not available in your package manager, use the official [install scri
 ### Clone the repo
 
 ```bash
-$ git clone https://github.com/feather-wallet/feather
-$ cd feather
+$ git clone https://github.com/BiscuitWallet/Biscuit.git
+$ cd Biscuit
+$ git submodule update --init --recursive
 ```
+
+A tagged release also needs the atomic swap helper, biscuit-swapd, in `contrib/biscuit-swapd/bin/`, matching
+`contrib/biscuit-swapd/SHA256SUMS`: see [RELEASE.md](../../RELEASE.md).
 
 ### Before building
 
@@ -129,7 +135,7 @@ and examples](#common-guix-build-invocation-patterns-and-examples) section below
 before starting a build. For a full list of customization options, see the
 [recognized environment variables][env-vars-list] section.*
 
-To build Feather Wallet reproducibly with all default options, invoke the
+To build Biscuit reproducibly with all default options, invoke the
 following from the top of a clean repository:
 
 ```sh
@@ -152,22 +158,10 @@ make clean
 
 ## Attesting to build outputs
 
-After you've cloned the `feather-sigs` repository, to attest to the current
-worktree's commit/tag:
-
-```
-make attest
-```
-
-## Verifying build output attestations
-
-After at least one other signer has uploaded their signatures to the `feather-sigs`
-repository:
-
-```
-git submodule update --recursive
-make verify
-```
+`make attest` and `make verify` come from Feather, whose contributors sign their build
+hashes in a shared repository. Biscuit doesn't have one yet: compare your hashes with the
+signed list of the release instead (`hashes-<version>-plain.txt`, see [RELEASE.md](../../RELEASE.md)),
+and tell us what you find.
 
 
 ## Common `guix-build` invocation patterns and examples

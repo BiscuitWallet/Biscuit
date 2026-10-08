@@ -471,34 +471,7 @@ EOF
                                       bash -c "cd /feather && bash contrib/guix/libexec/build.sh"
 
 
-        case "$OPTIONS" in
-            pack)
-                OUTDIR="$(outdir_for_host "$host")"
-                export VERSION=${VERSION}
-                time-machine pack -S /profile=. --manifest="${PWD}/contrib/guix/pack.scm"
-                PACK=$(time-machine pack --manifest="${PWD}/contrib/guix/pack.scm")
-                time-machine environment --ad-hoc zip unzip tar gzip findutils grep patchelf coreutils-minimal bash binutils sed \
-                                         --container \
-                                         --pure \
-                                         --no-cwd \
-                                         --share="$PWD"=/feather \
-                                         --share="$PACK"=/pack \
-                                         --share="$(outdir_for_host "$host")"=/output \
-                                         --share="$LOGDIR_BASE"=/logdir-base \
-                                         --share="$OUTDIR"=/outdir \
-                                         --keep-failed \
-                                         --fallback \
-                                         --writable-root \
-                                         ${SUBSTITUTE_URLS:+--substitute-urls="$SUBSTITUTE_URLS"} \
-                                         ${ADDITIONAL_GUIX_COMMON_FLAGS} ${ADDITIONAL_GUIX_ENVIRONMENT_FLAGS} \
-                                         -- env DISTNAME="$DISTNAME" \
-                                                SOURCE_DATE_EPOCH="${COMMIT_TIMESTAMP:?unable to determine value}" \
-                                                LOGDIR="$(LOGDIR_BASE=/logdir-base && logdir_for_host "$host")" \
-                                                VERSION="$VERSION" \
-                                         bash -c "cd /feather && \
-                                                  bash contrib/flatpak/make_flatpak.sh"
-                ;;
-        esac
+        # Biscuit: no Flatpak (the "pack" option of Feather's releases).
     )
 
 done
