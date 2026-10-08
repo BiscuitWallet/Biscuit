@@ -264,10 +264,15 @@ private slots:
         const auto parsed = trocador::parseCoins(coins, nullptr);
         QVERIFY(parsed.has_value());
         const QList<AssetInfo> offered = walletAssets(*parsed);
-        QCOMPARE(offered.size(), 3);
+        // USDT on Ethereum is offered (Biscuit holds it), never LTC on BSC
+        // or Lightning BTC.
+        QCOMPARE(offered.size(), 4);
         QCOMPARE(offered.at(0).asset, Asset({"xmr", "Mainnet"}));
         QCOMPARE(offered.at(1).asset, Asset({"btc", "Mainnet"}));
         QCOMPARE(offered.at(2).asset, Asset({"ltc", "Mainnet"}));
+        QCOMPARE(offered.at(3).asset, Asset({"usdt", "ERC20"}));
+        QCOMPARE(offered.at(3).asset.displayName(), QString("USDT (ERC20)"));
+        QCOMPARE(Asset({"eth", "ERC20"}).displayName(), QString("ETH"));
     }
 
     void relayErrorsAreNotTrocadorErrors() {

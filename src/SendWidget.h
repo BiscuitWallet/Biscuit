@@ -65,7 +65,7 @@ private:
     biscuit::coins::CoinSendController *m_coinSend = nullptr;
     const biscuit::coins::CoinParams *m_coin = nullptr;   // nullptr = Monero
     biscuit::coins::CoinPicker *m_coinPicker = nullptr;
-    QList<QWidget *> m_walletBars;                        // Bitcoin, Litecoin
+    QList<QWidget *> m_walletBars;                        // Bitcoin, Litecoin, Ethereum
     QWidget *m_xmrBalanceRow = nullptr;
     QLabel *m_xmrBalance = nullptr;
     void updateXmrBalance();
@@ -73,6 +73,7 @@ private:
     QWidget *m_coinSelectionRow = nullptr;
     QLabel *m_coinSelection = nullptr;
     QLabel *m_coinUnit = nullptr;
+    QString m_asset;                                      // Ethereum: "ETH", "USDT" or "USDC" (the tab)
     QLabel *m_coinFeeTitle = nullptr;
     QComboBox *m_coinFee = nullptr;
     QLabel *m_coinFeeRate = nullptr;

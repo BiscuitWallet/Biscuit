@@ -11,7 +11,9 @@ namespace biscuit::swap {
 
 QString Asset::displayName() const {
     const QString upper = ticker.toUpper();
-    if (network.isEmpty() || network.compare(QLatin1String("Mainnet"), Qt::CaseInsensitive) == 0) {
+    // ETH is the Ethereum coin itself: "ETH (ERC20)" would only confuse.
+    if (network.isEmpty() || network.compare(QLatin1String("Mainnet"), Qt::CaseInsensitive) == 0
+        || (ticker == QLatin1String("eth") && network == QLatin1String("ERC20"))) {
         return upper;
     }
     return QString("%1 (%2)").arg(upper, network);
@@ -257,8 +259,9 @@ std::optional<Trade> Trade::fromJson(const QJsonObject &obj) {
 
 QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets) {
     QList<AssetInfo> result;
-    for (const char *ticker : {"xmr", "btc", "ltc"}) {
-        const Asset wanted{ticker, "Mainnet"};
+    const QList<Asset> held{{"xmr", "Mainnet"}, {"btc", "Mainnet"}, {"ltc", "Mainnet"},
+                            {"eth", "ERC20"}, {"usdt", "ERC20"}, {"usdc", "ERC20"}};
+    for (const Asset &wanted : held) {
         for (const AssetInfo &info : partnerAssets) {
             if (info.asset == wanted) {
                 result.append(info);

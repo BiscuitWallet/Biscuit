@@ -91,6 +91,12 @@ void BalanceTickerWidget::updateDisplay() {
             balanceFiatAmount += appData()->prices.convert(coin->params().ticker, fiatCurrency,
                                                            double(coin->balance().total()) / 1e8);
         }
+        if (vault->hasCoin(biscuit::coins::ethereum())) {
+            for (const QString &asset : biscuit::coins::EthWallet::assets()) {
+                const QString amount = biscuit::coins::eth::formatAmount(vault->ethereumBalance(asset), biscuit::coins::EthWallet::decimals(asset));
+                balanceFiatAmount += appData()->prices.convert(asset, fiatCurrency, amount.toDouble());
+            }
+        }
     }
     this->setFiatText(balanceFiatAmount, fiatCurrency);
 }

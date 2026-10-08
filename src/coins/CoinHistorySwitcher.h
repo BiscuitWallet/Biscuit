@@ -4,6 +4,7 @@
 #ifndef BISCUIT_COINHISTORYSWITCHER_H
 #define BISCUIT_COINHISTORYSWITCHER_H
 
+#include <QHash>
 #include <QPointer>
 #include <QWidget>
 
@@ -31,6 +32,7 @@ private:
     QTreeWidget *makeTree(bool withCoinColumn);
     void refresh();
     void fillCoinTree(QTreeWidget *tree, const CoinParams &params);
+    void fillEthereumTrees();
 
     QPointer<Wallet> m_wallet;
     QPointer<CoinVault> m_vault;
@@ -39,6 +41,7 @@ private:
     QTreeWidget *m_all;
     QTreeWidget *m_btc;
     QTreeWidget *m_ltc;
+    QHash<QString, QTreeWidget *> m_ethTrees;   // "ETH", "USDT", "USDC"
 };
 
 }

@@ -78,7 +78,7 @@ CoinCoinsSwitcher::CoinCoinsSwitcher(Wallet *wallet, QWidget *moneroPage, QWidge
     layout->addWidget(m_pages);
 
     connect(m_picker, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
-    showWalletCoins(m_picker, m_vault, 0, false);
+    showWalletCoins(m_picker, m_vault, false);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged,
                         &CoinVault::walletUpdated, &CoinVault::coinSelectionChanged}) {
         connect(m_vault, signal, this, &CoinCoinsSwitcher::refresh);

@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 
 #include "WalletWizard.h"
+#include "coins/CoinPicker.h"
 #include "coins/CoinSetupDialog.h"
 #include "coins/CoinVault.h"
 #include "coins/core/Bip39.h"
@@ -45,26 +46,57 @@ PageOtherCoins::PageOtherCoins(WizardFields *fields, QWidget *parent)
                              "Leave everything unticked to use Monero only.", this);
     intro->setWordWrap(true);
     layout->addWidget(intro);
-    for (const auto *params : biscuit::coins::walletCoins()) {
-        auto *check = new QCheckBox(params->name, this);
+    // Coins, then the tokens on Ethereum: a token needs Ethereum (its fees are
+    // paid in ETH), so ticking one ticks Ethereum too.
+    for (const QString &ticker : biscuit::coins::addableTickers()) {
+        auto *check = new QCheckBox(biscuit::coins::assetLabel(ticker), this);
+        check->setProperty("ticker", ticker);
         layout->addWidget(check);
         m_coins << check;
+    }
+    auto *tokenNote = new QLabel("USDT and USDC run on Ethereum: their network fees are paid in ETH, from the "
+                                 "same address. Keep a little ETH there to send them.", this);
+    tokenNote->setWordWrap(true);
+    tokenNote->setStyleSheet("color: gray;");
+    layout->addWidget(tokenNote);
+    const QString ethTicker = biscuit::coins::ethereum().ticker;
+    for (QCheckBox *check : m_coins) {
+        const QString ticker = check->property("ticker").toString();
+        const auto *params = biscuit::coins::coinOfTicker(ticker);
+        if (!params || params->ticker == ticker) {
+            continue;
+        }
+        connect(check, &QCheckBox::toggled, this, [this, ethTicker](bool on) {
+            for (QCheckBox *c : m_coins) {
+                if (on && c->property("ticker").toString() == ethTicker) c->setChecked(true);
+            }
+        });
+    }
+    for (QCheckBox *check : m_coins) {
+        if (check->property("ticker").toString() != ethTicker) {
+            continue;
+        }
+        connect(check, &QCheckBox::toggled, this, [this, ethTicker](bool on) {
+            for (QCheckBox *c : m_coins) {
+                const QString ticker = c->property("ticker").toString();
+                const auto *params = biscuit::coins::coinOfTicker(ticker);
+                if (!on && params && params->ticker != ticker) c->setChecked(false);   // no token without Ethereum
+            }
+        });
     }
     layout->addStretch();
 }
 
 void PageOtherCoins::initializePage() {
-    const auto &coins = biscuit::coins::walletCoins();
-    for (int i = 0; i < coins.size(); ++i) {
-        m_coins.at(i)->setChecked(m_fields->coinTickers.contains(coins.at(i)->ticker));
+    for (QCheckBox *check : m_coins) {
+        check->setChecked(m_fields->coinTickers.contains(check->property("ticker").toString()));
     }
 }
 
 bool PageOtherCoins::validatePage() {
     m_fields->coinTickers.clear();
-    const auto &coins = biscuit::coins::walletCoins();
-    for (int i = 0; i < coins.size(); ++i) {
-        if (m_coins.at(i)->isChecked()) m_fields->coinTickers << coins.at(i)->ticker;
+    for (QCheckBox *check : m_coins) {
+        if (check->isChecked()) m_fields->coinTickers << check->property("ticker").toString();
     }
     return true;
 }

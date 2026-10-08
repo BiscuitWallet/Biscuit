@@ -52,7 +52,7 @@ CoinContactsSwitcher::CoinContactsSwitcher(Wallet *wallet, QWidget *moneroPage, 
     layout->addWidget(m_pages);
 
     connect(m_picker, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
-    showWalletCoins(m_picker, m_vault, 0, false);
+    showWalletCoins(m_picker, m_vault, false);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::contactsChanged}) {
         connect(m_vault, signal, this, &CoinContactsSwitcher::refresh);
     }

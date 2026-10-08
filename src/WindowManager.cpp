@@ -380,6 +380,11 @@ void WindowManager::onWalletOpened(Wallet *wallet) {
             Utils::showError(window, QString("%1 not added").arg(biscuit::coins::coinNames(pendingCoins)), error,
                              {"Add it again with + in Receive, and restore it with the 12 words you wrote down."});
         }
+        // The tokens chosen too (USDT, USDC), on the Ethereum just set up.
+        for (const QString &ticker : m_pendingCoinTickers) {
+            const auto *params = biscuit::coins::coinOfTicker(ticker);
+            if (params && params->ticker != ticker) vault->setTokenEnabled(ticker, true, nullptr);
+        }
     } else if (vault->exists() && !vault->isUnlocked()) {
         QString error;
         if (!vault->unlock(m_pendingPassword, &error)) {

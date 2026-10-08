@@ -21,8 +21,8 @@ class CoinWallet;
 
 class CoinVault;
 
-// A destination typed or pasted in the Send tab, if it is Bitcoin or Litecoin:
-// a plain address or a BIP21 URI ("bitcoin:<address>?amount=0.01").
+// A destination typed or pasted in the Send tab, if it is Bitcoin, Litecoin
+// or Ethereum: a plain address or a BIP21 URI ("bitcoin:<address>?amount=0.01").
 struct CoinDestination {
     const CoinParams *params = nullptr;
     QString address;
@@ -51,6 +51,12 @@ public:
     // `amountText` is a decimal amount or "all".
     void send(QWidget *parent, const CoinParams &params, const QString &address, const QString &amountText,
               int targetBlocks);
+
+    // Ethereum: ETH, USDT or USDC from the selected Ethereum wallet. Asks the
+    // node for the nonce and gas, shows everything, sends once confirmed.
+    void sendEthereum(QWidget *parent, const QString &asset, const QString &address, const QString &amountText);
+    // Network fee of a typical send of `asset` now, in ETH: about / at most.
+    std::optional<QPair<QString, QString>> ethereumFee(const QString &asset) const;
 
     // Replace-by-fee: asks for a higher fee rate, shows the new fee, and
     // replaces the unconfirmed transaction after confirmation.

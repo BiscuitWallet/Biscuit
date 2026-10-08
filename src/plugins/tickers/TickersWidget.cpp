@@ -4,6 +4,7 @@
 #include "TickersWidget.h"
 #include "ui_TickersWidget.h"
 
+#include "coins/CoinPicker.h"
 #include "coins/CoinVault.h"
 #include "utils/config.h"
 #include "WindowManager.h"
@@ -74,7 +75,8 @@ void TickersWidget::setup() {
     this->updateVisibility();
 }
 
-// Biscuit: no BTC ticker (nor XMR/BTC) when Bitcoin is not in this wallet.
+// Biscuit: no BTC ticker (nor any ratio with BTC) when Bitcoin is not in this
+// wallet; the same for Litecoin, Ethereum, USDT and USDC.
 // While the wallet's coins are locked, which ones it holds is not known: all shown.
 void TickersWidget::updateVisibility() {
     if (!m_wallet) {
@@ -82,9 +84,9 @@ void TickersWidget::updateVisibility() {
     }
     const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
     QStringList missing;
-    for (const auto *params : biscuit::coins::walletCoins()) {
-        if (vault->coinState(*params) == biscuit::coins::CoinVault::CoinState::NotAdded) {
-            missing << params->ticker;
+    for (const QString &ticker : biscuit::coins::addableTickers()) {
+        if (vault->assetState(ticker) == biscuit::coins::CoinVault::CoinState::NotAdded) {
+            missing << ticker;
         }
     }
     for (int i = 0; i < m_tickerWidgets.size() && i < m_tickerSymbols.size(); ++i) {

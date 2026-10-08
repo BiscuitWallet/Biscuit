@@ -37,7 +37,15 @@ namespace {
     QString explorerUrl(const QString &ticker, const QString &txid) {
         if (ticker == QLatin1String("BTC")) return QString("https://mempool.space/tx/%1").arg(txid);
         if (ticker == QLatin1String("LTC")) return QString("https://litecoinspace.org/tx/%1").arg(txid);
+        if (coinOfTicker(ticker) == &ethereum()) return QString("https://eth.blockscout.com/tx/%1").arg(txid);
         return QString("https://xmrchain.net/tx/%1").arg(txid);
+    }
+
+    QIcon assetIcon(const QString &ticker) {
+        if (ticker == QLatin1String("ETH")) return PixelIcons::icon("ethereum");
+        if (ticker == QLatin1String("USDT")) return PixelIcons::icon("tether");
+        if (ticker == QLatin1String("USDC")) return PixelIcons::icon("usdc");
+        return {};
     }
 
     QString statusText(bool pending, bool failed, quint64 confirmations, quint64 required) {
@@ -66,8 +74,8 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
     layout->setContentsMargins(0, 0, 0, 0);
 
     m_filter = new CoinPicker(this);
-    m_filter->addCoin(QIcon(), "All coins");
-    addWalletCoins(m_filter);
+    m_filter->addCoin(QIcon(), "All coins", "*");
+    addWalletCoins(m_filter, true);
     layout->addWidget(m_filter);
 
     m_all = makeTree(true);
@@ -84,10 +92,23 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
         pageLayout->addWidget(tree);
         m_pages->addWidget(page);
     }
+    // Ethereum, then its tokens: one page each, same order as the tabs.
+    for (const QString &asset : EthWallet::assets()) {
+        auto *tree = makeTree(false);
+        m_ethTrees.insert(asset, tree);
+        auto *page = new QWidget(m_pages);
+        auto *pageLayout = new QVBoxLayout(page);
+        pageLayout->setContentsMargins(0, 0, 0, 0);
+        auto *bar = new CoinWalletBar(m_vault, ethereum(), page);
+        bar->setAsset(asset);
+        pageLayout->addWidget(bar);
+        pageLayout->addWidget(tree);
+        m_pages->addWidget(page);
+    }
     layout->addWidget(m_pages);
 
     connect(m_filter, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
-    showWalletCoins(m_filter, m_vault, 1, false);
+    showWalletCoins(m_filter, m_vault, false);
     connect(m_wallet->history(), &TransactionHistory::refreshFinished, this, &CoinHistorySwitcher::refresh);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged, &CoinVault::walletUpdated}) {
         connect(m_vault, signal, this, &CoinHistorySwitcher::refresh);
@@ -171,8 +192,51 @@ void CoinHistorySwitcher::fillCoinTree(QTreeWidget *tree, const CoinParams &para
     }
 }
 
+void CoinHistorySwitcher::fillEthereumTrees() {
+    if (!m_vault->isUnlocked()) {
+        return;
+    }
+    // Like the other coins: "All coins" lists every wallet, a page the selected one.
+    const QString selectedId = m_vault->selectedId(ethereum());
+    for (const auto &entry : m_vault->wallets(ethereum())) {
+        for (const eth::HistoryEntry &e : entry.eth->history()) {
+            QTreeWidget *page = m_ethTrees.value(e.asset);
+            const bool shown = m_vault->assetState(e.asset) == CoinVault::CoinState::Ready
+                               || e.amount > 0;   // a token not added, but received: still money
+            if (!page || !shown) {
+                continue;
+            }
+            const int decimals = EthWallet::decimals(e.asset);
+            const QString amount = QString("%1%2 %3").arg(e.incoming ? "+" : "-", eth::formatAmount(e.amount, decimals), e.asset);
+            const QString status = e.failed ? QString("Failed") : e.block == 0 ? QString("Pending") : QString("Confirmed");
+            const QString hash = "0x" + QString::fromLatin1(e.hash.toHex());
+            for (QTreeWidget *t : {page, m_all}) {
+                if (t == page && entry.id != selectedId) {
+                    continue;
+                }
+                auto *item = new DateItem(t);
+                item->setText(ColDate, e.time.isValid() ? e.time.toLocalTime().toString("yyyy-MM-dd HH:mm") : QString());
+                item->setData(ColDate, SortRole, e.time.isValid() ? e.time.toSecsSinceEpoch() : std::numeric_limits<qint64>::max());
+                item->setData(ColDate, TickerRole, e.asset);
+                item->setIcon(ColCoin, assetIcon(e.asset));
+                item->setText(ColCoin, e.asset);
+                item->setText(ColWallet, entry.name);
+                item->setText(ColAmount, amount);
+                item->setTextAlignment(ColAmount, Qt::AlignRight | Qt::AlignVCenter);
+                if (!e.incoming && e.fee > 0) {
+                    item->setToolTip(ColAmount, QString("Network fee: %1 ETH").arg(eth::formatAmount(e.fee, eth::etherDecimals)));
+                }
+                item->setText(ColStatus, status);
+                item->setText(ColTx, hash);
+            }
+        }
+    }
+}
+
 void CoinHistorySwitcher::refresh() {
-    for (QTreeWidget *t : {m_all, m_btc, m_ltc}) {
+    QList<QTreeWidget *> trees{m_all, m_btc, m_ltc};
+    trees << m_ethTrees.values();
+    for (QTreeWidget *t : trees) {
         t->setSortingEnabled(false);
         t->clear();
     }
@@ -195,10 +259,12 @@ void CoinHistorySwitcher::refresh() {
     }
     fillCoinTree(m_btc, bitcoin());
     fillCoinTree(m_ltc, litecoin());
+    fillEthereumTrees();
     m_all->setColumnHidden(ColWallet, !(m_vault->isUnlocked()
-                                        && (m_vault->wallets(bitcoin()).size() > 1 || m_vault->wallets(litecoin()).size() > 1)));
+                                        && (m_vault->wallets(bitcoin()).size() > 1 || m_vault->wallets(litecoin()).size() > 1
+                                            || m_vault->wallets(ethereum()).size() > 1)));
 
-    for (QTreeWidget *t : {m_all, m_btc, m_ltc}) {
+    for (QTreeWidget *t : trees) {
         t->setSortingEnabled(true);
         t->sortByColumn(ColDate, Qt::DescendingOrder);
         for (int c = ColDate; c < ColTx; ++c) t->resizeColumnToContents(c);

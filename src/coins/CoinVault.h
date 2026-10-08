@@ -14,6 +14,7 @@
 #include <QTimer>
 
 #include "CoinWallet.h"
+#include "EthWallet.h"
 #include "WalletFile.h"
 
 class Wallet;
@@ -24,6 +25,9 @@ namespace biscuit::coins {
 const QList<const CoinParams *> &walletCoins();
 // "Bitcoin", "Bitcoin and Litecoin"…
 QString coinNames(const QList<const CoinParams *> &coins);
+// The coin of a ticker: "BTC" -> Bitcoin; "USDT" or "USDC" -> Ethereum, whose
+// wallet holds them. nullptr for Monero or anything else.
+const CoinParams *coinOfTicker(const QString &ticker);
 
 // The BTC/LTC side of a Monero wallet: a companion file "<wallet>.btcltc"
 // next to the Monero wallet, encrypted with the same password.
@@ -77,20 +81,36 @@ public:
     // Adds a coin on the main seed (vault unlocked): same words, so the
     // user's paper backup already covers it.
     bool addCoin(const CoinParams &params, QString *error);
+    // The same for any ticker of the coin buttons: BTC, LTC, ETH, and the
+    // tokens USDT and USDC, which are added one by one on top of Ethereum.
+    CoinState assetState(const QString &ticker) const;
+    // Shows a token in this wallet (vault unlocked, Ethereum added), or hides
+    // it. Its coins stay on the Ethereum address either way.
+    bool setTokenEnabled(const QString &symbol, bool enabled, QString *error);
+    QStringList enabledTokens() const { return m_tokens; }
+
     // Coins on the main seed, e.g. "Bitcoin and Litecoin" (every coin while locked).
     QString mainSeedCoinsText() const;
     QList<const CoinParams *> mainSeedCoins() const;
 
     struct Entry {
-        QString id;          // "main-BTC", "main-LTC" or a random id
+        QString id;          // "main-BTC", "main-LTC", "main-ETH" or a random id
         QString name;        // shown on the wallet buttons
         bool mainSeed = false;
-        CoinWallet *wallet = nullptr;
+        const CoinParams *params = nullptr;
+        CoinWallet *wallet = nullptr;   // Bitcoin or Litecoin
+        EthWallet *eth = nullptr;       // Ethereum
+        // First address: tells two wallets of the same seed apart.
+        QString firstAddress() const;
     };
 
     // Selected wallet of each coin (nullptr while locked).
     CoinWallet *bitcoin() const { return wallet(coins::bitcoin()); }
     CoinWallet *litecoin() const { return wallet(coins::litecoin()); }
+    // The selected Ethereum wallet (nullptr while locked or not added).
+    EthWallet *ethereum() const;
+    // ETH or a token, all the Ethereum wallets together.
+    eth::u128 ethereumBalance(const QString &asset) const;
     CoinWallet *wallet(const CoinParams &params) const;
     QString selectedId(const CoinParams &params) const;
     QString selectedName(const CoinParams &params) const;
@@ -98,16 +118,19 @@ public:
 
     // Every wallet of a coin, main seed first, then in the order added.
     QList<Entry> wallets(const CoinParams &params) const;
+    // Every Bitcoin and Litecoin wallet (Ethereum: wallets(ethereum())).
     QList<CoinWallet *> allWallets() const;
     // Suggested name for the next wallet of a coin, e.g. "Litecoin 2".
     QString nextName(const CoinParams &params) const;
 
-    // Adds a Bitcoin or Litecoin wallet from its own BIP39 seed (vault
-    // unlocked), and selects it. The seed is stored in the encrypted file.
+    // Adds a Bitcoin, Litecoin or Ethereum wallet from its own BIP39 seed
+    // (vault unlocked), and selects it. The seed is stored in the encrypted file.
     bool addWallet(const CoinParams &params, const QString &name, const QString &mnemonic,
                    const QString &passphrase, QString *error);
-    // Removes an added wallet (never the main seed). Its seed is erased from
-    // the file: the user needs their own backup to add it again.
+    // Removes a wallet. An added one: its seed is erased from the file (the
+    // user needs their own backup to add it again). The main one of a coin:
+    // that coin leaves the main seed, which stays for the other coins. The
+    // last wallet of all: the file is deleted, as if nothing was ever added.
     bool removeWallet(const QString &id, QString *error);
     // Renames a wallet, the main one included (its name is kept per coin).
     // Names are unique per coin.
@@ -154,6 +177,7 @@ private:
     std::optional<walletfile::Session> m_session;
     QList<Entry> m_entries;
     QStringList m_mainCoins;              // tickers on the main seed
+    QStringList m_tokens;                 // tokens shown: "USDT", "USDC"
     QHash<QString, QString> m_selected;   // ticker -> entry id
     struct CoinSelection { QString walletId; QStringList coinKeys; };
     QHash<QString, CoinSelection> m_coinSelection;   // ticker -> chosen coins

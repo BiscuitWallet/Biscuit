@@ -124,8 +124,39 @@ void BalanceDialog::updateBalance() {
                        double(balance.total()) / 1e8);
             }
         }
+        // Ethereum: ETH, then each token there is some of (no unconfirmed
+        // amount: a payment counts once it is in a block).
+        const auto ethEntries = m_vault->wallets(biscuit::coins::ethereum());
+        for (const auto &entry : ethEntries) {
+            for (const QString &asset : biscuit::coins::EthWallet::assets()) {
+                const auto amount = entry.eth->balance(asset);
+                // ETH, and each token added to this wallet (at zero too); a
+                // token not added still shows once some arrived.
+                const bool added = m_vault->assetState(asset) == biscuit::coins::CoinVault::CoinState::Ready;
+                if (!added && amount == 0) {
+                    continue;
+                }
+                const int decimals = biscuit::coins::EthWallet::decimals(asset);
+                const QString text = QString("%1 %2").arg(biscuit::coins::eth::formatAmount(amount, decimals), asset);
+                QString name = asset == "ETH" ? QString("Ethereum") : QString("%1 (Ethereum)").arg(asset);
+                if (ethEntries.size() > 1) name += QString(" · %1").arg(entry.name);
+                ++row;
+                cell(row, ColCoin, name);
+                cell(row, ColSpendable, text);
+                cell(row, ColUnconfirmed, "–");
+                cell(row, ColTotal, text);
+                if (showFiat && prices.canConvert(asset, fiat)) {
+                    const double value = prices.convert(asset, fiat, biscuit::coins::eth::formatAmount(amount, decimals).toDouble());
+                    totalValue += value;
+                    cell(row, ColValue, Utils::amountToCurrencyString(value, fiat));
+                } else if (showFiat) {
+                    cell(row, ColValue, "price unknown");
+                    if (amount > 0) valueKnown = false;
+                }
+            }
+        }
     } else if (m_vault && m_vault->exists()) {
-        notes << "Unlock Bitcoin and Litecoin to see their balances.";
+        notes << QString("Unlock %1 to see their balances.").arg(m_vault->mainSeedCoinsText());
     }
 
     if (showFiat) {

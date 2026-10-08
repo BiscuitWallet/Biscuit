@@ -25,6 +25,9 @@ CoinPicker::CoinPicker(QWidget *parent)
 {
     m_tabs->setDrawBase(false);
     m_tabs->setExpanding(false);
+    // Every coin in sight: never scroll arrows, the bar is as wide as its tabs.
+    m_tabs->setUsesScrollButtons(false);
+    m_tabs->setElideMode(Qt::ElideNone);
     m_tabs->setIconSize(QSize(16, 16));
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -41,7 +44,13 @@ CoinPicker::CoinPicker(QWidget *parent)
 }
 
 void CoinPicker::setCoinVisible(int index, bool visible) {
+    if (m_tabs->isTabVisible(index) == visible) {
+        return;
+    }
     m_tabs->setTabVisible(index, visible);
+    // A coin added later: the bar grows to show it (it kept its old width).
+    m_tabs->updateGeometry();
+    m_tabs->adjustSize();
     update();   // the base line follows the tabs
 }
 
@@ -61,8 +70,23 @@ void CoinPicker::setAddVisible(bool visible) {
     m_add->setVisible(visible);
 }
 
-void CoinPicker::addCoin(const QIcon &icon, const QString &name) {
-    m_tabs->addTab(icon, name);
+void CoinPicker::addCoin(const QIcon &icon, const QString &name, const QString &ticker) {
+    m_tabs->setTabData(m_tabs->addTab(icon, name), ticker);
+}
+
+QString CoinPicker::ticker(int index) const {
+    return m_tabs->tabData(index).toString();
+}
+
+int CoinPicker::indexOf(const QString &ticker) const {
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        if (this->ticker(i) == ticker) return i;
+    }
+    return -1;
+}
+
+int CoinPicker::count() const {
+    return m_tabs->count();
 }
 
 int CoinPicker::currentIndex() const {
@@ -89,40 +113,63 @@ void CoinPicker::paintEvent(QPaintEvent *event) {
     QStylePainter(this).drawPrimitive(QStyle::PE_FrameTabBarBase, base);
 }
 
-void addWalletCoins(CoinPicker *picker) {
-    picker->addCoin(PixelIcons::icon("monero"), "Monero");
-    picker->addCoin(icons()->icon("bitcoin.png"), "Bitcoin");
-    picker->addCoin(icons()->icon("litecoin.png"), "Litecoin");
+void addWalletCoins(CoinPicker *picker, bool ethereum) {
+    picker->addCoin(PixelIcons::icon("monero"), "Monero", "XMR");
+    picker->addCoin(icons()->icon("bitcoin.png"), "Bitcoin", bitcoin().ticker);
+    picker->addCoin(icons()->icon("litecoin.png"), "Litecoin", litecoin().ticker);
+    if (ethereum) {
+        // The tokens on Ethereum get their own tab: they are what people send.
+        picker->addCoin(PixelIcons::icon("ethereum"), "Ethereum", coins::ethereum().ticker);
+        picker->addCoin(PixelIcons::icon("tether"), "USDT", "USDT");
+        picker->addCoin(PixelIcons::icon("usdc"), "USDC", "USDC");
+    }
 }
 
-void showWalletCoins(CoinPicker *picker, CoinVault *vault, int first, bool addButton) {
+QStringList addableTickers() {
+    QStringList list;
+    for (const CoinParams *params : walletCoins()) list << params->ticker;
+    for (const eth::Token &token : eth::tokens()) list << token.symbol;
+    return list;
+}
+
+void showWalletCoins(CoinPicker *picker, CoinVault *vault, bool addButton) {
     const QPointer<CoinVault> guard(vault);
-    auto update = [picker, guard, first, addButton] {
+    auto update = [picker, guard, addButton] {
         if (!guard) {
             return;
         }
-        const auto &coins = walletCoins();
+        const int monero = picker->indexOf("XMR");
+        const int all = picker->indexOf("*");
         bool missing = false;
-        for (int i = 0; i < coins.size(); ++i) {
-            const int index = first + 1 + i;
+        int coins = 0;
+        for (int i = 0; i < picker->count(); ++i) {
+            const QString ticker = picker->ticker(i);
+            if (!coinOfTicker(ticker)) {
+                coins += i == monero;
+                continue;
+            }
             // While locked, which coins the wallet holds is not known: shown.
-            const bool held = guard->coinState(*coins.at(i)) != CoinVault::CoinState::NotAdded;
+            const bool held = guard->assetState(ticker) != CoinVault::CoinState::NotAdded;
             missing = missing || !held;
-            if (!held && picker->currentIndex() == index) {
-                picker->setCurrentIndex(first);   // Monero
+            coins += held;
+            if (!held && picker->currentIndex() == i) {
+                picker->setCurrentIndex(monero);
             }
-            picker->setCoinVisible(index, held);
+            picker->setCoinVisible(i, held);
         }
-        if (first > 0) {
+        if (all >= 0) {
             // "All coins" only means something with two coins or more.
-            const bool all = picker->visibleCount() - (picker->isCoinVisible(0) ? 1 : 0) > 1;
-            if (!all && picker->currentIndex() == 0) {
-                picker->setCurrentIndex(first);
+            if (coins < 2 && picker->currentIndex() == all) {
+                picker->setCurrentIndex(monero);
             }
-            picker->setCoinVisible(0, all);
+            picker->setCoinVisible(all, coins >= 2);
+        }
+        // Any coin or token not added, even one without a page in this tab.
+        for (const QString &ticker : addableTickers()) {
+            missing = missing || guard->assetState(ticker) == CoinVault::CoinState::NotAdded;
         }
         picker->setAddVisible(addButton && missing);
-        picker->setVisible(addButton || picker->visibleCount() > 1);
+        picker->setVisible(addButton || coins > 1);
     };
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged}) {
         QObject::connect(vault, signal, picker, update);
@@ -132,20 +179,21 @@ void showWalletCoins(CoinPicker *picker, CoinVault *vault, int first, bool addBu
     if (!addButton) {
         return;
     }
-    QObject::connect(picker, &CoinPicker::addRequested, picker, [picker, guard, first] {
+    QObject::connect(picker, &CoinPicker::addRequested, picker, [picker, guard] {
         if (!guard) {
             return;
         }
+        // Every coin not added yet, even one this tab has no page for: it is
+        // added to the wallet all the same, and shown here if it has a page.
         QMenu menu(picker);
-        const auto &coins = walletCoins();
-        for (int i = 0; i < coins.size(); ++i) {
-            const CoinParams *params = coins.at(i);
-            if (guard->coinState(*params) != CoinVault::CoinState::NotAdded) {
+        for (const QString &ticker : addableTickers()) {
+            if (guard->assetState(ticker) != CoinVault::CoinState::NotAdded) {
                 continue;
             }
-            menu.addAction(QString("Add %1…").arg(params->name), picker, [picker, guard, params, index = first + 1 + i] {
-                if (guard && addCoinToWallet(guard, *params, picker->window())) {
-                    picker->setCurrentIndex(index);
+            menu.addAction(QString("Add %1…").arg(assetLabel(ticker)), picker, [picker, guard, ticker] {
+                if (guard && addAssetToWallet(guard, ticker, picker->window())) {
+                    const int index = picker->indexOf(ticker);
+                    if (index >= 0) picker->setCurrentIndex(index);
                 }
             });
         }

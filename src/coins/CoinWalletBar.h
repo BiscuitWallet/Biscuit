@@ -33,13 +33,16 @@ public:
     void setTitle(const QString &title);
     // "Add wallet" button (shown by default; compact screens leave it to Receive).
     void setAddVisible(bool visible);
+    // Ethereum: the asset whose balance is shown ("ETH", "USDT", "USDC").
+    void setAsset(const QString &asset);
 
 private:
     void rebuild();
     void updateBalances();
     QString format(quint64 amount) const;
     void rename(const QString &id, const QString &name);
-    void confirmRemove(const QString &id, const QString &name);
+    void confirmRemove(const QString &id, const QString &name, bool mainSeed);
+    void confirmRemoveToken();
 
     QPointer<CoinVault> m_vault;
     const CoinParams &m_params;
@@ -49,6 +52,7 @@ private:
     bool m_active = true;
     QString m_title = "Wallet:";
     bool m_addVisible = true;
+    QString m_asset = "ETH";
 };
 
 }

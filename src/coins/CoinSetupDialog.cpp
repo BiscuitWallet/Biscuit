@@ -181,9 +181,11 @@ QWidget *CoinSetupDialog::pageRestore() {
     intro->setWordWrap(true);
     l->addWidget(intro);
     if (m_addTo) {
-        auto *note = new QLabel(QString("Biscuit uses native SegWit addresses (%1, BIP84), like most recent wallets. "
-                                        "Coins on older address types of this seed are not shown.")
-                                .arg(*m_addTo == coins::bitcoin() ? "bc1q…" : "ltc1q…"), page);
+        auto *note = new QLabel(m_addTo->ethereum
+            ? QString("The first address of this seed (m/44'/60'/0'/0/0), as in MetaMask and most Ethereum wallets.")
+            : QString("Biscuit uses native SegWit addresses (%1, BIP84), like most recent wallets. "
+                      "Coins on older address types of this seed are not shown.")
+                  .arg(*m_addTo == coins::bitcoin() ? "bc1q…" : "ltc1q…"), page);
         note->setWordWrap(true);
         note->setStyleSheet("color: gray;");
         l->addWidget(note);
@@ -338,17 +340,87 @@ bool addCoinToWallet(CoinVault *vault, const CoinParams &params, QWidget *parent
     box.setWindowTitle(QString("Add %1").arg(params.name));
     box.setIcon(QMessageBox::Question);
     box.setText(QString("Add %1 to this wallet?").arg(params.name));
-    box.setInformativeText(QString("It uses the same 12 words as your %1, so your paper backup already covers it.")
-                           .arg(vault->mainSeedCoinsText()));
+    const QString mainCoins = vault->mainSeedCoinsText();
+    box.setInformativeText(mainCoins.isEmpty()
+        ? QString("It uses the 12 words written down when the first coin was added to this wallet.")
+        : QString("It uses the same 12 words as your %1, so your paper backup already covers it.").arg(mainCoins));
     auto *add = box.addButton(QString("Add %1").arg(params.name), QMessageBox::AcceptRole);
+    // To check the paper backup before relying on it (asks the password).
+    auto *show = box.addButton("Show the 12 words…", QMessageBox::ActionRole);
     box.addButton(QMessageBox::Cancel);
-    box.exec();
+    box.setDefaultButton(add);
+    for (box.exec(); box.clickedButton() == show; box.exec()) {
+        showCoinSeed(vault, parent);
+    }
     if (box.clickedButton() != add) {
         return false;
     }
     QString error;
     if (!vault->addCoin(params, &error)) {
         QMessageBox::warning(parent, QString("Add %1").arg(params.name), error);
+        return false;
+    }
+    return true;
+}
+
+QString assetLabel(const QString &ticker) {
+    const CoinParams *params = coinOfTicker(ticker);
+    if (!params) {
+        return ticker;
+    }
+    return params->ticker == ticker ? params->name : QString("%1 (on Ethereum)").arg(ticker);
+}
+
+bool addAssetToWallet(CoinVault *vault, const QString &ticker, QWidget *parent) {
+    const CoinParams *params = coinOfTicker(ticker);
+    if (!vault || !params) {
+        return false;
+    }
+    if (params->ticker == ticker) {
+        return addCoinToWallet(vault, *params, parent);
+    }
+    // A token: open the wallet first if it is locked, to know what is in it.
+    if (vault->exists() && !vault->isUnlocked()) {
+        bool ok = false;
+        const QString password = QInputDialog::getText(parent, ticker, "Password of this wallet:", QLineEdit::Password, {}, &ok);
+        QString error;
+        if (!ok) {
+            return false;
+        }
+        if (!vault->unlock(password, &error)) {
+            QMessageBox::warning(parent, ticker, error);
+            return false;
+        }
+    }
+    if (vault->assetState(ticker) == CoinVault::CoinState::Ready) {
+        return true;
+    }
+    // What a token on Ethereum means, before it is added: always said.
+    const bool withEthereum = !vault->hasCoin(ethereum());
+    QMessageBox box(parent);
+    box.setWindowTitle(QString("Add %1").arg(ticker));
+    box.setIcon(QMessageBox::Information);
+    box.setText(withEthereum ? QString("Add %1? It runs on Ethereum, which is added with it.").arg(ticker)
+                             : QString("Add %1 to this wallet?").arg(ticker));
+    box.setInformativeText(QString(
+        "%1 here is %1 on the Ethereum network (ERC-20), on the same address as your Ethereum wallet.\n\n"
+        "Network fees are paid in ETH, not in %1: to send %1, this address needs a little ETH. A send usually "
+        "costs a few cents (more when the network is busy), so a few dollars of ETH cover many sends.\n\n"
+        "Only receive %1 sent on the Ethereum network: %1 sent on Tron, BNB Chain or any other network is lost.")
+        .arg(ticker));
+    auto *add = box.addButton(QString("Add %1").arg(ticker), QMessageBox::AcceptRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(add);
+    box.exec();
+    if (box.clickedButton() != add) {
+        return false;
+    }
+    if (withEthereum && !addCoinToWallet(vault, ethereum(), parent)) {
+        return false;
+    }
+    QString error;
+    if (!vault->setTokenEnabled(ticker, true, &error)) {
+        QMessageBox::warning(parent, QString("Add %1").arg(ticker), error);
         return false;
     }
     return true;
@@ -383,8 +455,10 @@ void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
     }
 
     QDialog dialog(parent);
-    const QString mainCoins = vault->mainSeedCoinsText();
-    dialog.setWindowTitle(coin ? QString("Seed of \"%1\"").arg(name) : QString("%1 seed").arg(mainCoins));
+    // No coin left on the main seed (only added wallets): still shown, as the shared seed.
+    const QString mainCoins = vault->mainSeedCoinsText().isEmpty() ? QString("coins") : vault->mainSeedCoinsText();
+    dialog.setWindowTitle(coin ? QString("Seed of \"%1\"").arg(name)
+                               : vault->mainSeedCoinsText().isEmpty() ? QString("Shared seed") : QString("%1 seed").arg(mainCoins));
     auto *l = new QVBoxLayout(&dialog);
     auto *intro = new QLabel(coin ? QString("Never share these words. Anyone who has them can take the %1 in \"%2\".").arg(coin->name, name)
                                   : QString("Never share these words. Anyone who has them can take your %1.").arg(mainCoins), &dialog);
@@ -394,9 +468,11 @@ void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
     if (!seed->second.isEmpty()) {
         l->addWidget(new QLabel("This seed also uses a passphrase.", &dialog));
     }
-    QStringList pathText{"BIP39 · native SegWit (BIP84)"};
+    QStringList pathText{"BIP39"};
     for (const CoinParams *params : coin ? QList<const CoinParams *>{coin} : vault->mainSeedCoins()) {
-        pathText << QString("%1 m/84'/%2'/0'").arg(params->name).arg(params->bip44CoinType);
+        // Bitcoin and Litecoin: native SegWit (BIP84). Ethereum: as MetaMask.
+        pathText << (params->ethereum ? QString("Ethereum m/44'/60'/0'/0/0")
+                                      : QString("%1 m/84'/%2'/0' (BIP84)").arg(params->name).arg(params->bip44CoinType));
     }
     auto *paths = new QLabel(pathText.join(" · "), &dialog);
     paths->setStyleSheet("color: gray;");
@@ -411,7 +487,9 @@ void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
 
 
 void addCoinSeedActions(QMenu *menu, CoinVault *vault, QWidget *parent) {
-    menu->addAction(QString("%1 seed…").arg(vault->mainSeedCoinsText()), parent, [vault, parent] { showCoinSeed(vault, parent); });
+    const QString mainCoins = vault->mainSeedCoinsText();
+    menu->addAction(mainCoins.isEmpty() ? QString("Shared seed (no coin uses it now)…") : QString("%1 seed…").arg(mainCoins),
+                    parent, [vault, parent] { showCoinSeed(vault, parent); });
     for (const CoinParams *params : walletCoins()) {
         for (const auto &entry : vault->wallets(*params)) {
             if (entry.mainSeed) {

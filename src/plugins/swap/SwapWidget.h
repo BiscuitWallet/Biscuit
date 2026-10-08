@@ -75,6 +75,9 @@ private:
     // XMR always; BTC or LTC only once added to this wallet (locked counts:
     // the password is asked when needed). Otherwise only other addresses.
     bool walletHolds(const biscuit::swap::Asset &asset) const;
+    // Biscuit's ticker for a swap coin: "BTC", "ETH", "USDT"… (empty: Monero
+    // or a coin Biscuit does not hold).
+    static QString walletTicker(const biscuit::swap::Asset &asset);
     void validateTypedAddresses(QList<QPair<biscuit::swap::Asset, QString>> addresses, std::function<void()> done);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);

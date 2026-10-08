@@ -329,6 +329,40 @@ icon("litecoin", {"o": (52, 93, 157), "w": WHITE}, overlay(disc(7.0), [
     "..ww....",
     "..wwwww.",
 ], 4, 4))
+icon("ethereum", {"o": (98, 126, 234), "w": WHITE}, overlay(disc(7.0), [
+    "...ww...",
+    "..wwww..",
+    ".wwwwww.",
+    "wwwwwwww",
+    "wwwwwwww",
+    ".wwwwww.",
+    "w.wwww.w",
+    ".w.ww.w.",
+    "..w..w..",
+    "...ww...",
+], 4, 3))
+icon("tether", {"o": (38, 161, 123), "w": WHITE}, overlay(disc(7.0), [
+    "wwwwwwww",
+    "wwwwwwww",
+    "...ww...",
+    ".wwwwww.",
+    "...ww...",
+    "...ww...",
+    "...ww...",
+    "...ww...",
+    "...ww...",
+], 4, 4))
+icon("usdc", {"o": (39, 117, 202), "w": WHITE}, overlay(disc(7.0), [
+    "...ww...",
+    ".wwwwww.",
+    "ww.ww...",
+    "ww.ww...",
+    ".wwwwww.",
+    "...ww.ww",
+    "...ww.ww",
+    ".wwwwww.",
+    "...ww...",
+], 4, 3))
 
 # --- Settings pages -------------------------------------------------------------
 

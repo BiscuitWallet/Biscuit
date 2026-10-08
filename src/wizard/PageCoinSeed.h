@@ -27,7 +27,7 @@ public:
 
 private:
     WizardFields *m_fields;
-    QList<QCheckBox *> m_coins;   // one per walletCoins(), same order
+    QList<QCheckBox *> m_coins;   // one per addableTickers(), ticker in property "ticker"
 };
 
 // The seed of the other coins chosen (12 BIP39 words). The BTC/LTC file is

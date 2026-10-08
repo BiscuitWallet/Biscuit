@@ -33,17 +33,20 @@ CoinReceiveSwitcher::CoinReceiveSwitcher(Wallet *wallet, QWidget *moneroPage, QW
     layout->setContentsMargins(0, 0, 0, 0);
 
     m_coin = new CoinPicker(this);
-    addWalletCoins(m_coin);
+    addWalletCoins(m_coin, true);
     layout->addWidget(m_coin);
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(moneroPage);
     m_pages->addWidget(coinPage(bitcoin()));
     m_pages->addWidget(coinPage(litecoin()));
+    for (const QString &asset : EthWallet::assets()) {
+        m_pages->addWidget(ethereumPage(asset));   // same order as the tabs
+    }
     layout->addWidget(m_pages);
 
     connect(m_coin, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
-    showWalletCoins(m_coin, m_vault, 0, true);
+    showWalletCoins(m_coin, m_vault, true);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged, &CoinVault::walletUpdated}) {
         connect(m_vault, signal, this, &CoinReceiveSwitcher::refresh);
     }
@@ -138,11 +141,102 @@ QWidget *CoinReceiveSwitcher::coinPage(const CoinParams &params) {
     return w.state;
 }
 
+QWidget *CoinReceiveSwitcher::ethereumPage(const QString &asset) {
+    EthWidgets w;
+    w.asset = asset;
+    w.state = new QStackedWidget(this);
+
+    // Locked: the password (it is not added, or it would not be shown).
+    auto *setup = new QWidget(w.state);
+    auto *setupLayout = new QVBoxLayout(setup);
+    w.setupText = new QLabel(setup);
+    w.setupText->setWordWrap(true);
+    setupLayout->addWidget(w.setupText);
+    auto *buttons = new QHBoxLayout;
+    w.setupButton = new QPushButton(setup);
+    buttons->addWidget(w.setupButton);
+    buttons->addStretch();
+    setupLayout->addLayout(buttons);
+    setupLayout->addStretch();
+    connect(w.setupButton, &QPushButton::clicked, this, [this] { addCoinToWallet(m_vault, ethereum(), this); });
+    w.state->addWidget(setup);
+
+    // One address for ETH and its tokens, like the other receive pages.
+    auto *page = new QWidget(w.state);
+    auto *pageLayout = new QHBoxLayout(page);
+    pageLayout->setSpacing(12);
+    auto *form = new QFormLayout;
+    form->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
+    auto *addressRow = new QHBoxLayout;
+    w.address = new QLineEdit(page);
+    w.address->setReadOnly(true);
+    auto *copy = new QPushButton("Copy", page);
+    addressRow->addWidget(w.address);
+    addressRow->addWidget(copy);
+    form->addRow("Address", addressRow);
+    auto *hint = new QLabel(asset == "ETH"
+        ? QString("Receive ETH on the Ethereum network. The same address also receives USDT and USDC (ERC-20).")
+        : QString("Receive %1 on the Ethereum network only (ERC-20). %1 sent on another network, such as Tron "
+                  "or BNB Chain, is lost. Sending it later costs a small network fee in ETH, paid from this "
+                  "same address.").arg(asset), page);
+    hint->setWordWrap(true);
+    hint->setStyleSheet("color: gray;");
+    hint->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    form->addRow(QString(), hint);
+    pageLayout->addLayout(form, 1);
+    w.qr = new QLabel(page);
+    w.qr->setFixedSize(180, 180);
+    w.qr->setAlignment(Qt::AlignCenter);
+    pageLayout->addWidget(w.qr, 0, Qt::AlignTop);
+    QLineEdit *address = w.address;
+    connect(copy, &QPushButton::clicked, this, [address] { Utils::copyToClipboard(address->text()); });
+
+    // Wallet buttons ([Main] [Ethereum 2] [Add wallet]) and this asset's balance.
+    auto *withBar = new QWidget(w.state);
+    auto *withBarLayout = new QVBoxLayout(withBar);
+    withBarLayout->setContentsMargins(0, 0, 0, 0);
+    withBarLayout->setSpacing(16);
+    auto *bar = new CoinWalletBar(m_vault, ethereum(), withBar);
+    bar->setAsset(asset);
+    withBarLayout->addWidget(bar);
+    withBarLayout->addWidget(page);
+    withBarLayout->addStretch(1);   // everything at the top
+    w.state->addWidget(withBar);
+
+    m_eth.append(w);
+    return w.state;
+}
+
+void CoinReceiveSwitcher::refreshEthereum() {
+    EthWallet *eth = m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
+    const bool locked = m_vault->coinState(ethereum()) == CoinVault::CoinState::Locked;
+    for (EthWidgets &w : m_eth) {
+        w.state->setCurrentIndex(eth ? 1 : 0);
+        if (!eth) {
+            w.setupText->setText(locked ? QString("Enter the password of this wallet to open Ethereum.")
+                                        : QString("Ethereum is not in this wallet."));
+            w.setupButton->setText(locked ? QString("Unlock…") : QString("Add Ethereum…"));
+            continue;
+        }
+        const QString address = eth->addressText();
+        if (w.address->text() == address) {
+            continue;
+        }
+        w.address->setText(address);
+        w.address->setCursorPosition(0);
+        const QrCode qr(address, QrCode::Version::AUTO, QrCode::ErrorCorrectionLevel::MEDIUM);
+        if (qr.isValid()) {
+            w.qr->setPixmap(qr.toPixmap(1).scaled(w.qr->size(), Qt::KeepAspectRatio));
+        }
+    }
+}
+
 CoinWallet *CoinReceiveSwitcher::coin(const CoinParams &params) const {
     return m_vault->isUnlocked() ? m_vault->wallet(params) : nullptr;
 }
 
 void CoinReceiveSwitcher::refresh() {
+    refreshEthereum();
     for (CoinWidgets &w : m_coinWidgets) {
         CoinWallet *coin = this->coin(*w.params);
         w.state->setCurrentIndex(coin ? 1 : 0);

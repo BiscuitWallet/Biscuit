@@ -5,8 +5,10 @@
 
 #include <cmath>
 
+#include <QApplication>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPointer>
 #include <QPushButton>
 #include <QUrl>
 #include <QUrlQuery>
@@ -27,6 +29,10 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
         return std::nullopt;
     }
 
+    // Ethereum: 0x… (with a correct checksum if mixed case).
+    if (eth::parseAddress(trimmed)) {
+        return CoinDestination{&ethereum(), trimmed, {}};
+    }
     for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
         // BIP21 URI: bitcoin:<address>?amount=<decimal>
         const QString scheme = params->name.toLower() + ':';
@@ -161,6 +167,79 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
         m_vault->setCoinSelection(*sentParams, {});   // those coins are spent
         Utils::showInfo(guard, "Transaction sent", QString("Transaction ID: %1").arg(txid));
         emit sent(txid);
+    });
+}
+
+std::optional<QPair<QString, QString>> CoinSendController::ethereumFee(const QString &asset) const {
+    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
+    const auto fees = eth ? eth->fees() : std::nullopt;
+    if (!fees) {
+        return std::nullopt;
+    }
+    // A plain transfer uses 21000 gas; a USDT or USDC transfer about 65000.
+    const eth::u128 gas = asset == "ETH" ? eth::transferGas : 65000;
+    return qMakePair(eth::formatAmount(gas * (fees->baseFee + fees->priorityFee), eth::etherDecimals),
+                     eth::formatAmount(gas * fees->maxFeePerGas, eth::etherDecimals));
+}
+
+void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, const QString &address,
+                                      const QString &amountText) {
+    if (!ensureReady(parent, ethereum())) {
+        return;
+    }
+    EthWallet *eth = m_vault->ethereum();
+    if (eth->status() != EthWallet::Status::Synchronized) {
+        Utils::showError(parent, "Not synchronized", "Wait until Ethereum is synchronized, then try again.");
+        return;
+    }
+    QString text = amountText.trimmed();
+    text.replace(',', '.');
+
+    // The nonce and the gas come from the node: a moment.
+    QPointer<QWidget> guard(parent);
+    QPointer<EthWallet> wallet(eth);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    eth->planSend(asset, address, text, [this, guard, wallet](std::optional<EthWallet::Plan> plan, const QString &error) {
+        QApplication::restoreOverrideCursor();
+        if (!guard || !wallet) {
+            return;
+        }
+        if (!plan) {
+            Utils::showError(guard, "Unable to send", error);
+            return;
+        }
+        const int decimals = EthWallet::decimals(plan->asset);
+        const QString amount = QString("%1 %2").arg(eth::formatAmount(plan->amount, decimals), plan->asset);
+        const QString maxFee = QString("%1 ETH").arg(eth::formatAmount(plan->maxFee, eth::etherDecimals));
+
+        // Explicit confirmation: nothing is signed or sent before this.
+        QMessageBox box(guard);
+        box.setWindowTitle(QString("Send %1").arg(plan->asset));
+        box.setIcon(QMessageBox::Question);
+        box.setText(QString("Send %1?").arg(amount));
+        const auto entries = m_vault->wallets(ethereum());
+        QString details = entries.size() > 1
+                          ? QString("From: Ethereum wallet \"%1\"\n").arg(m_vault->selectedName(ethereum())) : QString();
+        details += QString("To: %1\n").arg(eth::checksumAddress(plan->recipient));
+        details += plan->asset == "ETH" ? QString("Network: Ethereum\n") : QString("Network: Ethereum (ERC-20)\n");
+        details += QString("Network fee: at most %1, usually less").arg(maxFee);
+        if (plan->asset == "ETH") {
+            details += QString("\nTotal: at most %1 ETH").arg(eth::formatAmount(plan->amount + plan->maxFee, eth::etherDecimals));
+        }
+        box.setInformativeText(details);
+        box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        box.setDefaultButton(QMessageBox::Cancel);
+        if (box.exec() != QMessageBox::Yes || !wallet) {
+            return;
+        }
+        wallet->broadcast(*plan, [this, guard](const QString &hash, const QString &error) {
+            if (!error.isEmpty()) {
+                Utils::showError(guard, "Transaction not sent", error);
+                return;
+            }
+            Utils::showInfo(guard, "Transaction sent", QString("Transaction hash: %1").arg(hash));
+            emit sent(hash);
+        });
     });
 }
 
