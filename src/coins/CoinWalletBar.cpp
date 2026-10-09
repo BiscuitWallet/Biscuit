@@ -264,6 +264,12 @@ void CoinWalletBar::confirmRemove(const QString &id, const QString &name, bool m
     if (walletCount == 1) {
         text = "Only Monero is left after this: the file holding these words is erased from this computer. "
                "Keep your paper backup of the 12 words to add the coins again.";
+        // The address book of these coins lives in that file too.
+        int contacts = 0;
+        for (const CoinParams *params : walletCoins()) contacts += int(m_vault->contacts(*params).size());
+        if (contacts > 0) {
+            text += QString(" Your %1 Bitcoin, Litecoin and Ethereum contact(s) are erased with it.").arg(contacts);
+        }
     } else if (mainSeed && !sharing.isEmpty()) {
         text = QString("%1 leaves this wallet. Its 12 words stay, because %2 %3 them: %1 can be added again "
                        "at any time, with the same words.")
