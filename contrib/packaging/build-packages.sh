@@ -42,6 +42,7 @@ unzip -q "$ZIP" -d "$WORK/zip"
 install -m 0755 "$WORK/zip/$DISTNAME" "$STAGE/biscuit"
 install -m 0755 "$WORK/zip/biscuit-swapd" "$STAGE/biscuit-swapd"
 install -m 0644 "$ROOT/src/assets/biscuit.desktop" "$STAGE/biscuit.desktop"
+install -m 0644 "$ROOT/src/assets/com.biscuitwallet.Biscuit.appdata.xml" "$STAGE/com.biscuitwallet.Biscuit.appdata.xml"
 for size in 32 48 64 96 128 256 512; do
     install -m 0644 "$ROOT/src/assets/images/appicons/${size}x${size}.png" "$STAGE/icons/"
 done
@@ -64,10 +65,12 @@ for packager in deb rpm archlinux; do
         "$NFPM_IMAGE" package --config /cfg/nfpm.yaml --packager "$packager" --target /out/ < /dev/null
 done
 
-# Plain archive: the two binaries, the desktop entry, an icon and the licenses.
+# Plain archive: the two binaries, the desktop entry, the AppStream metadata, an icon
+# and the licenses.
 TARNAME="biscuit-${VERSION}${PRERELEASE:+~$PRERELEASE}-linux-x86_64"
 mkdir -p "$WORK/$TARNAME"
-cp -p "$STAGE/biscuit" "$STAGE/biscuit-swapd" "$STAGE/biscuit.desktop" "$STAGE/LICENSE" "$STAGE/LICENSE.biscuit-swapd" "$WORK/$TARNAME/"
+cp -p "$STAGE/biscuit" "$STAGE/biscuit-swapd" "$STAGE/biscuit.desktop" "$STAGE/com.biscuitwallet.Biscuit.appdata.xml" \
+      "$STAGE/LICENSE" "$STAGE/LICENSE.biscuit-swapd" "$WORK/$TARNAME/"
 cp -p "$STAGE/icons/256x256.png" "$WORK/$TARNAME/biscuit.png"
 tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner \
     -C "$WORK" -cf - "$TARNAME" | gzip -9n > "$PKGDIR/$TARNAME.tar.gz"

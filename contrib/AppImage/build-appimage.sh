@@ -10,9 +10,12 @@ APPDIR="$PWD/biscuit.AppDir"
 mkdir -p "$APPDIR"
 mkdir -p "$APPDIR/usr/share/applications/"
 mkdir -p "$APPDIR/usr/bin"
+mkdir -p "$APPDIR/usr/share/metainfo"
 
 cp "src/assets/biscuit.desktop" "$APPDIR/usr/share/applications/biscuit.desktop"
 cp "src/assets/biscuit.desktop" "$APPDIR/biscuit.desktop"
+# What app stores (AppImageHub, software centers) show about Biscuit.
+cp "src/assets/com.biscuitwallet.Biscuit.appdata.xml" "$APPDIR/usr/share/metainfo/com.biscuitwallet.Biscuit.appdata.xml"
 cp "src/assets/images/appicons/64x64.png" "$APPDIR/biscuit.png"
 cp "build/bin/biscuit" "$APPDIR/usr/bin/biscuit"
 chmod +x "$APPDIR/usr/bin/biscuit"

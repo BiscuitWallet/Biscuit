@@ -31,6 +31,8 @@ contents:
     type: symlink
   - src: ${STAGE}/biscuit.desktop
     dst: /usr/share/applications/biscuit.desktop
+  - src: ${STAGE}/com.biscuitwallet.Biscuit.appdata.xml
+    dst: /usr/share/metainfo/com.biscuitwallet.Biscuit.appdata.xml
   - src: ${STAGE}/icons/32x32.png
     dst: /usr/share/icons/hicolor/32x32/apps/biscuit.png
   - src: ${STAGE}/icons/48x48.png

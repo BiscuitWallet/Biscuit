@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- What app stores and software centers show about Biscuit (AppStream). -->
+<component type="desktop-application">
+  <id>com.biscuitwallet.Biscuit</id>
+  <name>Biscuit</name>
+  <summary>Light desktop wallet for Monero, Bitcoin and Litecoin</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>BSD-3-Clause AND GPL-3.0-only</project_license>
+
+  <developer id="com.biscuitwallet">
+    <name>The Biscuit developers</name>
+  </developer>
+
+  <description>
+    <p>
+      Biscuit is a light desktop wallet for Monero, Bitcoin and Litecoin, in one
+      window, with one password. It is based on Feather Wallet and keeps its
+      simple, fast interface.
+    </p>
+    <ul>
+      <li>Your keys never leave your computer, and every send waits for your confirmation.</li>
+      <li>Swap between your coins through exchanges, ranked only by what you receive. Biscuit adds no fee.</li>
+      <li>Atomic swaps from Bitcoin to Monero, with no exchange in the middle.</li>
+      <li>Tor if you want it: everything goes through Tor once it is on.</li>
+      <li>Your own nodes and servers if you want them.</li>
+      <li>No telemetry, no analytics, no account.</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">biscuit.desktop</launchable>
+  <provides>
+    <binary>biscuit</binary>
+  </provides>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The Home tab: prices, balance and news</caption>
+      <image type="source" width="1002" height="665">https://biscuitwallet.com/img/gallery/main-home.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Swap offers from several exchanges, with what you receive and what it costs</caption>
+      <image type="source" width="1002" height="665">https://biscuitwallet.com/img/gallery/swap-offers.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Sending Monero, Bitcoin or Litecoin</caption>
+      <image type="source" width="1002" height="665">https://biscuitwallet.com/img/gallery/main-send.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Receiving Monero on a new subaddress</caption>
+      <image type="source" width="1002" height="665">https://biscuitwallet.com/img/gallery/main-receive-xmr.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Looking for atomic swap offers over Tor</caption>
+      <image type="source" width="1002" height="665">https://biscuitwallet.com/img/gallery/atomic-search.png</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://biscuitwallet.com/</url>
+  <url type="help">https://biscuitwallet.com/docs/</url>
+  <url type="contact">https://biscuitwallet.com/contact/</url>
+  <url type="donation">https://biscuitwallet.com/donate/</url>
+  <url type="bugtracker">https://github.com/BiscuitWallet/Biscuit/issues</url>
+  <url type="vcs-browser">https://github.com/BiscuitWallet/Biscuit</url>
+
+  <categories>
+    <category>Finance</category>
+    <category>Network</category>
+  </categories>
+  <keywords>
+    <keyword>wallet</keyword>
+    <keyword>monero</keyword>
+    <keyword>bitcoin</keyword>
+    <keyword>litecoin</keyword>
+    <keyword>xmr</keyword>
+    <keyword>btc</keyword>
+    <keyword>ltc</keyword>
+    <keyword>crypto</keyword>
+    <keyword>swap</keyword>
+    <keyword>tor</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <releases>
+    <release version="1.0.12" date="2026-10-07">
+      <url type="details">https://biscuitwallet.com/journal/</url>
+    </release>
+  </releases>
+</component>
