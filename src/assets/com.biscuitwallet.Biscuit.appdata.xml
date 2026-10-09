@@ -3,7 +3,7 @@
 <component type="desktop-application">
   <id>com.biscuitwallet.Biscuit</id>
   <name>Biscuit</name>
-  <summary>Light desktop wallet for Monero, Bitcoin and Litecoin</summary>
+  <summary>Light multi-coin desktop wallet</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>BSD-3-Clause AND GPL-3.0-only</project_license>
 
@@ -13,10 +13,12 @@
 
   <description>
     <p>
-      Biscuit is a light desktop wallet for Monero, Bitcoin and Litecoin, in one
-      window, with one password. It is based on Feather Wallet and keeps its
-      simple, fast interface.
+      Biscuit is a light desktop wallet for several coins, in one window, with
+      one password. It is based on Feather Wallet and keeps its simple, fast
+      interface.
     </p>
+    <!-- The coins: update this line (and the keywords) when a release adds one. -->
+    <p>Coins: Monero, Bitcoin and Litecoin.</p>
     <ul>
       <li>Your keys never leave your computer, and every send waits for your confirmation.</li>
       <li>Swap between your coins through exchanges, ranked only by what you receive. Biscuit adds no fee.</li>
@@ -42,7 +44,7 @@
       <image type="source" width="1002" height="665">https://biscuitwallet.com/img/gallery/swap-offers.png</image>
     </screenshot>
     <screenshot>
-      <caption>Sending Monero, Bitcoin or Litecoin</caption>
+      <caption>The Send tab</caption>
       <image type="source" width="1002" height="665">https://biscuitwallet.com/img/gallery/main-send.png</image>
     </screenshot>
     <screenshot>

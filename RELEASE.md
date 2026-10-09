@@ -89,5 +89,9 @@ Releases come out every two weeks, unless a security fix can't wait.
 9. **Site:** the announcement in the Journal, the download page (version,
    file names, sizes) and anything the release changes in the docs.
 
+Before the version commit (step 3), add the release to
+`src/assets/com.biscuitwallet.Biscuit.appdata.xml` (what app stores show), and
+update its coin list and keywords if the release adds a coin.
+
 The release key is `D714 332E 6101 C1DA AC60  E644 202F 1FA3 98DE CEFA`
 ("Biscuit Wallet releases"); the app only installs updates signed with it.
