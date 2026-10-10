@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 project(feather
-  VERSION "1.0.12"
+  VERSION "2.0.0"
   DESCRIPTION "Biscuit - a light multi-coin desktop wallet based on Feather"
   LANGUAGES CXX C ASM
 )
