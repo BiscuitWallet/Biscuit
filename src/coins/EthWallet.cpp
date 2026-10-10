@@ -239,19 +239,23 @@ void EthWallet::call(const QString &method, const QJsonArray &params, RpcDone do
         done(std::nullopt, "Ethereum is offline");
         return;
     }
-    const QString url = list.at(m_node % list.size());
+    const int node = m_node % list.size();
+    const QString url = list.at(node);
     const int id = int(QRandomGenerator::global()->bounded(1, 1 << 30));
     QNetworkReply *reply = Networking(this).postJson(this, url, rpc::request(id, method, params));
     if (!reply) {
         done(std::nullopt, "Ethereum is offline");
         return;
     }
-    connect(reply, &QNetworkReply::finished, this, [this, reply, id, method, params, done, attempt, list] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, id, method, params, done, attempt, list, node] {
         reply->deleteLater();
         const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
         if (reply->error() != QNetworkReply::NoError && !doc.isObject()) {
-            // This node is down or blocks us: the next one, once round.
-            m_node = (m_node + 1) % list.size();
+            // This node is down or blocks us: the next one, once round. Calls made
+            // together fail together: only the first moves on, the others follow it.
+            if (m_node % list.size() == node) {
+                m_node = (node + 1) % list.size();
+            }
             if (attempt + 1 < list.size()) {
                 call(method, params, done, attempt + 1);
             } else {
@@ -290,12 +294,16 @@ void EthWallet::refreshNode() {
     auto state = std::make_shared<Pending>();
     const quint64 generation = m_generation;
     const QString me = addressText();
-    auto finish = [this, state, generation] {
+    const int node = m_node;
+    auto finish = [this, state, generation, node] {
         if (--state->remaining > 0 || generation != m_generation) {
             return;
         }
         if (!state->ok || !state->fees) {
-            m_node = (m_node + 1) % std::max<int>(1, nodes().size());   // next refresh: another node
+            // Next refresh: another node, unless a failed call already moved on.
+            if (m_node == node) {
+                m_node = (m_node + 1) % std::max<int>(1, nodes().size());
+            }
             if (m_status != Status::Synchronized) setStatus(Status::Connecting);
             return;
         }
