@@ -12,6 +12,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QShortcut>
+#include <QStandardItemModel>
 
 #include "Amount.h"
 #include "AtomicSwapWidget.h"
@@ -19,6 +20,7 @@
 #include "QuoteRanking.h"
 #include "SwapTradeDialog.h"
 #include "coins/CoinSendController.h"
+#include "coins/CoinSetupDialog.h"
 #include "coins/CoinVault.h"
 #include "coins/CoinWallet.h"
 #include "coins/CoinWalletBar.h"
@@ -32,6 +34,7 @@
 #include "libwalletqt/Subaddress.h"
 #include "libwalletqt/Wallet.h"
 #include "libwalletqt/WalletManager.h"
+#include "utils/ColorScheme.h"
 #include "utils/Icons.h"
 #include "WindowManager.h"
 #include "utils/Utils.h"
@@ -140,6 +143,26 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     ui->layout_send->insertWidget(1, m_btnMax);
     connect(m_btnMax, &QPushButton::clicked, this, &SwapWidget::onMax);
 
+    // Scan the address to receive at, or to be refunded to, as in Send: a
+    // payment link (bitcoin:, monero:, ethereum:…) gives its address.
+    auto addScan = [this](QHBoxLayout *layout, QLineEdit *line) {
+        auto *button = new QPushButton(this);
+        button->setToolTip("Scan a QR code with your webcam");
+        button->setAutoDefault(false);
+        layout->addWidget(button);
+        connect(button, &QPushButton::clicked, this, [this, line] {
+            const QString data = Utils::scanQrCode(this);
+            if (!data.isEmpty()) {
+                line->setText(Utils::addressFromPaymentText(data));
+                line->setCursorPosition(0);
+            }
+        });
+        return button;
+    };
+    m_scanReceive = addScan(ui->layout_receive, ui->line_receive);
+    m_scanRefund = addScan(ui->layout_refund, ui->line_refund);
+    updateScanIcons();
+
     // "From wallet" under "You send", "To wallet" under "Receive at": the
     // Bitcoin/Litecoin wallet used, with its balance (as in Receive and Send).
     auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
@@ -147,7 +170,7 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         auto *row = new QWidget(this);
         auto *layout = new QHBoxLayout(row);
         layout->setContentsMargins(0, 0, 0, 0);
-        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum()}) {
             auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, row);
             bar->setTitle({});
             bar->setAddVisible(false);   // added from Receive
@@ -166,6 +189,11 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     ui->formLayout->insertRow(formRow + 1, "To wallet", m_toWalletRow);
     for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked}) {
         connect(vault, signal, this, &SwapWidget::updateWalletRows);
+    }
+    // A coin added or not: which "My … wallet" choices are offered.
+    for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
+                        &biscuit::coins::CoinVault::walletsChanged}) {
+        connect(vault, signal, this, &SwapWidget::updateWalletChoices);
     }
     updateWalletRows();
     connect(ui->line_amount, &QLineEdit::textEdited, this, &SwapWidget::clearOffers);
@@ -297,8 +325,9 @@ void SwapWidget::placeAmountField() {
         ui->layout_get->setSpacing(12);
     }
     ui->tree_offers->headerItem()->setText(OfferGet, fixedRate() ? "You send" : "You get");
-    // Max fills the amount sent: meaningless when the amount typed is the one received.
-    m_btnMax->setVisible(!fixedRate());
+    // Max fills the amount sent: meaningless when the amount typed is the one
+    // received, or when the coins are sent from a wallet outside Biscuit.
+    m_btnMax->setVisible(!fixedRate() && walletHolds(assetOf(ui->combo_from)));
 }
 
 void SwapWidget::loadAssets() {
@@ -341,15 +370,23 @@ void SwapWidget::onFromChanged() {
         return;
     }
     m_updating = true;
-    const Asset from = assetOf(ui->combo_from);
-    const Asset to = assetOf(ui->combo_to);
-    if (from != xmr() && to != xmr()) {
-        selectAsset(ui->combo_to, xmr());
-    } else if (from == xmr() && to == xmr()) {
-        ui->combo_to->setCurrentIndex(ui->combo_to->currentIndex() == 0 ? 1 : 0);
+    // Any two different coins (BTC → ETH, USDT → LTC…). The same coin on
+    // both sides: the other side moves away from it.
+    if (assetOf(ui->combo_from) == assetOf(ui->combo_to)) {
+        moveAway(ui->combo_to);
     }
     m_updating = false;
     updateForm();
+}
+
+void SwapWidget::moveAway(QComboBox *combo) {
+    // XMR if possible, otherwise the first other coin.
+    const Asset same = assetOf(combo);
+    if (same != xmr()) {
+        selectAsset(combo, xmr());
+        return;
+    }
+    combo->setCurrentIndex(combo->currentIndex() == 0 ? 1 : 0);
 }
 
 void SwapWidget::onToChanged() {
@@ -357,12 +394,8 @@ void SwapWidget::onToChanged() {
         return;
     }
     m_updating = true;
-    const Asset from = assetOf(ui->combo_from);
-    const Asset to = assetOf(ui->combo_to);
-    if (from != xmr() && to != xmr()) {
-        selectAsset(ui->combo_from, xmr());
-    } else if (from == xmr() && to == xmr()) {
-        ui->combo_from->setCurrentIndex(ui->combo_from->currentIndex() == 0 ? 1 : 0);
+    if (assetOf(ui->combo_from) == assetOf(ui->combo_to)) {
+        moveAway(ui->combo_from);
     }
     m_updating = false;
     updateForm();
@@ -393,25 +426,7 @@ void SwapWidget::updateForm() {
     const Asset to = assetOf(ui->combo_to);
     const bool sendXmr = sendsXmr();
 
-    // Every coin offered (XMR, BTC, LTC) has its wallet in Biscuit: coins are
-    // received, and refunded, to this wallet by default, or to any address.
-    // XMR: a new subaddress of this wallet for each swap (never the main address).
-    auto walletChoice = [this](const Asset &asset) {
-        return asset == xmr() ? QString("New XMR subaddress (Biscuit)")
-                              : QString("My %1 wallet (Biscuit)").arg(asset.ticker.toUpper());
-    };
-    if (to.isValid()) {
-        ui->combo_receiveMode->setItemText(ModeNewWalletAddress, walletChoice(to));
-    }
-    if (from.isValid()) {
-        ui->combo_refundMode->setItemText(ModeNewWalletAddress, walletChoice(from));
-    }
-    const bool receiveInWallet = ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
-    const bool refundInWallet = ui->combo_refundMode->currentIndex() == ModeNewWalletAddress;
-    ui->line_receive->setVisible(!receiveInWallet);
-    updateWalletRows();
-    ui->line_refund->setVisible(!refundInWallet);
-
+    updateWalletChoices();
     if (to.isValid()) {
         ui->line_receive->setPlaceholderText(QString("%1 address").arg(to.displayName()));
     }
@@ -420,6 +435,40 @@ void SwapWidget::updateForm() {
                                                     : QString("%1 address, used only if the swap fails (optional)").arg(from.displayName()));
     }
     clearOffers();
+}
+
+void SwapWidget::updateWalletChoices() {
+    const Asset from = assetOf(ui->combo_from);
+    const Asset to = assetOf(ui->combo_to);
+    // Coins are received, and refunded, to this wallet by default, or to any
+    // address. XMR: a new subaddress of this wallet for each swap (never the
+    // main address). A coin not added to this wallet: another address only.
+    auto setWalletChoice = [this](QComboBox *combo, const Asset &asset) {
+        const bool held = walletHolds(asset);
+        combo->setItemText(ModeNewWalletAddress,
+                           asset == xmr() ? QString("New XMR subaddress (Biscuit)")
+                           : held         ? QString("My %1 wallet (Biscuit)").arg(asset.ticker.toUpper())
+                                          : QString("My %1 wallet (not added to Biscuit)").arg(asset.ticker.toUpper()));
+        if (auto *model = qobject_cast<QStandardItemModel *>(combo->model())) {
+            model->item(ModeNewWalletAddress)->setEnabled(held);
+        }
+        if (!held && combo->currentIndex() == ModeNewWalletAddress) {
+            const QSignalBlocker blocker(combo);
+            combo->setCurrentIndex(ModeNewWalletAddress + 1);
+        }
+    };
+    if (to.isValid()) {
+        setWalletChoice(ui->combo_receiveMode, to);
+    }
+    if (from.isValid()) {
+        setWalletChoice(ui->combo_refundMode, from);
+    }
+    m_btnMax->setVisible(!fixedRate() && walletHolds(from));
+    ui->line_receive->setVisible(ui->combo_receiveMode->currentIndex() != ModeNewWalletAddress);
+    ui->line_refund->setVisible(ui->combo_refundMode->currentIndex() != ModeNewWalletAddress);
+    m_scanReceive->setVisible(ui->line_receive->isVisibleTo(this));
+    m_scanRefund->setVisible(ui->line_refund->isVisibleTo(this));
+    updateWalletRows();
 }
 
 void SwapWidget::clearOffers() {
@@ -451,6 +500,14 @@ void SwapWidget::onGetOffers() {
     }
     if ((fixedRate() ? receivesXmr() : sendsXmr()) && !amount::toAtomic(amountText, moneroDecimals)) {
         Utils::showError(this, "Invalid amount", "Monero amounts have at most 12 decimals.");
+        return;
+    }
+    // ETH has 18 decimals, USDT and USDC 6: more could not be sent.
+    const QString typedTicker = walletTicker(fixedRate() ? to : from);
+    if (biscuit::coins::coinOfTicker(typedTicker) == &biscuit::coins::ethereum()
+        && !biscuit::coins::eth::parseAmount(amountText, biscuit::coins::EthWallet::decimals(typedTicker))) {
+        Utils::showError(this, "Invalid amount", QString("%1 amounts have at most %2 decimals.")
+                                                 .arg(typedTicker).arg(biscuit::coins::EthWallet::decimals(typedTicker)));
         return;
     }
 
@@ -576,13 +633,31 @@ void SwapWidget::onMax() {
     }
 
     using namespace biscuit::coins;
-    const CoinParams *params = from == Asset{"btc", "Mainnet"} ? &bitcoin()
-                             : from == Asset{"ltc", "Mainnet"} ? &litecoin() : nullptr;
+    const QString ticker = walletTicker(from);
+    const CoinParams *params = coinOfTicker(ticker);
     CoinVault *vault = CoinVault::forWallet(m_wallet);
     if (!params || !vault) {
         return;
     }
-    if (!m_coins->ensureReady(this) && !vault->isUnlocked()) {
+    if (!m_coins->ensureReady(this, *params) && !vault->hasCoin(*params)) {
+        return;
+    }
+    if (params->ethereum) {
+        // ETH: the balance less the most a transfer can cost; a token: all of it.
+        const EthWallet *eth = vault->ethereum();
+        if (!eth || eth->status() != EthWallet::Status::Synchronized) {
+            Utils::showInfo(this, "Not synchronized", "Wait until your Ethereum wallet is synchronized.");
+            return;
+        }
+        // ETH: as Max in Send, with the narrow fee reserve (almost nothing left).
+        const eth::u128 available = ticker == "ETH" ? eth->sendableEther() : eth->balance(ticker);
+        if (available == 0) {
+            Utils::showInfo(this, "Nothing to send", QString("Your Ethereum wallet \"%1\" has no %2 to send.")
+                                                     .arg(vault->selectedName(*params), ticker));
+            return;
+        }
+        ui->line_amount->setText(eth::formatAmount(available, EthWallet::decimals(ticker)));
+        clearOffers();
         return;
     }
     CoinWallet *coin = vault->wallet(*params);
@@ -632,27 +707,48 @@ void SwapWidget::updateWalletRows() {
     const bool unlocked = vault && vault->isUnlocked();
     const Asset from = assetOf(ui->combo_from);
     const Asset to = assetOf(ui->combo_to);
-    const Asset btc{"btc", "Mainnet"}, ltc{"ltc", "Mainnet"};
     const bool receiveInWallet = ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
-    m_fromBars.at(0)->setActive(from == btc);
-    m_fromBars.at(1)->setActive(from == ltc);
-    m_toBars.at(0)->setActive(to == btc);
-    m_toBars.at(1)->setActive(to == ltc);
-    ui->formLayout->setRowVisible(m_fromWalletRow, unlocked && (from == btc || from == ltc));
-    ui->formLayout->setRowVisible(m_toWalletRow, unlocked && receiveInWallet && (to == btc || to == ltc));
+    // Bars: Bitcoin, Litecoin, Ethereum (showing the swapped ETH, USDT or USDC).
+    auto activate = [](const QList<biscuit::coins::CoinWalletBar *> &bars, const QString &ticker) {
+        const auto *params = biscuit::coins::coinOfTicker(ticker);
+        const QList<const biscuit::coins::CoinParams *> order{&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(),
+                                                              &biscuit::coins::ethereum()};
+        for (int i = 0; i < bars.size(); ++i) {
+            bars.at(i)->setActive(params == order.value(i));
+            if (params && params->ethereum) bars.at(i)->setAsset(ticker);
+        }
+        return params != nullptr;
+    };
+    const bool fromCoin = activate(m_fromBars, walletTicker(from));
+    const bool toCoin = activate(m_toBars, walletTicker(to));
+    ui->formLayout->setRowVisible(m_fromWalletRow, unlocked && fromCoin);
+    ui->formLayout->setRowVisible(m_toWalletRow, unlocked && receiveInWallet && toCoin);
 }
 
-// Bitcoin/Litecoin deposit from the selected wallet, through the same path and
-// confirmation as the Send tab.
+// Bitcoin/Litecoin/Ethereum deposit from the selected wallet, through the same
+// path and confirmation as the Send tab.
 void SwapWidget::sendCoinDeposit(const Trade &trade) {
     using namespace biscuit::coins;
-    const CoinParams *params = trade.from == Asset{"btc", "Mainnet"} ? &bitcoin()
-                             : trade.from == Asset{"ltc", "Mainnet"} ? &litecoin() : nullptr;
+    const QString ticker = walletTicker(trade.from);
+    const CoinParams *params = coinOfTicker(ticker);
     CoinVault *vault = CoinVault::forWallet(m_wallet);
     if (!params || !vault) {
         return;
     }
-    if (!m_coins->ensureReady(this) && !vault->isUnlocked()) {
+    if (!walletHolds(trade.from)) {
+        Utils::showInfo(this, QString("%1 is not in this wallet").arg(assetLabel(ticker)),
+                        QString("Send exactly %1 %2 to the deposit address of this swap from your other wallet.")
+                        .arg(trade.amountFrom, ticker));
+        return;
+    }
+    if (!m_coins->ensureReady(this, *params) && !vault->hasCoin(*params)) {
+        return;
+    }
+    if (params->ethereum) {
+        // The exact amount: an Ethereum send never needs "everything".
+        m_pendingDepositProvider = trade.providerId;
+        m_pendingDepositTrade = trade.tradeId;
+        m_coins->sendEthereum(this, ticker, trade.depositAddress, trade.amountFrom);
         return;
     }
     const auto atomic = amount::toAtomic(trade.amountFrom, params->decimals);
@@ -677,31 +773,73 @@ void SwapWidget::sendCoinDeposit(const Trade &trade) {
     m_coins->send(this, *params, trade.depositAddress, amountText, 6);
 }
 
+QString SwapWidget::walletTicker(const Asset &asset) {
+    if (asset.network == QLatin1String("Mainnet")) {
+        if (asset.ticker == QLatin1String("btc")) return "BTC";
+        if (asset.ticker == QLatin1String("ltc")) return "LTC";
+    } else if (asset.network == QLatin1String("ERC20")) {
+        if (asset.ticker == QLatin1String("eth")) return "ETH";
+        if (asset.ticker == QLatin1String("usdt")) return "USDT";
+        if (asset.ticker == QLatin1String("usdc")) return "USDC";
+    }
+    return {};
+}
+
+void SwapWidget::updateScanIcons() {
+    const QIcon icon = icons()->icon(ColorScheme::hasDarkBackground(this) ? "camera_white.png" : "camera_dark.png");
+    for (QPushButton *button : {m_scanReceive, m_scanRefund}) {
+        if (button) button->setIcon(icon);
+    }
+}
+
+void SwapWidget::changeEvent(QEvent *event) {
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange) {
+        updateScanIcons();   // light or dark theme
+    }
+}
+
+bool SwapWidget::walletHolds(const Asset &asset) const {
+    if (asset == xmr()) {
+        return true;
+    }
+    using namespace biscuit::coins;
+    const QString ticker = walletTicker(asset);
+    const CoinVault *vault = CoinVault::forWallet(m_wallet);
+    return !ticker.isEmpty() && vault && vault->assetState(ticker) != CoinVault::CoinState::NotAdded;
+}
+
 QString SwapWidget::coinWalletLabel(const Asset &asset) const {
     using namespace biscuit::coins;
-    const CoinParams *params = asset == Asset{"btc", "Mainnet"} ? &bitcoin()
-                             : asset == Asset{"ltc", "Mainnet"} ? &litecoin() : nullptr;
+    const CoinParams *params = coinOfTicker(walletTicker(asset));
     CoinVault *vault = CoinVault::forWallet(m_wallet);
+    const QString kind = params && params->ethereum ? QString("Ethereum") : asset.ticker.toUpper();
     if (params && vault && vault->wallets(*params).size() > 1) {
-        return QString("your %1 wallet \"%2\" in Biscuit").arg(params->ticker, vault->selectedName(*params));
+        return QString("your %1 wallet \"%2\" in Biscuit").arg(kind, vault->selectedName(*params));
     }
-    return QString("your %1 wallet in Biscuit").arg(asset.ticker.toUpper());
+    return QString("your %1 wallet in Biscuit").arg(kind);
 }
 
 QString SwapWidget::coinWalletAddress(const Asset &asset) {
     using namespace biscuit::coins;
-    const CoinParams *params = asset == Asset{"btc", "Mainnet"} ? &bitcoin()
-                             : asset == Asset{"ltc", "Mainnet"} ? &litecoin() : nullptr;
+    const QString ticker = walletTicker(asset);
+    const CoinParams *params = coinOfTicker(ticker);
     CoinVault *vault = CoinVault::forWallet(m_wallet);
     if (!params || !vault) {
         return {};
     }
-    // Offers setup or asks the password when needed; it then returns false,
-    // but the vault may be ready now.
-    if (!m_coins->ensureReady(this) && !vault->isUnlocked()) {
+    // Offers to add the coin or asks the password when needed; it then
+    // returns false, but the coin may be ready now.
+    if (!m_coins->ensureReady(this, *params) && !vault->hasCoin(*params)) {
         return {};
     }
-    const QString address = vault->wallet(*params)->receiveAddress();
+    // A token not shown yet: same address as ETH, but say it first.
+    if (params->ethereum && vault->assetState(ticker) != CoinVault::CoinState::Ready
+        && !addAssetToWallet(vault, ticker, this)) {
+        return {};
+    }
+    const QString address = params->ethereum ? (vault->ethereum() ? vault->ethereum()->addressText() : QString())
+                                             : vault->wallet(*params)->receiveAddress();
     if (address.isEmpty()) {
         Utils::showError(this, "Address not ready", QString("Your %1 wallet is not ready yet. Try again in a moment.").arg(params->name));
     }
@@ -761,9 +899,18 @@ void SwapWidget::createTrade(const Quote &quote) {
                 Utils::showError(this, "Invalid address", "This is not a valid Monero address.");
                 return;
             }
-        } else {
-            external.append({asset, address});
+            continue;
         }
+        // Ethereum addresses are checked here first (a typo in the checksum),
+        // then by the swap partner like the others.
+        if (asset.network == QLatin1String("ERC20")) {
+            QString error;
+            if (!biscuit::coins::eth::parseAddress(address, &error)) {
+                Utils::showError(this, "Invalid address", error);
+                return;
+            }
+        }
+        external.append({asset, address});
     }
 
     // Bitcoin and Litecoin addresses of this wallet are known before asking

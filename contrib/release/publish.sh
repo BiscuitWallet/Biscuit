@@ -3,6 +3,7 @@
 # finds it:
 #
 #   files/releases/<platform>/biscuit-<version>-<platform>.zip   (Guix builds)
+#   files/releases/linux-appimage/biscuit-<version>.AppImage      (the same AppImage, unzipped)
 #   files/releases/packages/<version>/…                          (.deb, .rpm, Arch, .tar.gz)
 #   files/releases/source/biscuit-<version>.tar.gz               (source archive)
 #   files/releases/hashes-<version>-plain.txt                    (SHA-256 list, clearsigned)
@@ -43,6 +44,17 @@ while IFS= read -r zip; do
     PLATFORMS+=("$platform")
 done < <(find "$OUTPUT" -maxdepth 2 -name "biscuit-$VERSION-*.zip" | sort)
 [ "${#PLATFORMS[@]}" -gt 0 ] || { echo "no biscuit-$VERSION-*.zip in $OUTPUT" >&2; exit 1; }
+
+# The AppImage on its own too, ready to run: on Tails, unzipping is a chore.
+# The updater keeps using the zip; this file is in the signed list like the rest.
+if [ -f "$OUTPUT/x86_64-linux-gnu/biscuit-$VERSION.AppImage" ]; then
+    mkdir -p "$STAGE/files/releases/linux-appimage"
+    cp "$OUTPUT/x86_64-linux-gnu/biscuit-$VERSION.AppImage" "$STAGE/files/releases/linux-appimage/"
+    chmod 755 "$STAGE/files/releases/linux-appimage/biscuit-$VERSION.AppImage"
+else
+    echo "biscuit-$VERSION.AppImage missing from x86_64-linux-gnu" >&2
+    exit 1
+fi
 
 # Linux packages, if built (contrib/packaging/build-packages.sh).
 if [ -d "$OUTPUT/x86_64-linux-gnu/packages" ]; then

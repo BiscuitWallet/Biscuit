@@ -27,11 +27,13 @@ private slots:
 
 private:
     void setup();
+    void updateVisibility();
 
     QScopedPointer<Ui::TickersWidget> ui;
     Wallet *m_wallet;
 
     QList<TickerWidgetBase*> m_tickerWidgets;
+    QList<QStringList> m_tickerSymbols;   // per widget: "XMR", or "XMR", "BTC" for a ratio
     QScopedPointer<BalanceTickerWidget> m_balanceTickerWidget;
 };
 

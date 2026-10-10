@@ -92,10 +92,10 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     // The coin to send, as in Receive; for Bitcoin and Litecoin, the wallet it
     // is sent from. Pasting an address of another coin switches to that coin.
     m_coinPicker = new biscuit::coins::CoinPicker(this);
-    biscuit::coins::addWalletCoins(m_coinPicker);
+    biscuit::coins::addWalletCoins(m_coinPicker, true);
     ui->formLayout->insertRow(0, m_coinPicker);
     auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-    for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+    for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum()}) {
         auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, this);
         ui->formLayout->insertRow(1 + m_walletBars.size(), bar);
         m_walletBars << bar;
@@ -116,6 +116,7 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
                         &biscuit::coins::CoinVault::walletsChanged}) {
         connect(vault, signal, this, &SendWidget::updateCoinMode);
     }
+    biscuit::coins::showWalletCoins(m_coinPicker, vault, true);
 
     m_coinHint = new QLabel(this);
     m_coinHint->setStyleSheet("color: gray;");
@@ -144,6 +145,15 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
 
     m_coinUnit = new QLabel(this);
     ui->horizontalLayout_2->addWidget(m_coinUnit);
+    // Ethereum fees follow the node: the estimate follows them, and its value
+    // follows the preferred currency.
+    connect(vault, &biscuit::coins::CoinVault::walletUpdated, this, &SendWidget::updateCoinFeeLabel);
+    connect(conf(), &Config::changed, this, [this](Config::ConfigKey key) {
+        if (key == Config::preferredFiatCurrency) {
+            this->updateCoinFeeLabel();
+            this->updateConversionLabel();
+        }
+    });
 
     m_coinFeeTitle = new QLabel("Network fee", this);
     m_coinFee = new QComboBox(this);
@@ -152,11 +162,14 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     }
     m_coinFee->setCurrentIndex(1);
     m_coinFeeRate = new QLabel(this);
+    m_coinFeeRate->setTextFormat(Qt::RichText);   // the "not enough ETH" line
+    m_coinFeeRate->setTextInteractionFlags(Qt::TextSelectableByMouse);   // to copy the fee
+    m_coinFeeRate->setWordWrap(true);   // the gas line can be long when the network is busy
+    m_coinFeeRate->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);   // the whole width, not a column
     auto *feeRow = new QHBoxLayout;
     feeRow->setSpacing(12);
     feeRow->addWidget(m_coinFee);
-    feeRow->addWidget(m_coinFeeRate);
-    feeRow->addStretch();
+    feeRow->addWidget(m_coinFeeRate, 1);   // the text takes the rest of the row
     ui->formLayout->getWidgetPosition(ui->label_Amount, &row, &role);
     ui->formLayout->insertRow(row + 1, m_coinFeeTitle, feeRow);
     connect(m_coinFee, &QComboBox::currentIndexChanged, this, &SendWidget::updateCoinFeeLabel);
@@ -171,34 +184,48 @@ void SendWidget::showCoin(int coinIndex) {
 
 void SendWidget::updateCoinMode() {
     const auto destination = biscuit::coins::detectCoinDestination(ui->lineAddress->text());
-    // A pasted address selects its coin (Bitcoin, Litecoin or Monero).
+    // A pasted address selects its coin (Bitcoin, Litecoin, Ethereum or Monero).
+    // An Ethereum address on the USDT or USDC tab stays there: same addresses.
     int detected = -1;
-    if (destination) {
-        detected = *destination->params == biscuit::coins::bitcoin() ? 1 : 2;
+    const auto *current = biscuit::coins::coinOfTicker(m_coinPicker->ticker(m_coinPicker->currentIndex()));
+    if (destination && current && destination->params == current) {
+        detected = m_coinPicker->currentIndex();
+    } else if (destination) {
+        detected = m_coinPicker->indexOf(destination->params->ticker);
     } else if (WalletManager::addressValid(ui->lineAddress->text().trimmed(), constants::networkType)) {
         detected = 0;
     }
-    if (detected >= 0 && m_coinPicker->currentIndex() != detected) {
+    // Not a coin of this wallet: stays on Monero, which refuses the address.
+    if (detected >= 0 && m_coinPicker->currentIndex() != detected && m_coinPicker->isCoinVisible(detected)) {
         QSignalBlocker blocker(m_coinPicker);
         m_coinPicker->setCurrentIndex(detected);
     }
     const int coinIndex = m_coinPicker->currentIndex();
-    m_coin = coinIndex == 1 ? &biscuit::coins::bitcoin() : coinIndex == 2 ? &biscuit::coins::litecoin() : nullptr;
+    const QString ticker = m_coinPicker->ticker(coinIndex);
+    m_coin = biscuit::coins::coinOfTicker(ticker);
     const bool coinMode = m_coin != nullptr;
+    const bool ethereum = coinMode && m_coin->ethereum;
+    m_asset = ethereum ? ticker : QString();
 
+    const QList<const biscuit::coins::CoinParams *> barCoins{&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(),
+                                                             &biscuit::coins::ethereum()};
     for (int i = 0; i < m_walletBars.size(); ++i) {
-        // A bar also hides itself while Bitcoin/Litecoin are locked or not set up.
-        static_cast<biscuit::coins::CoinWalletBar *>(m_walletBars.at(i))->setActive(coinIndex == i + 1);
+        // A bar also hides itself while the coin is locked or not added.
+        auto *bar = static_cast<biscuit::coins::CoinWalletBar *>(m_walletBars.at(i));
+        bar->setActive(m_coin == barCoins.value(i));
+        if (ethereum) bar->setAsset(m_asset);
     }
-    ui->lineAddress->setPlaceholderText(m_coin ? QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1" : "ltc1")
-                                               : QString("Monero address (4… or 8…)"));
+    ui->lineAddress->setPlaceholderText(!m_coin   ? QString("Monero address (4… or 8…)")
+                                        : ethereum ? QString("Ethereum address (0x…)")
+                                        : QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1" : "ltc1"));
     ui->formLayout->setRowVisible(m_xmrBalanceRow, !coinMode);
 
     ui->formLayout->setRowVisible(m_coinHint, coinMode);
-    const QStringList chosen = coinMode ? biscuit::coins::CoinVault::forWallet(m_wallet)->coinSelection(*m_coin) : QStringList();
+    const QStringList chosen = coinMode && !ethereum ? biscuit::coins::CoinVault::forWallet(m_wallet)->coinSelection(*m_coin) : QStringList();
     m_coinSelection->setText(QString("Coin control: only the %1 coin(s) selected in the Coins tab").arg(chosen.size()));
     ui->formLayout->setRowVisible(m_coinSelectionRow, !chosen.isEmpty());
     ui->formLayout->setRowVisible(m_coinFeeTitle, coinMode);
+    m_coinFee->setVisible(coinMode && !ethereum);   // Ethereum: one fee, from the node
     m_coinUnit->setVisible(coinMode);
     ui->comboCurrencySelection->setVisible(!coinMode);
 
@@ -210,9 +237,18 @@ void SendWidget::updateCoinMode() {
 
     if (coinMode) {
         const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-        m_coinHint->setText(vault->isUnlocked() ? QString("Sent from your %1 wallet \"%2\"").arg(m_coin->ticker, vault->selectedName(*m_coin))
-                                                : QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name));
-        m_coinUnit->setText(m_coin->ticker);
+        const auto state = vault->coinState(*m_coin);
+        QString hint = state == biscuit::coins::CoinVault::CoinState::Ready
+                                ? QString("Sent from your %1 wallet \"%2\"").arg(ethereum ? QString("Ethereum") : m_coin->ticker,
+                                                                                   vault->selectedName(*m_coin))
+                            : state == biscuit::coins::CoinVault::CoinState::Locked
+                                ? QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name)
+                                : QString("%1 is not in this wallet yet: add it with + above.").arg(m_coin->name);
+        if (ethereum && m_asset != "ETH") {
+            hint += QString(" · on Ethereum (ERC-20); the network fee is paid in ETH");
+        }
+        m_coinHint->setText(hint);
+        m_coinUnit->setText(ethereum ? m_asset : m_coin->ticker);
         // Times follow the coin's blocks.
         const auto levels = biscuit::coins::feeLevels(*m_coin);
         for (int i = 0; i < levels.size() && i < m_coinFee->count(); ++i) {
@@ -239,6 +275,40 @@ void SendWidget::updateXmrBalance() {
 
 void SendWidget::updateCoinFeeLabel() {
     if (!m_coin) {
+        return;
+    }
+    if (m_coin->ethereum) {
+        const auto fee = m_coinSend->ethereumFee(m_asset);
+        QString text, tip;
+        if (fee) {
+            // Money first, the ETH amount short; the exact figures in the tooltip.
+            using biscuit::coins::fiatAmount;
+            using biscuit::coins::shortAmount;
+            const QString about = fiatAmount("ETH", fee->first), most = fiatAmount("ETH", fee->second);
+            text = !about.isEmpty() ? QString("≈ %1 (%2 ETH) · at most %3").arg(about, shortAmount(fee->first), most)
+                                    : QString("about %1 ETH · at most %2 ETH").arg(shortAmount(fee->first), shortAmount(fee->second));
+            tip = QString("About %1 ETH, at most %2 ETH.\nYou usually pay about the first; the second is the most it can "
+                          "cost if fees rise before the transaction is in a block.").arg(fee->first, fee->second);
+        }
+        // How busy Ethereum is: most days of 2026 stay under 1 gwei.
+        if (const auto gwei = m_coinSend->ethereumGwei()) {
+            const QString value = QString::number(*gwei, 'f', *gwei < 10 ? 2 : 1);
+            text += "<br>" + (*gwei >= 6 ? QString("<span style=\"color: #c0392b;\"><b>%1 gwei · very busy</b> · waiting is often cheaper</span>").arg(value)
+                              : *gwei >= 2 ? QString("<span style=\"color: #d35400;\">%1 gwei · busy</span>").arg(value)
+                                           : QString("<span style=\"color: gray;\">%1 gwei · calm</span>").arg(value));
+            tip += QString("\n\nGas price now: %1 gwei. On most days Ethereum stays under 1 gwei; when it is busy, "
+                           "fees can be 10 times higher for a few hours.").arg(value);
+        }
+        m_coinFeeRate->setToolTip(tip);
+        // A token with no ETH to pay its fee: said plainly, before trying.
+        const auto *eth = biscuit::coins::CoinVault::forWallet(m_wallet)->ethereum();
+        if (fee && eth && m_asset != "ETH"
+            && eth->balance("ETH") < biscuit::coins::eth::parseAmount(fee->second, biscuit::coins::eth::etherDecimals).value_or(0)) {
+            text += QString("<br><span style=\"color: #c0392b;\">This wallet has %1 ETH: not enough for the network fee. "
+                            "Receive a little ETH on this address first.</span>")
+                    .arg(biscuit::coins::eth::formatAmount(eth->balance("ETH"), biscuit::coins::eth::etherDecimals));
+        }
+        m_coinFeeRate->setText(text);
         return;
     }
     const auto rate = m_coinSend->feeRate(*m_coin, m_coinFee->currentData().toInt());
@@ -312,16 +382,11 @@ void SendWidget::fillAddress(const QString &address) {
 
 void SendWidget::scanClicked() {
 #if defined(WITH_SCANNER)
-    auto cameras = QMediaDevices::videoInputs();
-    if (cameras.empty()) {
+    if (QMediaDevices::videoInputs().empty()) {
         Utils::showError(this, "Can't open QR scanner", "No available cameras found");
         return;
     }
-
-    auto dialog = new QrCodeScanDialog(this, false);
-    dialog->exec();
-    this->onDataFromQR(dialog->decodedString());
-    dialog->deleteLater();
+    this->onDataFromQR(Utils::scanQrCode(this));
 #else
     Utils::showError(this, "Can't open QR scanner", "Biscuit was built without webcam QR scanner support");
 #endif
@@ -333,6 +398,10 @@ void SendWidget::sendClicked() {
     if (m_coin) {
         const auto destination = biscuit::coins::detectCoinDestination(ui->lineAddress->text());
         const QString address = destination ? destination->address : ui->lineAddress->text().trimmed();
+        if (m_coin->ethereum) {
+            m_coinSend->sendEthereum(this, m_asset, address, ui->lineAmount->text());
+            return;
+        }
         m_coinSend->send(this, *m_coin, address, ui->lineAmount->text(), m_coinFee->currentData().toInt());
         return;
     }
@@ -479,12 +548,13 @@ void SendWidget::btnMaxClicked() {
 
 void SendWidget::updateConversionLabel() {
     if (m_coin) {
-        // Display only: fiat value of the Bitcoin/Litecoin amount.
+        // Display only: fiat value of the Bitcoin/Litecoin/Ethereum amount.
         const double coinAmount = ui->lineAmount->text().replace(',', '.').toDouble();
         const QString fiat = conf()->get(Config::preferredFiatCurrency).toString();
-        if (coinAmount > 0 && appData()->prices.canConvert(m_coin->ticker, fiat)) {
+        const QString unit = m_coin->ethereum ? m_asset : m_coin->ticker;
+        if (coinAmount > 0 && appData()->prices.canConvert(unit, fiat)) {
             ui->label_conversionAmount->setText(QString("~%1 %2").arg(
-                    QString::number(appData()->prices.convert(m_coin->ticker, fiat, coinAmount), 'f', 2), fiat));
+                    QString::number(appData()->prices.convert(unit, fiat, coinAmount), 'f', 2), fiat));
             ui->label_conversionAmount->show();
         } else {
             ui->label_conversionAmount->hide();
@@ -631,12 +701,50 @@ void SendWidget::onDataFromQR(const QString &data) {
             auto amount = WalletManager::amountFromString(amountStr);
             ui->lineAmount->setText(WalletManager::displayAmount(amount, false));
         } else {
-            ui->lineAddress->setText(data);
+            this->fillFromPaymentLink(data);
         }
     }
     else {
         Utils::showError(this, "Unable to decode QR code", "No QR code found.");
     }
+}
+
+// Biscuit: another coin's payment link, read the way Send expects it.
+void SendWidget::fillFromPaymentLink(const QString &data) {
+    const QString text = data.trimmed();
+    const QString scheme = text.section(':', 0, 0).toLower();
+    const qsizetype q = text.indexOf('?');
+    if (scheme == "bitcoin" || scheme == "litecoin") {
+        // Kept as a link, so that Send also reads its amount; the address in
+        // lower case (QR codes are often in capitals).
+        ui->lineAddress->setText(scheme + ":" + Utils::addressFromPaymentText(text) + (q < 0 ? QString() : text.mid(q)));
+        return;
+    }
+    if (scheme != "ethereum") {
+        ui->lineAddress->setText(text);
+        return;
+    }
+    // Ethereum: a USDT or USDC payment request opens that tab, if it is added;
+    // otherwise say so, rather than letting ETH go to someone expecting a token.
+    const QString address = Utils::addressFromPaymentText(text);
+    const QString path = text.mid(scheme.size() + 1).section('?', 0, 0);
+    if (path.contains("/transfer")) {
+        const QString contract = path.section('/', 0, 0).section('@', 0, 0).remove("pay-");
+        const auto bytes = biscuit::coins::eth::parseAddress(contract);
+        const auto *token = bytes ? biscuit::coins::eth::tokenByContract(*bytes) : nullptr;
+        if (!token) {
+            Utils::showError(this, "Unknown token", "This QR code asks for a token Biscuit doesn't hold. Only USDT and USDC on Ethereum can be sent.");
+            return;
+        }
+        const int index = m_coinPicker->indexOf(token->symbol);
+        if (index < 0 || !m_coinPicker->isCoinVisible(index)) {
+            Utils::showError(this, QString("%1 isn't in this wallet").arg(token->symbol),
+                             QString("This QR code asks for %1. Add %1 with + first, then scan it again.").arg(token->symbol));
+            return;
+        }
+        m_coinPicker->setCurrentIndex(index);   // before the address: it then stays on this tab
+    }
+    ui->lineAddress->setText(address);
 }
 
 void SendWidget::setupComboBox() {

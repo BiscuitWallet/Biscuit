@@ -18,17 +18,27 @@ class Wallet;
 namespace biscuit::coins {
 
 class CoinWallet;
+class EthWallet;
 
 class CoinVault;
 
-// A destination typed or pasted in the Send tab, if it is Bitcoin or Litecoin:
-// a plain address or a BIP21 URI ("bitcoin:<address>?amount=0.01").
+// A destination typed or pasted in the Send tab, if it is Bitcoin, Litecoin
+// or Ethereum: a plain address or a BIP21 URI ("bitcoin:<address>?amount=0.01").
 struct CoinDestination {
     const CoinParams *params = nullptr;
     QString address;
     QString amount;   // from the URI, empty if none
 };
 std::optional<CoinDestination> detectCoinDestination(const QString &text);
+
+// "€0.05": an amount of a coin in the preferred currency ("less than €0.01"
+// below a cent), empty while prices are unknown.
+QString fiatAmount(const QString &ticker, const QString &amount);
+// The same as " ≈ €0.05", to follow an amount. For fees with many decimals,
+// which say little alone.
+QString fiatValue(const QString &ticker, const QString &amount);
+// "0.00083582512052" -> "0.00084": two significant digits, to be read at a glance.
+QString shortAmount(const QString &amount);
 
 struct FeeLevel {
     QString label;
@@ -52,13 +62,32 @@ public:
     void send(QWidget *parent, const CoinParams &params, const QString &address, const QString &amountText,
               int targetBlocks);
 
+    // Ethereum: ETH, USDT or USDC from the selected Ethereum wallet. Asks the
+    // node for the nonce and gas, shows everything, sends once confirmed.
+    void sendEthereum(QWidget *parent, const QString &asset, const QString &address, const QString &amountText);
+    // Network fee of a typical send of `asset` now, in ETH: about / at most.
+    std::optional<QPair<QString, QString>> ethereumFee(const QString &asset) const;
+    // Gas price now (base fee + tip), in gwei.
+    std::optional<double> ethereumGwei() const;
+    // Speed up a pending Ethereum send of `eth`: shows the higher fee, sends
+    // the replacement once confirmed.
+    void speedUpEthereum(QWidget *parent, EthWallet *eth, const QByteArray &hash);
+
+    // Combines coins of the selected Bitcoin/Litecoin wallet into one, sent to
+    // a new address of that wallet at the slow fee: `selected` (two or more),
+    // or every coin that isn't frozen. Coins worth less than their fee are
+    // left out. Shows the cost and the privacy trade-off before sending.
+    void consolidate(QWidget *parent, const CoinParams &params, const QStringList &selected);
+
     // Replace-by-fee: asks for a higher fee rate, shows the new fee, and
     // replaces the unconfirmed transaction after confirmation.
     void bumpFee(QWidget *parent, const CoinParams &params, CoinWallet *coin, const QString &txid);
 
-    // Makes sure Bitcoin/Litecoin are set up and unlocked, asking the user if needed.
+    // True if this coin is in the wallet and unlocked. Otherwise offers to
+    // add it or asks the password, and returns false: the coin may be ready
+    // afterwards (check CoinVault::hasCoin), but not synchronized yet.
     // Also used by Swap to receive into this wallet.
-    bool ensureReady(QWidget *parent);
+    bool ensureReady(QWidget *parent, const CoinParams &params);
 
 signals:
     void sent(const QString &txid);

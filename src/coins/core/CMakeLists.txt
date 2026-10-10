@@ -15,8 +15,16 @@ add_library(biscuit_coins_core STATIC
         MessageSigning.cpp
         Electrum.cpp
         ElectrumServers.cpp
+        Eth.cpp
+        EthApi.cpp
+        Keccak.c
 )
 target_include_directories(biscuit_coins_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Monero's Keccak-256 (Keccak.c), and the headers it includes.
+target_include_directories(biscuit_coins_core PRIVATE
+        ${CMAKE_SOURCE_DIR}/monero/src
+        ${CMAKE_SOURCE_DIR}/monero/contrib/epee/include
+        ${Boost_INCLUDE_DIRS})
 # libsodium (already used by Monero) for the wallet file encryption.
 find_library(SODIUM_LIBRARY sodium)
 find_path(SODIUM_INCLUDE_DIR sodium.h)

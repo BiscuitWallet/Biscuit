@@ -4,6 +4,8 @@
 #include "TickersWidget.h"
 #include "ui_TickersWidget.h"
 
+#include "coins/CoinPicker.h"
+#include "coins/CoinVault.h"
 #include "utils/config.h"
 #include "WindowManager.h"
 
@@ -26,6 +28,12 @@ TickersWidget::TickersWidget(QWidget *parent, Wallet *wallet)
            this->setup();
        }
     });
+    // Biscuit: a coin added to the wallet, or not, shows or hides its tickers.
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
+                        &biscuit::coins::CoinVault::walletsChanged}) {
+        connect(vault, signal, this, &TickersWidget::updateVisibility);
+    }
     this->updateBalance();
 }
 
@@ -36,6 +44,7 @@ void TickersWidget::setup() {
     Utils::clearLayout(ui->fiatTickerLayout);
 
     m_tickerWidgets.clear();
+    m_tickerSymbols.clear();
     m_balanceTickerWidget.reset(nullptr);
 
     for (const auto &ticker : tickers) {
@@ -46,10 +55,12 @@ void TickersWidget::setup() {
             }
             auto* tickerWidget = new RatioTickerWidget(this, m_wallet, symbols[0], symbols[1]);
             m_tickerWidgets.append(tickerWidget);
+            m_tickerSymbols.append(symbols);
             ui->tickerLayout->addWidget(tickerWidget);
         } else {
             auto* tickerWidget = new PriceTickerWidget(this, m_wallet, ticker);
             m_tickerWidgets.append(tickerWidget);
+            m_tickerSymbols.append({ticker});
             ui->tickerLayout->addWidget(tickerWidget);
         }
     }
@@ -61,6 +72,30 @@ void TickersWidget::setup() {
 
     this->updateBalance();
     this->updateDisplay();
+    this->updateVisibility();
+}
+
+// Biscuit: no BTC ticker (nor any ratio with BTC) when Bitcoin is not in this
+// wallet; the same for Litecoin, Ethereum, USDT and USDC.
+// While the wallet's coins are locked, which ones it holds is not known: all shown.
+void TickersWidget::updateVisibility() {
+    if (!m_wallet) {
+        return;
+    }
+    const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    QStringList missing;
+    for (const QString &ticker : biscuit::coins::addableTickers()) {
+        if (vault->assetState(ticker) == biscuit::coins::CoinVault::CoinState::NotAdded) {
+            missing << ticker;
+        }
+    }
+    for (int i = 0; i < m_tickerWidgets.size() && i < m_tickerSymbols.size(); ++i) {
+        bool shown = true;
+        for (const QString &symbol : m_tickerSymbols.at(i)) {
+            shown = shown && !missing.contains(symbol.trimmed(), Qt::CaseInsensitive);
+        }
+        m_tickerWidgets.at(i)->setVisible(shown);
+    }
 }
 
 void TickersWidget::updateBalance() {

@@ -67,6 +67,14 @@ namespace Utils
     bool writeJsonFile(QIODevice &device, const QSettings::SettingsMap &map);
 
     void copyToClipboard(const QString &string);
+
+    // Biscuit: reads a QR code with the webcam; empty if none (after saying why
+    // when there is no camera or no scanner in this build).
+    QString scanQrCode(QWidget *parent);
+    // The address in a payment link ("bitcoin:…?amount=…", "monero:…",
+    // "ethereum:0x…@1", or the recipient of a token transfer,
+    // "ethereum:<token>@1/transfer?address=0x…"), or the text itself.
+    QString addressFromPaymentText(const QString &text);
     QString copyFromClipboard();
     void copyColumn(QModelIndex * index, int column);
 

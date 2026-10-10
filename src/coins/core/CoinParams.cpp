@@ -16,6 +16,11 @@ const CoinParams &litecoin() {
     return p;
 }
 
+const CoinParams &ethereum() {
+    static const CoinParams p{"ETH", "Ethereum", {}, 60, 18, 0, {}, true};
+    return p;
+}
+
 const CoinParams &bitcoinTestnet() {
     static const CoinParams p{"tBTC", "Bitcoin testnet", "tb", 1, 8, 0x6F, {0xC4}};
     return p;

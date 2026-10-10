@@ -3,10 +3,13 @@
 
 #include "CoinSendController.h"
 
+#include <algorithm>
 #include <cmath>
 
+#include <QApplication>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPointer>
 #include <QPushButton>
 #include <QUrl>
 #include <QUrlQuery>
@@ -17,9 +20,36 @@
 #include "CoinVault.h"
 #include "CoinWallet.h"
 #include "libwalletqt/Wallet.h"
+#include "utils/AppData.h"
 #include "utils/Utils.h"
+#include "utils/config.h"
 
 namespace biscuit::coins {
+
+QString fiatAmount(const QString &ticker, const QString &amount) {
+    const QString fiat = conf()->get(Config::preferredFiatCurrency).toString();
+    if (!appData()->prices.canConvert(ticker, fiat)) {
+        return {};
+    }
+    const double value = appData()->prices.convert(ticker, fiat, amount.toDouble());
+    // Below a cent, say so rather than "€0.00".
+    return value > 0 && value < 0.01 ? QString("less than %1").arg(Utils::amountToCurrencyString(0.01, fiat))
+                                     : Utils::amountToCurrencyString(value, fiat);
+}
+
+QString fiatValue(const QString &ticker, const QString &amount) {
+    const QString value = fiatAmount(ticker, amount);
+    return value.isEmpty() ? QString() : QString(" ≈ %1").arg(value);
+}
+
+QString shortAmount(const QString &amount) {
+    const double value = amount.toDouble();
+    if (value <= 0) {
+        return "0";
+    }
+    const int decimals = std::clamp(int(std::ceil(-std::log10(value))) + 1, 2, 18);
+    return QString::number(value, 'f', decimals);
+}
 
 std::optional<CoinDestination> detectCoinDestination(const QString &text) {
     const QString trimmed = text.trimmed();
@@ -27,6 +57,10 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
         return std::nullopt;
     }
 
+    // Ethereum: 0x… (with a correct checksum if mixed case).
+    if (eth::parseAddress(trimmed)) {
+        return CoinDestination{&ethereum(), trimmed, {}};
+    }
     for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
         // BIP21 URI: bitcoin:<address>?amount=<decimal>
         const QString scheme = params->name.toLower() + ':';
@@ -68,48 +102,22 @@ CoinSendController::CoinSendController(Wallet *wallet, QObject *parent)
 }
 
 std::optional<double> CoinSendController::feeRate(const CoinParams &params, int targetBlocks) const {
-    if (!m_vault || !m_vault->isUnlocked()) {
+    CoinWallet *coin = m_vault && m_vault->isUnlocked() ? m_vault->wallet(params) : nullptr;
+    if (!coin) {
         return std::nullopt;
     }
-    return m_vault->wallet(params)->feeRate(targetBlocks);
+    return coin->feeRate(targetBlocks);
 }
 
-bool CoinSendController::ensureReady(QWidget *parent) {
+bool CoinSendController::ensureReady(QWidget *parent, const CoinParams &params) {
     if (!m_vault) {
         return false;
     }
-    if (!m_vault->exists()) {
-        QMessageBox box(parent);
-        box.setWindowTitle("Bitcoin and Litecoin");
-        box.setIcon(QMessageBox::Information);
-        box.setText("Bitcoin and Litecoin are not set up in this wallet yet.");
-        box.setInformativeText("They use one seed phrase (BIP39), separate from your Monero seed, "
-                               "encrypted with the password of this wallet.");
-        auto *create = box.addButton("Create new seed", QMessageBox::AcceptRole);
-        auto *restore = box.addButton("Restore from seed", QMessageBox::AcceptRole);
-        box.addButton(QMessageBox::Cancel);
-        box.exec();
-        if (box.clickedButton() == create) {
-            CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Create, parent).exec();
-        } else if (box.clickedButton() == restore) {
-            CoinSetupDialog(m_vault, CoinSetupDialog::Mode::Restore, parent).exec();
-        }
-        return false;   // the user sends again once the wallet is synchronized
+    if (m_vault->hasCoin(params)) {
+        return true;
     }
-    if (!m_vault->isUnlocked()) {
-        bool ok = false;
-        const QString password = QInputDialog::getText(parent, "Bitcoin and Litecoin", "Password of this wallet:",
-                                                       QLineEdit::Password, {}, &ok);
-        if (!ok) {
-            return false;
-        }
-        QString error;
-        if (!m_vault->unlock(password, &error)) {
-            Utils::showError(parent, "Unable to unlock", error);
-        }
-        return false;   // unlocking starts the synchronization
-    }
-    return true;
+    addCoinToWallet(m_vault, params, parent);
+    return false;   // the user sends again once the wallet is synchronized
 }
 
 void CoinSendController::send(QWidget *parent, const CoinParams &params, const QString &address,
@@ -130,7 +138,7 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
         }
         amount = *parsed;
     }
-    if (!ensureReady(parent)) {
+    if (!ensureReady(parent, params)) {
         return;
     }
 
@@ -167,7 +175,14 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
               .arg(address, segwitAddress(plan->outputs.at(plan->changeOutput == 0 ? 1 : 0).scriptPubKey, params));
     const QString coinsLine = onlyCoins.isEmpty() ? QString()
         : QString("Coins: %1 selected in the Coins tab\n").arg(plan->inputs.size());
-    box.setInformativeText(coinsLine + QString("%1To: %2\nNetwork fee: %3 (%4 sat/vB)\nTotal: %5")
+    // More in fees than sent (dust): said first, nothing is blocked.
+    const QString dustLine = plan->fee > plan->amount
+        ? QString("You pay more in network fees (%1) than you send (%2).\n\n").arg(format(plan->fee), format(plan->amount))
+        : QString();
+    if (!dustLine.isEmpty()) {
+        box.setIcon(QMessageBox::Warning);
+    }
+    box.setInformativeText(dustLine + coinsLine + QString("%1To: %2\nNetwork fee: %3 (%4 sat/vB)\nTotal: %5")
                            .arg(from, to, format(plan->fee))
                            .arg(rate, 0, 'f', 1)
                            .arg(format(plan->amount + plan->fee)));
@@ -190,8 +205,248 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
     });
 }
 
+std::optional<QPair<QString, QString>> CoinSendController::ethereumFee(const QString &asset) const {
+    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
+    const auto fees = eth ? eth->fees() : std::nullopt;
+    if (!fees) {
+        return std::nullopt;
+    }
+    // A plain transfer uses 21000 gas; a USDT or USDC transfer about 65000.
+    const eth::u128 gas = asset == "ETH" ? eth::transferGas : 65000;
+    return qMakePair(eth::formatAmount(gas * (fees->baseFee + fees->priorityFee), eth::etherDecimals),
+                     eth::formatAmount(gas * fees->maxFeePerGas, eth::etherDecimals));
+}
+
+std::optional<double> CoinSendController::ethereumGwei() const {
+    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
+    const auto fees = eth ? eth->fees() : std::nullopt;
+    if (!fees) {
+        return std::nullopt;
+    }
+    return double(fees->baseFee + fees->priorityFee) / 1e9;
+}
+
+void CoinSendController::speedUpEthereum(QWidget *parent, EthWallet *eth, const QByteArray &hash) {
+    if (!eth) {
+        return;
+    }
+    QPointer<QWidget> guard(parent);
+    QPointer<EthWallet> wallet(eth);
+    const auto oldFee = eth->pendingMaxFee(hash);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    eth->planSpeedUp(hash, [guard, wallet, oldFee](std::optional<EthWallet::Plan> plan, const QString &error) {
+        QApplication::restoreOverrideCursor();
+        if (!guard || !wallet) {
+            return;
+        }
+        if (!plan) {
+            Utils::showError(guard, "Unable to speed up", error);
+            return;
+        }
+        const QString newFee = eth::formatAmount(plan->maxFee, eth::etherDecimals);
+        const QString was = oldFee ? eth::formatAmount(*oldFee, eth::etherDecimals) : QString();
+        QMessageBox box(guard);
+        box.setWindowTitle("Speed up");
+        box.setIcon(QMessageBox::Question);
+        box.setText(QString("Send %1 %2 again with a higher fee?")
+                    .arg(eth::formatAmount(plan->amount, EthWallet::decimals(plan->asset)), plan->asset));
+        box.setTextInteractionFlags(Qt::TextSelectableByMouse);
+        QString details = QString("To: %1\nNetwork fee: at most %2 ETH%3, usually less")
+                          .arg(eth::checksumAddress(plan->recipient), newFee, fiatValue("ETH", newFee));
+        if (!was.isEmpty()) {
+            details += QString("\nWas: at most %1 ETH%2").arg(was, fiatValue("ETH", was));
+        }
+        details += "\n\nThe same payment replaces the waiting one: only one of the two can ever go through.";
+        box.setInformativeText(details);
+        box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        box.setDefaultButton(QMessageBox::Cancel);
+        if (box.exec() != QMessageBox::Yes || !wallet) {
+            return;
+        }
+        wallet->broadcast(*plan, [guard](const QString &newHash, const QString &error) {
+            if (!error.isEmpty()) {
+                Utils::showError(guard, "Not sped up", error);
+                return;
+            }
+            Utils::showInfo(guard, "Sped up", QString("New transaction hash: %1").arg(newHash));
+        });
+    });
+}
+
+void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, const QString &address,
+                                      const QString &amountText) {
+    if (!ensureReady(parent, ethereum())) {
+        return;
+    }
+    EthWallet *eth = m_vault->ethereum();
+    if (eth->status() != EthWallet::Status::Synchronized) {
+        Utils::showError(parent, "Not synchronized", "Wait until Ethereum is synchronized, then try again.");
+        return;
+    }
+    QString text = amountText.trimmed();
+    text.replace(',', '.');
+
+    // The nonce and the gas come from the node: a moment.
+    QPointer<QWidget> guard(parent);
+    QPointer<EthWallet> wallet(eth);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    eth->planSend(asset, address, text, [this, guard, wallet](std::optional<EthWallet::Plan> plan, const QString &error) {
+        QApplication::restoreOverrideCursor();
+        if (!guard || !wallet) {
+            return;
+        }
+        if (!plan) {
+            Utils::showError(guard, "Unable to send", error);
+            return;
+        }
+        const int decimals = EthWallet::decimals(plan->asset);
+        const QString amountValue = eth::formatAmount(plan->amount, decimals);
+        const QString amount = QString("%1 %2").arg(amountValue, plan->asset);
+        const QString maxFeeValue = eth::formatAmount(plan->maxFee, eth::etherDecimals);
+        const QString maxFee = QString("%1 ETH%2").arg(maxFeeValue, fiatValue("ETH", maxFeeValue));
+
+        // Explicit confirmation: nothing is signed or sent before this.
+        QMessageBox box(guard);
+        box.setWindowTitle(QString("Send %1").arg(plan->asset));
+        box.setIcon(QMessageBox::Question);
+        box.setText(QString("Send %1?").arg(amount + fiatValue(plan->asset, amountValue)));
+        // Everything can be selected and copied (e.g. into the converter).
+        box.setTextInteractionFlags(Qt::TextSelectableByMouse);
+        const auto entries = m_vault->wallets(ethereum());
+        QString details = entries.size() > 1
+                          ? QString("From: Ethereum wallet \"%1\"\n").arg(m_vault->selectedName(ethereum())) : QString();
+        details += QString("To: %1\n").arg(eth::checksumAddress(plan->recipient));
+        details += plan->asset == "ETH" ? QString("Network: Ethereum\n") : QString("Network: Ethereum (ERC-20)\n");
+        details += QString("Network fee: at most %1, usually less").arg(maxFee);
+        if (const auto fees = wallet->fees()) {
+            const double gwei = double(fees->baseFee + fees->priorityFee) / 1e9;
+            details += QString(" (%1 gwei%2)").arg(QString::number(gwei, 'f', gwei < 10 ? 2 : 1),
+                                                   gwei >= 6 ? QString(", very busy right now") : QString());
+        }
+        if (plan->asset == "ETH") {
+            const QString total = eth::formatAmount(plan->amount + plan->maxFee, eth::etherDecimals);
+            details += QString("\nTotal: at most %1 ETH%2").arg(total, fiatValue("ETH", total));
+        }
+        // More in fees than sent (dust): said first, nothing is blocked.
+        const auto fees = wallet->fees();
+        const eth::u128 probable = fees ? eth::u128(plan->tx.gasLimit)
+                                          * std::min(plan->tx.maxFeePerGas, fees->baseFee + plan->tx.maxPriorityFeePerGas)
+                                        : plan->maxFee;
+        const QString probableText = eth::formatAmount(probable, eth::etherDecimals);
+        bool feeAboveAmount = false;
+        if (plan->asset == "ETH") {
+            feeAboveAmount = probable > plan->amount;
+        } else {
+            const QString fiat = conf()->get(Config::preferredFiatCurrency).toString();
+            if (appData()->prices.canConvert("ETH", fiat) && appData()->prices.canConvert(plan->asset, fiat)) {
+                feeAboveAmount = appData()->prices.convert("ETH", fiat, probableText.toDouble())
+                                 > appData()->prices.convert(plan->asset, fiat, amountValue.toDouble());
+            }
+        }
+        if (feeAboveAmount) {
+            box.setIcon(QMessageBox::Warning);
+            details = QString("You pay more in network fees than you send: about %1 ETH%2 to move %3%4.\n\n")
+                      .arg(shortAmount(probableText), fiatValue("ETH", probableText), amount, fiatValue(plan->asset, amountValue))
+                      + details;
+        }
+        box.setInformativeText(details);
+        box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        box.setDefaultButton(QMessageBox::Cancel);
+        if (box.exec() != QMessageBox::Yes || !wallet) {
+            return;
+        }
+        wallet->broadcast(*plan, [this, guard](const QString &hash, const QString &error) {
+            if (!error.isEmpty()) {
+                Utils::showError(guard, "Transaction not sent", error);
+                return;
+            }
+            Utils::showInfo(guard, "Transaction sent", QString("Transaction hash: %1").arg(hash));
+            emit sent(hash);
+        });
+    });
+}
+
+void CoinSendController::consolidate(QWidget *parent, const CoinParams &params, const QStringList &selected) {
+    if (!ensureReady(parent, params)) {
+        return;
+    }
+    CoinWallet *coin = m_vault->wallet(params);
+    if (coin->status() != CoinWallet::Status::Synchronized) {
+        Utils::showError(parent, "Not synchronized", QString("Wait until %1 is synchronized, then try again.").arg(params.name));
+        return;
+    }
+    auto format = [&params](quint64 sats) {
+        return QString("%1 %2").arg(biscuit::swap::amount::fromAtomic(sats, params.decimals), params.ticker);
+    };
+    // The slow fee: consolidating is never urgent, and it is the point.
+    const double rate = coin->feeRate(24);
+    QStringList keys;
+    int dust = 0;
+    quint64 dustValue = 0;
+    for (const auto &c : coin->coins()) {
+        const QString key = CoinWallet::coinKey(c.utxo);
+        const bool chosen = selected.size() >= 2 ? selected.contains(key) : !coin->isFrozen(c.utxo);
+        if (!chosen) {
+            continue;
+        }
+        if (isDust(c.utxo.value, rate)) {   // would cost more than it brings
+            ++dust;
+            dustValue += c.utxo.value;
+            continue;
+        }
+        keys << key;
+    }
+    if (keys.size() < 2) {
+        Utils::showInfo(parent, "Nothing to consolidate",
+                        dust > 0 ? QString("Fewer than two coins are worth combining at the current fee: %1 of them would cost "
+                                           "more to move than they hold. Try again when fees are lower.").arg(dust)
+                                 : QString("This wallet has fewer than two coins to combine."));
+        return;
+    }
+    QString error;
+    const auto plan = coin->planSend(coin->receiveAddress(), 0, rate, true, &error, keys);
+    if (!plan) {
+        Utils::showError(parent, "Unable to consolidate", error);
+        return;
+    }
+
+    QMessageBox box(parent);
+    box.setWindowTitle(QString("Consolidate %1").arg(params.name));
+    box.setIcon(QMessageBox::Question);
+    box.setText(QString("Combine %1 coins into one?").arg(plan->inputs.size()));
+    box.setTextInteractionFlags(Qt::TextSelectableByMouse);
+    QString details = QString("They go to a new address of your %1 wallet \"%2\". You keep %3; the network fee is %4 "
+                              "(%5 sat/vB, the slow speed: a few hours).")
+                      .arg(params.ticker, m_vault->selectedName(params), format(plan->amount), format(plan->fee))
+                      .arg(rate, 0, 'f', 1);
+    if (dust > 0) {
+        details += QString("\n\n%1 coin(s) worth less than their fee (%2 in all) are left out.").arg(dust).arg(format(dustValue));
+    }
+    details += "\n\nCombining coins shows on the blockchain that their addresses belong to the same person. "
+               "Only combine coins whose link you don't mind.";
+    box.setInformativeText(details);
+    box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    if (box.exec() != QMessageBox::Yes) {
+        return;
+    }
+    // The controller may be gone when the answer comes (a temporary, from the
+    // Coins tab): only the widget and the vault are used, guarded.
+    QPointer<QWidget> guard(parent);
+    QPointer<CoinVault> vault(m_vault);
+    const CoinParams *sentParams = &params;
+    coin->broadcast(*plan, [guard, vault, sentParams](const QString &txid, const QString &error) {
+        if (!error.isEmpty()) {
+            Utils::showError(guard, "Not consolidated", error);
+            return;
+        }
+        if (vault) vault->setCoinSelection(*sentParams, {});
+        Utils::showInfo(guard, "Coins combined", QString("Transaction ID: %1").arg(txid));
+    });
+}
+
 void CoinSendController::bumpFee(QWidget *parent, const CoinParams &params, CoinWallet *coin, const QString &txid) {
-    if (!coin || !ensureReady(parent)) {
+    if (!coin || !ensureReady(parent, params)) {
         return;
     }
     if (coin->status() != CoinWallet::Status::Synchronized) {

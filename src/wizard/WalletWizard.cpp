@@ -61,6 +61,7 @@ WalletWizard::WalletWizard(QWidget *parent)
     setPage(Page_Plugins, new PagePlugins(this));
     setPage(Page_CoinSeed, new PageCoinSeed(&m_wizardFields, this));
     setPage(Page_CoinSeedVerify, new PageCoinSeedVerify(&m_wizardFields, this));
+    setPage(Page_OtherCoins, new PageOtherCoins(&m_wizardFields, this));
 
     setStartId(Page_Menu);
 
@@ -162,11 +163,15 @@ void WalletWizard::onCreateWallet() {
     }
 
     bool newWallet = m_wizardFields.mode == WizardMode::CreateWallet;
+    // Other coins only if some were chosen (their seed may have been shown
+    // before the user went back and unticked them).
+    const bool coins = newWallet && !m_wizardFields.coinTickers.isEmpty();
 
     emit createWallet(m_wizardFields.seed, walletPath, m_wizardFields.password, m_wizardFields.seedLanguage, m_wizardFields.seedOffsetPassphrase, m_wizardFields.subaddressLookahead, newWallet,
-                      newWallet ? m_wizardFields.coinMnemonic : QString());
+                      coins ? m_wizardFields.coinMnemonic : QString(), coins ? m_wizardFields.coinTickers : QStringList());
     m_wizardFields.coinMnemonic.fill(QChar(' '));
     m_wizardFields.coinMnemonic.clear();
+    m_wizardFields.coinTickers.clear();
 }
 
 QString WalletWizard::helpPage() {

@@ -44,7 +44,9 @@ struct WizardFields {
     Seed::Type seedType;
     DeviceType deviceType;
     QString subaddressLookahead;
-    // New wallet: Bitcoin/Litecoin BIP39 seed, set up once the wallet exists.
+    // New wallet: the other coins chosen (tickers, none = Monero only) and
+    // their BIP39 seed, set up once the wallet exists.
+    QStringList coinTickers;
     QString coinMnemonic;
     QList<int> coinCheckIndexes;
 
@@ -87,7 +89,8 @@ public:
         Page_NetworkWebsocket,
         Page_Plugins,
         Page_CoinSeed,
-        Page_CoinSeedVerify
+        Page_CoinSeedVerify,
+        Page_OtherCoins
     };
 
     explicit WalletWizard(QWidget *parent = nullptr);
@@ -100,7 +103,7 @@ signals:
 
     void createWalletFromDevice(const QString &path, const QString &password, const QString &deviceName, int restoreHeight, const QString &subaddressLookahead);
     void createWalletFromKeys(const QString &path, const QString &password, const QString &address, const QString &viewkey, const QString &spendkey, quint64 restoreHeight, const QString subaddressLookahead = "");
-    void createWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage, const QString &seedOffset, const QString &subaddressLookahead, bool newWallet, const QString &coinMnemonic);
+    void createWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage, const QString &seedOffset, const QString &subaddressLookahead, bool newWallet, const QString &coinMnemonic, const QStringList &coinTickers);
 
 private slots:
     void onCreateWallet();

@@ -126,16 +126,8 @@ AtomicSwapWidget::~AtomicSwapWidget() = default;
 void AtomicSwapWidget::showEvent(QShowEvent *event) {
     QWidget::showEvent(event);
     // Tor may have been switched on or off in the settings meanwhile.
+    // Nothing is searched before the user clicks Find makers.
     updateTorOption();
-
-    // Opening the tab means the user wants offers: start searching once per
-    // session, but only through Tor. Without Tor it waits for the click and
-    // the IP warning.
-    const bool tor = torEnabledInSettings() || ui->check_tor->isChecked();
-    if (!m_autoStarted && tor && !m_daemon->isRunning() && !AtomicSwapDaemon::helperPath().isEmpty()) {
-        m_autoStarted = true;
-        onDiscover();
-    }
 }
 
 void AtomicSwapWidget::updateTorOption() {
@@ -372,8 +364,10 @@ void AtomicSwapWidget::onSwap() {
     CoinVault *vault = CoinVault::forWallet(m_wallet);
     CoinWallet *btc = vault && vault->isUnlocked() ? vault->bitcoin() : nullptr;
     if (!btc) {
-        Utils::showError(this, "Bitcoin wallet not open",
-                         "Open or set up your Bitcoin wallet first (Receive → Bitcoin): the swap pays from it.");
+        const bool added = vault && vault->coinState(bitcoin()) != CoinVault::CoinState::NotAdded;
+        Utils::showError(this, added ? "Bitcoin wallet not open" : "Bitcoin not in this wallet",
+                         added ? "Open your Bitcoin wallet first (Receive → Bitcoin): the swap pays from it."
+                               : "An atomic swap pays from the Bitcoin wallet of Biscuit. Add Bitcoin first, with + in Receive.");
         return;
     }
     if (btc->status() != CoinWallet::Status::Synchronized) {

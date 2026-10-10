@@ -3,6 +3,8 @@
 
 #include "CoinCoinsSwitcher.h"
 
+#include <QHBoxLayout>
+#include <QPushButton>
 #include <QHeaderView>
 #include <QLabel>
 #include <QMenu>
@@ -13,6 +15,7 @@
 #include "Addresses.h"
 #include "Amount.h"
 #include "CoinPicker.h"
+#include "CoinSendController.h"
 #include "CoinVault.h"
 #include "CoinWallet.h"
 #include "CoinWalletBar.h"
@@ -71,13 +74,26 @@ CoinCoinsSwitcher::CoinCoinsSwitcher(Wallet *wallet, QWidget *moneroPage, QWidge
         pageLayout->setContentsMargins(0, 0, 0, 0);
         pageLayout->addWidget(new CoinWalletBar(m_vault, *params, page));
         pageLayout->addWidget(tree);
+        auto *bottom = new QHBoxLayout;
         summary->setParent(page);
-        pageLayout->addWidget(summary);
+        summary->setWordWrap(true);
+        bottom->addWidget(summary, 1);
+        // Many small coins: one, at the slow fee (the selected ones, or all).
+        auto *consolidate = new QPushButton("Consolidate…", page);
+        consolidate->setAutoDefault(false);
+        consolidate->setToolTip("Combine small coins into one when fees are low, so that later payments cost less. "
+                                "Select coins first to combine only those.");
+        bottom->addWidget(consolidate, 0, Qt::AlignTop);
+        pageLayout->addLayout(bottom);
         m_pages->addWidget(page);
+        connect(consolidate, &QPushButton::clicked, this, [this, tree, params] {
+            CoinSendController(m_wallet).consolidate(this, *params, selectedKeys(tree));
+        });
     }
     layout->addWidget(m_pages);
 
     connect(m_picker, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    showWalletCoins(m_picker, m_vault, false);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::walletsChanged,
                         &CoinVault::walletUpdated, &CoinVault::coinSelectionChanged}) {
         connect(m_vault, signal, this, &CoinCoinsSwitcher::refresh);
@@ -114,6 +130,11 @@ QTreeWidget *CoinCoinsSwitcher::makeTree(const CoinParams &params) {
             m_vault->setCoinSelection(*p, keys);
             emit sendCoins(*p == bitcoin() ? PageBitcoin : PageLitecoin);
         });
+        if (keys.size() >= 2) {
+            menu.addAction("Consolidate these coins…" + count, [this, keys, p] {
+                CoinSendController(m_wallet).consolidate(this, *p, keys);
+            });
+        }
         menu.addSeparator();
         menu.addAction("Freeze" + count, [coin, keys] { coin->setFrozen(keys, true); });
         menu.addAction("Unfreeze" + count, [coin, keys] { coin->setFrozen(keys, false); });
@@ -144,7 +165,9 @@ void CoinCoinsSwitcher::fillTree(QTreeWidget *tree, QLabel *summary, const CoinP
     tree->clear();
     CoinWallet *coin = m_vault->isUnlocked() ? m_vault->wallet(params) : nullptr;
     if (!coin) {
-        summary->setText(QString("Unlock %1 to see its coins.").arg(params.name));
+        summary->setText(m_vault->coinState(params) == CoinVault::CoinState::Locked
+                         ? QString("Unlock %1 to see its coins.").arg(params.name)
+                         : QString("%1 is not in this wallet. Add it with + in Receive.").arg(params.name));
         tree->setSortingEnabled(true);
         return;
     }
@@ -153,8 +176,10 @@ void CoinCoinsSwitcher::fillTree(QTreeWidget *tree, QLabel *summary, const CoinP
     };
     const QStringList chosen = m_vault->coinSelection(params);
     const int tip = coin->blockHeight();
-    quint64 total = 0, frozenTotal = 0;
-    int frozenCount = 0;
+    // Dust: worth no more than what spending it costs at the normal fee now.
+    const double normalRate = coin->feeRate(6);
+    quint64 total = 0, frozenTotal = 0, dustTotal = 0;
+    int frozenCount = 0, dustCount = 0;
     for (const auto &c : coin->coins()) {
         const Utxo &u = c.utxo;
         const bool frozen = coin->isFrozen(u);
@@ -168,6 +193,15 @@ void CoinCoinsSwitcher::fillTree(QTreeWidget *tree, QLabel *summary, const CoinP
                        : tip > 0 ? QString("%1 confirmations").arg(tip - u.height + 1) : QString("Confirmed");
         if (frozen) status = "Frozen";
         if (chosen.contains(key)) status += ", selected for sending";
+        const bool dust = normalRate > 0 && isDust(u.value, normalRate);
+        if (dust) {
+            status += ", dust";
+            item->setToolTip(ColStatus, QString("Worth less than the fee to spend it right now (%1 at %2 sat/vB). "
+                                                "It can wait for lower fees, or stay where it is.")
+                                        .arg(format(inputCost(normalRate))).arg(normalRate, 0, 'f', 1));
+            ++dustCount;
+            dustTotal += u.value;
+        }
         item->setText(ColStatus, status);
         item->setText(ColCoin, key);
         item->setToolTip(ColCoin, key);
@@ -186,6 +220,9 @@ void CoinCoinsSwitcher::fillTree(QTreeWidget *tree, QLabel *summary, const CoinP
     QString text = QString("%1 coins, %2").arg(tree->topLevelItemCount()).arg(format(total));
     if (frozenCount > 0) {
         text += QString(" · %1 frozen (%2), never spent unless you select them").arg(frozenCount).arg(format(frozenTotal));
+    }
+    if (dustCount > 0) {
+        text += QString(" · %1 dust (%2): worth less than their fee right now").arg(dustCount).arg(format(dustTotal));
     }
     summary->setText(text + ". Right-click a coin to freeze it or send only the coins you choose.");
 }

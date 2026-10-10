@@ -157,6 +157,7 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
                         &biscuit::coins::CoinVault::walletsChanged, &biscuit::coins::CoinVault::walletUpdated}) {
         connect(coinVault, signal, this, &MainWindow::updateBalance);
+        connect(coinVault, signal, this, &MainWindow::updateCoinsSyncStatus);
     }
 
     connect(m_windowManager->eventFilter, &EventFilter::userActivity, this, &MainWindow::userActivity);
@@ -399,6 +400,17 @@ void MainWindow::initMenu() {
         ui->actionSeed->setText("Monero seed");
         // A submenu, filled when opened: the main seed and each added wallet.
         auto *coinSeeds = new QMenu("Bitcoin and Litecoin seeds", this);
+        // Named after the coins in this wallet ("Bitcoin seeds"…).
+        auto *seedsVault = biscuit::coins::CoinVault::forWallet(m_wallet);
+        auto renameSeeds = [coinSeeds, seedsVault] {
+            const QString coins = seedsVault->mainSeedCoinsText();
+            coinSeeds->setTitle(seedsVault->exists() && !coins.isEmpty() ? QString("%1 seeds").arg(coins) : QString("Other seeds"));
+        };
+        for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
+                            &biscuit::coins::CoinVault::walletsChanged}) {
+            connect(seedsVault, signal, coinSeeds, renameSeeds);
+        }
+        renameSeeds();
         QAction *coinSeedsAction = coinSeeds->menuAction();
         ui->menuWallet->insertAction(ui->actionSeed, coinSeedsAction);
         ui->menuWallet->removeAction(ui->actionSeed);
@@ -409,7 +421,7 @@ void MainWindow::initMenu() {
             if (vault->exists()) {
                 biscuit::coins::addCoinSeedActions(coinSeeds, vault, this);
             } else {
-                coinSeeds->addAction("Not set up yet: go to Receive › Bitcoin or Litecoin")->setEnabled(false);
+                coinSeeds->addAction("Not added to this wallet: use + in Receive")->setEnabled(false);
             }
         });
     }
@@ -713,43 +725,66 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
     int displaySetting = conf()->get(Config::balanceDisplay).toInt();
     int decimals = conf()->get(Config::amountPrecision).toInt();
 
-    QString balance_str = "Balance: ";
     if (hide) {
-        balance_str += "HIDDEN";
-    }
-    else if (displaySetting == Config::totalBalance) {
-        balance_str += QString("%1 XMR").arg(WalletManager::displayAmount(balance, false, decimals));
-    }
-    else if (displaySetting == Config::spendable || displaySetting == Config::spendablePlusUnconfirmed) {
-        balance_str += QString("%1 XMR").arg(WalletManager::displayAmount(spendable, false, decimals));
-
-        if (displaySetting == Config::spendablePlusUnconfirmed && balance > spendable) {
-            balance_str += QString(" (+%1 XMR unconfirmed)").arg(WalletManager::displayAmount(balance - spendable, false, decimals));
-        }
+        m_statusLabelBalance->setToolTip("Click for details");
+        m_statusLabelBalance->setText("Balance: HIDDEN");
+        return;
     }
 
-    // Biscuit: every coin of the wallet on the same line, fiat value of the total.
+    // Biscuit: only what the wallet holds, each coin and token under its own
+    // name (USDT as USDT), then the total in the preferred currency.
+    QStringList parts;
     QString fiatCurrency = conf()->get(Config::preferredFiatCurrency).toString();
-    bool pricesKnown = appData()->prices.canConvert("XMR", fiatCurrency);
-    double balanceFiatAmount = appData()->prices.convert("XMR", fiatCurrency, balance / constants::cdiv);
+    bool pricesKnown = true;
+    double balanceFiatAmount = 0;
+    auto addValue = [&](const QString &ticker, double amount) {
+        pricesKnown = pricesKnown && appData()->prices.canConvert(ticker, fiatCurrency);
+        balanceFiatAmount += appData()->prices.convert(ticker, fiatCurrency, amount);
+    };
+
+    if (balance > 0) {
+        QString monero;
+        if (displaySetting == Config::totalBalance) {
+            monero = QString("%1 XMR").arg(WalletManager::displayAmount(balance, false, decimals));
+        } else {
+            monero = QString("%1 XMR").arg(WalletManager::displayAmount(spendable, false, decimals));
+            if (displaySetting == Config::spendablePlusUnconfirmed && balance > spendable) {
+                monero += QString(" (+%1 XMR unconfirmed)").arg(WalletManager::displayAmount(balance - spendable, false, decimals));
+            }
+        }
+        parts << monero;
+        addValue("XMR", balance / constants::cdiv);
+    }
+
     auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-    if (vault->isUnlocked() && !hide) {
-        // All the Bitcoin (or Litecoin) wallets of this wallet together.
-        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+    if (vault->isUnlocked()) {
+        // All the wallets of a coin together.
+        for (const auto *params : biscuit::coins::walletCoins()) {
+            if (params->ethereum) {
+                continue;   // below, asset by asset
+            }
             quint64 total = 0;
             for (const auto &entry : vault->wallets(*params)) {
                 total += entry.wallet->balance().total();
             }
-            balance_str += QString(" · %1 %2").arg(biscuit::swap::amount::fromAtomic(total, params->decimals), params->ticker);
             if (total > 0) {
-                pricesKnown = pricesKnown && appData()->prices.canConvert(params->ticker, fiatCurrency);
+                parts << QString("%1 %2").arg(biscuit::swap::amount::fromAtomic(total, params->decimals), params->ticker);
+                addValue(params->ticker, double(total) / 1e8);
             }
-            balanceFiatAmount += appData()->prices.convert(params->ticker, fiatCurrency, double(total) / 1e8);
+        }
+        for (const QString &asset : biscuit::coins::EthWallet::assets()) {
+            const auto amount = vault->ethereumBalance(asset);
+            if (amount > 0) {
+                const QString text = biscuit::coins::eth::formatAmount(amount, biscuit::coins::EthWallet::decimals(asset));
+                parts << QString("%1 %2").arg(text, asset);
+                addValue(asset, text.toDouble());
+            }
         }
     }
 
+    QString balance_str = QString("Balance: %1").arg(parts.isEmpty() ? QString("0") : parts.join(" · "));
     // Total of all coins in the preferred currency (Settings), once prices are known.
-    if (conf()->get(Config::balanceShowFiat).toBool() && !hide && pricesKnown) {
+    if (conf()->get(Config::balanceShowFiat).toBool() && !parts.isEmpty() && pricesKnown) {
         balance_str += QString(" · Total %1").arg(Utils::amountToCurrencyString(balanceFiatAmount, fiatCurrency));
     }
 
@@ -893,6 +928,49 @@ void MainWindow::onSyncStatus(quint64 height, quint64 target, bool daemonSync) {
     }
     this->setStatusText(Utils::formatSyncStatus(height, target, daemonSync));
     m_statusLabelStatus->setToolTip(QString("Wallet height: %1").arg(QString::number(height)));
+    this->updateCoinsSyncStatus();
+}
+
+// Biscuit: "Synchronized" only once every coin is, not Monero alone; until
+// then, the coins still on their way are named (their balances may still be 0).
+void MainWindow::updateCoinsSyncStatus() {
+    if (conf()->get(Config::offlineMode).toBool() || !m_wallet->isSynchronized()) {
+        return;   // Monero's own state is shown as it is
+    }
+    // Connecting or synchronizing: on its way. Disconnected: not trying (no
+    // network allowed, e.g. no onion node in "onion services only").
+    QStringList pending, offline;
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    if (vault->isUnlocked()) {
+        using biscuit::coins::CoinWallet;
+        using biscuit::coins::EthWallet;
+        for (const auto *params : biscuit::coins::walletCoins()) {
+            bool synchronizing = false, disconnected = false;
+            if (params->ethereum) {
+                if (const EthWallet *eth = vault->ethereum()) {
+                    disconnected = eth->status() == EthWallet::Status::Disconnected;
+                    synchronizing = eth->status() == EthWallet::Status::Connecting;
+                }
+            } else {
+                for (const auto &entry : vault->wallets(*params)) {
+                    disconnected = disconnected || entry.wallet->status() == CoinWallet::Status::Disconnected;
+                    synchronizing = synchronizing || (entry.wallet->status() != CoinWallet::Status::Synchronized
+                                                      && entry.wallet->status() != CoinWallet::Status::Disconnected);
+                }
+            }
+            if (synchronizing) {
+                pending << params->name;
+            } else if (disconnected) {
+                offline << params->name;
+            }
+        }
+    }
+    QString text = pending.isEmpty() ? QString("Synchronized") : QString("Synchronizing %1…").arg(pending.join(", "));
+    if (!offline.isEmpty()) {
+        text += QString(" · %1 not connected").arg(offline.join(", "));
+    }
+    this->setStatusText(text);
+    m_statusBtnConnectionStatusIndicator->setIcon(PixelIcons::icon(pending.isEmpty() ? "status_connected" : "status_synchronizing"));
 }
 
 void MainWindow::onConnectionStatusChanged(int status)
@@ -935,6 +1013,7 @@ void MainWindow::onConnectionStatusChanged(int status)
     }
 
     m_statusBtnConnectionStatusIndicator->setIcon(icon);
+    this->updateCoinsSyncStatus();
 }
 
 void MainWindow::onTransactionCreated(PendingTransaction *tx, const QVector<QString> &address) {

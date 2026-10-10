@@ -38,7 +38,7 @@ CoinContactsSwitcher::CoinContactsSwitcher(Wallet *wallet, QWidget *moneroPage, 
     layout->setContentsMargins(0, 0, 0, 0);
 
     m_picker = new CoinPicker(this);
-    addWalletCoins(m_picker);
+    addWalletCoins(m_picker, true, false);
     layout->addWidget(m_picker);
 
     m_pages = new QStackedWidget(this);
@@ -47,11 +47,15 @@ CoinContactsSwitcher::CoinContactsSwitcher(Wallet *wallet, QWidget *moneroPage, 
     m_ltc = new QTreeWidget(this);
     m_btcStatus = new QLabel(this);
     m_ltcStatus = new QLabel(this);
+    m_eth = new QTreeWidget(this);
+    m_ethStatus = new QLabel(this);
     m_pages->addWidget(makePage(bitcoin(), m_btc, m_btcStatus));
     m_pages->addWidget(makePage(litecoin(), m_ltc, m_ltcStatus));
+    m_pages->addWidget(makePage(ethereum(), m_eth, m_ethStatus));
     layout->addWidget(m_pages);
 
     connect(m_picker, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    showWalletCoins(m_picker, m_vault, false);
     for (auto signal : {&CoinVault::unlocked, &CoinVault::locked, &CoinVault::contactsChanged}) {
         connect(m_vault, signal, this, &CoinContactsSwitcher::refresh);
     }
@@ -109,13 +113,15 @@ QWidget *CoinContactsSwitcher::makePage(const CoinParams &params, QTreeWidget *t
 
 void CoinContactsSwitcher::refresh() {
     for (auto [tree, status, params] : {std::tuple{m_btc, m_btcStatus, &bitcoin()},
-                                        std::tuple{m_ltc, m_ltcStatus, &litecoin()}}) {
+                                        std::tuple{m_ltc, m_ltcStatus, &litecoin()},
+                                        std::tuple{m_eth, m_ethStatus, &ethereum()}}) {
         tree->setSortingEnabled(false);
         tree->clear();
         const bool unlocked = m_vault->isUnlocked();
         tree->setEnabled(unlocked);
         if (!unlocked) {
-            status->setText(QString("Unlock %1 to see its contacts.").arg(params->name));
+            status->setText(m_vault->exists() ? QString("Unlock %1 to see its contacts.").arg(params->name)
+                                              : QString("%1 is not in this wallet. Add it with + in Receive.").arg(params->name));
             tree->setSortingEnabled(true);
             continue;
         }
@@ -128,7 +134,8 @@ void CoinContactsSwitcher::refresh() {
         }
         tree->setSortingEnabled(true);
         status->setText(contacts.isEmpty() ? QString("No %1 contact yet.").arg(params->name)
-                                           : "Double-click a contact to pay it. Kept in the encrypted wallet file.");
+                        : params->ethereum ? QString("Double-click a contact to pay it (ETH, USDT or USDC). Kept in the encrypted wallet file.")
+                                           : QString("Double-click a contact to pay it. Kept in the encrypted wallet file."));
     }
 }
 
@@ -146,7 +153,8 @@ void CoinContactsSwitcher::editContact(const CoinParams &params, int index) {
     auto *name = new QLineEdit(isNew ? QString() : contacts[index].name, &dialog);
     auto *address = new QLineEdit(isNew ? QString() : contacts[index].address, &dialog);
     address->setMinimumWidth(420);
-    address->setPlaceholderText(params == bitcoin() ? "bc1…, 1…, 3… or a silent payment address (sp1…)" : "ltc1…, L…, M…");
+    address->setPlaceholderText(params.ethereum     ? "0x… (also for USDT and USDC on Ethereum)"
+                                : params == bitcoin() ? "bc1…, 1…, 3… or a silent payment address (sp1…)" : "ltc1…, L…, M…");
     form->addRow("Name:", name);
     form->addRow("Address:", address);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dialog);
@@ -157,7 +165,13 @@ void CoinContactsSwitcher::editContact(const CoinParams &params, int index) {
             Utils::showError(&dialog, "Name missing", "Give the contact a name.");
             return;
         }
-        if (!isValidSendDestination(address->text().trimmed(), params)) {
+        if (params.ethereum) {
+            QString error;
+            if (!eth::parseAddress(address->text(), &error)) {
+                Utils::showError(&dialog, "Invalid address", error);
+                return;
+            }
+        } else if (!isValidSendDestination(address->text().trimmed(), params)) {
             Utils::showError(&dialog, "Invalid address", QString("This is not a valid %1 address.").arg(params.name));
             return;
         }
@@ -167,7 +181,12 @@ void CoinContactsSwitcher::editContact(const CoinParams &params, int index) {
         return;
     }
 
-    const CoinVault::Contact contact{name->text().trimmed(), address->text().trimmed()};
+    // Ethereum: kept with its checksum, whatever case it was typed in.
+    QString saved = address->text().trimmed();
+    if (params.ethereum) {
+        saved = eth::checksumAddress(*eth::parseAddress(saved));
+    }
+    const CoinVault::Contact contact{name->text().trimmed(), saved};
     if (isNew) {
         contacts.append(contact);
     } else {

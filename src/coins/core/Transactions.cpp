@@ -52,6 +52,10 @@ namespace {
     const unsigned char *u(const QByteArray &b) { return reinterpret_cast<const unsigned char *>(b.constData()); }
 }
 
+quint64 inputCost(double feeRate) {
+    return static_cast<quint64>(std::ceil(p2wpkhInput * feeRate));
+}
+
 int estimateVsize(int inputs, const QList<int> &outputScriptSizes) {
     double vsize = txOverhead + inputs * p2wpkhInput;
     for (int size : outputScriptSizes) {

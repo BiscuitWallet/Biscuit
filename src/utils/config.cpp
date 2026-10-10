@@ -84,6 +84,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::dataTorOnly, {QS("dataTorOnly"), false}},
         {Config::electrumServerBTC, {QS("electrumServerBTC"), ""}},
         {Config::electrumServerLTC, {QS("electrumServerLTC"), ""}},
+        {Config::ethereumNode, {QS("ethereumNode"), ""}},
+        {Config::ethereumBlockscout, {QS("ethereumBlockscout"), ""}},
         {Config::offlineMode, {QS("offlineMode"), false}},
 
         // Transactions
@@ -117,7 +119,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::cameraExposureTime, {QS("cameraExposureTime"), 10}},
 
         {Config::fiatSymbols, {QS("fiatSymbols"), QStringList{"USD", "EUR", "GBP", "CAD", "AUD", "RUB"}}},
-        {Config::cryptoSymbols, {QS("cryptoSymbols"), QStringList{"BTC", "ETH", "LTC", "XMR", "ZEC"}}},
+        {Config::cryptoSymbols, {QS("cryptoSymbols"), QStringList{"BTC", "ETH", "LTC", "XMR", "USDT", "USDC", "ZEC"}}},
 
         // Tor
         {Config::proxy, {QS("proxy"), Config::Proxy::None}}, // Biscuit: Tor is opt-in
@@ -134,7 +136,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
         {Config::enabledPlugins, {QS("enabledPlugins"), QStringList{"tickers", "news", "crowdfunding", "revuo", "calc", "swap"}}},
         {Config::restartRequired, {QS("restartRequired"), false}},
 
-        {Config::tickers, {QS("tickers"), QStringList{"XMR", "BTC", "LTC", "XMR/BTC"}}},
+        // Biscuit: each coin's price, shown once that coin is added to the wallet.
+        {Config::tickers, {QS("tickers"), QStringList{"XMR", "BTC", "LTC", "ETH", "USDT", "USDC"}}},
         {Config::tickersShowFiatBalance, {QS("tickersShowFiatBalance"), true}},
 
         // Biscuit: swaps

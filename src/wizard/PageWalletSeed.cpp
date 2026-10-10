@@ -147,8 +147,8 @@ void PageWalletSeed::onError() {
 }
 
 int PageWalletSeed::nextId() const {
-    // Biscuit: the Bitcoin/Litecoin seed comes next, then the usual path.
-    return WalletWizard::Page_CoinSeed;
+    // Biscuit: other coins (optional) come next, then the usual path.
+    return WalletWizard::Page_OtherCoins;
 }
 
 bool PageWalletSeed::validatePage() {

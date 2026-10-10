@@ -22,7 +22,8 @@
 namespace biscuit::coins {
 
 namespace {
-    // 1: main seed only. 2: adds "extra" wallets and "selected".
+    // 1: main seed only. 2: adds "extra" wallets and "selected". Later
+    // optional key: "mainCoins" (without it, both Bitcoin and Litecoin).
     constexpr int fileVersion = 2;
     constexpr char mainName[] = "Main";
 
@@ -31,9 +32,20 @@ namespace {
     }
 
     const CoinParams *paramsForTicker(const QString &ticker) {
-        if (ticker == coins::bitcoin().ticker) return &coins::bitcoin();
-        if (ticker == coins::litecoin().ticker) return &coins::litecoin();
+        for (const CoinParams *params : walletCoins()) {
+            if (params->ticker == ticker) return params;
+        }
         return nullptr;
+    }
+
+    // First address of a coin for a seed, to recognise a wallet already here.
+    QString firstAddressOf(const QByteArray &seed, const CoinParams &params) {
+        if (params.ethereum) {
+            const auto account = eth::Account::fromSeed(seed);
+            return account ? eth::checksumAddress(account->address(0)) : QString();
+        }
+        const auto account = HdAccount::fromSeed(seed, params);
+        return account ? account->address(HdAccount::Receive, 0) : QString();
     }
     constexpr int saveDelayMs = 3000;
 
@@ -45,6 +57,37 @@ namespace {
     QJsonObject parseContent(const QByteArray &content) {
         return QJsonDocument::fromJson(content).object();
     }
+
+    QJsonArray tickers(const QStringList &list) {
+        QJsonArray array;
+        for (const QString &ticker : list) array.append(ticker);
+        return array;
+    }
+}
+
+const QList<const CoinParams *> &walletCoins() {
+    static const QList<const CoinParams *> list{&coins::bitcoin(), &coins::litecoin(), &coins::ethereum()};
+    return list;
+}
+
+const CoinParams *coinOfTicker(const QString &ticker) {
+    for (const CoinParams *params : walletCoins()) {
+        if (params->ticker == ticker) return params;
+    }
+    for (const eth::Token &token : eth::tokens()) {
+        if (token.symbol == ticker) return &coins::ethereum();
+    }
+    return nullptr;
+}
+
+QString coinNames(const QList<const CoinParams *> &coins) {
+    QStringList names;
+    for (const CoinParams *params : coins) names << params->name;
+    if (names.size() < 2) {
+        return names.join(QString());
+    }
+    const QString last = names.takeLast();
+    return QString("%1 and %2").arg(names.join(", "), last);
 }
 
 CoinVault *CoinVault::forWallet(Wallet *wallet) {
@@ -78,7 +121,12 @@ bool CoinVault::exists() const {
     return QFile::exists(path());
 }
 
-bool CoinVault::setUp(const QString &mnemonic, const QString &passphrase, const QString &password, QString *error) {
+bool CoinVault::setUp(const QString &mnemonic, const QString &passphrase, const QString &password,
+                      const QList<const CoinParams *> &coins, QString *error) {
+    if (coins.isEmpty()) {
+        if (error) *error = "No coin chosen";
+        return false;
+    }
     if (!m_wallet || !m_wallet->verifyPassword(password)) {
         if (error) *error = "Wrong password (use the password of this Monero wallet)";
         return false;
@@ -103,6 +151,14 @@ bool CoinVault::setUp(const QString &mnemonic, const QString &passphrase, const 
         {"mnemonic", bip39::normalizeMnemonic(mnemonic)},
         {"passphrase", passphrase},
         {"created", m_created},
+        {"mainCoins", tickers([&coins] {
+            QStringList list;
+            for (const CoinParams *params : walletCoins()) {
+                const bool chosen = std::any_of(coins.begin(), coins.end(), [params](const CoinParams *c) { return *c == *params; });
+                if (chosen) list << params->ticker;
+            }
+            return list;
+        }())},
         {"coins", QJsonObject{}},
         {"extra", QJsonArray{}},
     }).toJson(QJsonDocument::Compact);
@@ -155,9 +211,27 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
     const QJsonObject caches = obj.value("coins").toObject();
     QByteArray seedBytes = *seed;
     bool ok = true;
+    // Coins on the main seed. Files written before coins became optional
+    // have no list: both Bitcoin and Litecoin.
+    m_mainCoins.clear();
+    const QJsonArray mainCoins = obj.contains("mainCoins") ? obj.value("mainCoins").toArray()
+                                                           : QJsonArray{coins::bitcoin().ticker, coins::litecoin().ticker};
+    for (const CoinParams *params : walletCoins()) {
+        if (mainCoins.contains(params->ticker)) {
+            m_mainCoins << params->ticker;
+        }
+    }
+    // Tokens shown ("tokens": ["USDT", ...]), each added by the user.
+    m_tokens.clear();
+    for (const eth::Token &token : eth::tokens()) {
+        if (obj.value("tokens").toArray().contains(token.symbol)) m_tokens << token.symbol;
+    }
     // The main wallets' names, if renamed ("mainNames": {"BTC": ..., "LTC": ...}).
     const QJsonObject mainNames = obj.value("mainNames").toObject();
-    for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
+    for (const CoinParams *params : walletCoins()) {
+        if (!m_mainCoins.contains(params->ticker)) {
+            continue;
+        }
         const QString name = mainNames.value(params->ticker).toString(mainName);
         ok = ok && addEntry(mainId(*params), name, true, *params, seedBytes,
                             caches.value(params->ticker).toObject(), error);
@@ -196,11 +270,11 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
     }
 
     const QJsonObject selected = obj.value("selected").toObject();
-    for (const CoinParams *params : {&coins::bitcoin(), &coins::litecoin()}) {
+    for (const CoinParams *params : walletCoins()) {
         const QString id = selected.value(params->ticker).toString();
         const auto list = wallets(*params);
         const bool known = std::any_of(list.begin(), list.end(), [&id](const Entry &e) { return e.id == id; });
-        m_selected[params->ticker] = known ? id : mainId(*params);
+        m_selected[params->ticker] = known ? id : list.isEmpty() ? mainId(*params) : list.first().id;
     }
     applyNetworkSettings();   // sets the proxy and starts the wallets
     return true;
@@ -208,6 +282,19 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
 
 bool CoinVault::addEntry(const QString &id, const QString &name, bool mainSeed, const CoinParams &params,
                          const QByteArray &seed, const QJsonObject &cache, QString *error) {
+    if (params.ethereum) {
+        auto account = eth::Account::fromSeed(seed);
+        if (!account) {
+            if (error) *error = "Unable to derive keys";
+            return false;
+        }
+        auto *w = new EthWallet(std::move(*account), cache, this);
+        connect(w, &EthWallet::cacheChanged, this, &CoinVault::scheduleSave);
+        connect(w, &EthWallet::updated, this, &CoinVault::walletUpdated);
+        connect(w, &EthWallet::statusChanged, this, &CoinVault::walletUpdated);
+        m_entries.append({id, name, mainSeed, &params, nullptr, w});
+        return true;
+    }
     auto account = HdAccount::fromSeed(seed, params);
     if (!account) {
         if (error) *error = "Unable to derive keys";
@@ -217,15 +304,18 @@ bool CoinVault::addEntry(const QString &id, const QString &name, bool mainSeed, 
     connect(w, &CoinWallet::cacheChanged, this, &CoinVault::scheduleSave);
     connect(w, &CoinWallet::updated, this, &CoinVault::walletUpdated);
     connect(w, &CoinWallet::statusChanged, this, &CoinVault::walletUpdated);
-    m_entries.append({id, name, mainSeed, w});
+    m_entries.append({id, name, mainSeed, &params, w, nullptr});
     return true;
 }
 
 void CoinVault::clearWallets() {
     for (const Entry &e : m_entries) {
         delete e.wallet;
+        delete e.eth;
     }
     m_entries.clear();
+    m_mainCoins.clear();
+    m_tokens.clear();
     m_selected.clear();
     m_contacts.clear();   // they live in the encrypted file only
     m_coinSelection.clear();
@@ -314,12 +404,126 @@ std::optional<QPair<QString, QString>> CoinVault::revealMnemonic(const QString &
     return std::nullopt;
 }
 
+CoinVault::CoinState CoinVault::coinState(const CoinParams &params) const {
+    if (!exists()) {
+        return CoinState::NotAdded;
+    }
+    if (!isUnlocked()) {
+        return CoinState::Locked;
+    }
+    return wallets(params).isEmpty() ? CoinState::NotAdded : CoinState::Ready;
+}
+
+CoinVault::CoinState CoinVault::assetState(const QString &ticker) const {
+    const CoinParams *params = coinOfTicker(ticker);
+    if (!params) {
+        return CoinState::NotAdded;
+    }
+    const CoinState state = coinState(*params);
+    if (params->ticker == ticker || state != CoinState::Ready) {
+        return state;
+    }
+    return m_tokens.contains(ticker) ? CoinState::Ready : CoinState::NotAdded;   // a token on Ethereum
+}
+
+bool CoinVault::setTokenEnabled(const QString &symbol, bool enabled, QString *error) {
+    if (!m_session) {
+        if (error) *error = "This wallet is locked";
+        return false;
+    }
+    if (enabled && !hasCoin(coins::ethereum())) {
+        if (error) *error = "Add Ethereum first";
+        return false;
+    }
+    QStringList tokens;
+    for (const eth::Token &token : eth::tokens()) {
+        const bool on = token.symbol == symbol ? enabled : m_tokens.contains(token.symbol);
+        if (on) tokens << token.symbol;
+    }
+    if (tokens == m_tokens) {
+        return true;
+    }
+    if (!rewrite([&tokens](QJsonObject &obj) { obj["tokens"] = QJsonArray::fromStringList(tokens); }, error)) {
+        return false;
+    }
+    m_tokens = tokens;
+    emit walletsChanged();
+    return true;
+}
+
+QList<const CoinParams *> CoinVault::mainSeedCoins() const {
+    QList<const CoinParams *> list;
+    for (const CoinParams *params : walletCoins()) {
+        if (!isUnlocked() || m_mainCoins.contains(params->ticker)) list << params;
+    }
+    return list;
+}
+
+QString CoinVault::mainSeedCoinsText() const {
+    return coinNames(mainSeedCoins());
+}
+
+bool CoinVault::addCoin(const CoinParams &params, QString *error) {
+    if (!m_session) {
+        if (error) *error = "Bitcoin and Litecoin are locked";
+        return false;
+    }
+    if (coinState(params) == CoinState::Ready) {
+        if (error) *error = QString("%1 is already in this wallet.").arg(params.name);
+        return false;
+    }
+    auto seed = bip39Seed(mainId(coins::bitcoin()), error);   // the main seed
+    if (!seed) {
+        return false;
+    }
+    QStringList mainCoins;
+    for (const CoinParams *p : walletCoins()) {
+        if (m_mainCoins.contains(p->ticker) || *p == params) mainCoins << p->ticker;
+    }
+    QString name = mainName;
+    const bool written = rewrite([&](QJsonObject &obj) {
+        name = obj.value("mainNames").toObject().value(params.ticker).toString(mainName);
+        obj["mainCoins"] = tickers(mainCoins);
+    }, error);
+    const bool added = written && addEntry(mainId(params), name, true, params, *seed, {}, error);
+    walletfile::wipe(*seed);
+    if (!added) {
+        return false;
+    }
+    m_mainCoins = mainCoins;
+    m_selected[params.ticker] = mainId(params);
+    applyNetworkSettings();   // starts it
+    scheduleSave();
+    emit walletsChanged();
+    return true;
+}
+
 CoinWallet *CoinVault::wallet(const CoinParams &params) const {
     const QString id = selectedId(params);
     for (const Entry &e : m_entries) {
         if (e.id == id) return e.wallet;
     }
     return nullptr;
+}
+
+EthWallet *CoinVault::ethereum() const {
+    const QString id = selectedId(coins::ethereum());
+    for (const Entry &e : m_entries) {
+        if (e.id == id) return e.eth;
+    }
+    return nullptr;
+}
+
+eth::u128 CoinVault::ethereumBalance(const QString &asset) const {
+    eth::u128 total = 0;
+    for (const Entry &e : m_entries) {
+        if (e.eth) total += e.eth->balance(asset);
+    }
+    return total;
+}
+
+QString CoinVault::Entry::firstAddress() const {
+    return eth ? eth->addressText() : wallet ? wallet->firstAddress() : QString();
 }
 
 QString CoinVault::selectedId(const CoinParams &params) const {
@@ -347,14 +551,16 @@ void CoinVault::select(const CoinParams &params, const QString &id) {
 QList<CoinVault::Entry> CoinVault::wallets(const CoinParams &params) const {
     QList<Entry> list;
     for (const Entry &e : m_entries) {
-        if (e.wallet->params() == params) list.append(e);
+        if (*e.params == params) list.append(e);
     }
     return list;
 }
 
 QList<CoinWallet *> CoinVault::allWallets() const {
     QList<CoinWallet *> list;
-    for (const Entry &e : m_entries) list.append(e.wallet);
+    for (const Entry &e : m_entries) {
+        if (e.wallet) list.append(e.wallet);
+    }
     return list;
 }
 
@@ -387,7 +593,7 @@ std::optional<QByteArray> CoinVault::bip39Seed(const QString &id, QString *error
     walletfile::wipe(*content);
 
     QJsonObject entry;
-    if (id == mainId(coins::bitcoin()) || id == mainId(coins::litecoin())) {
+    if (id.startsWith("main-")) {   // every coin of the main seed
         entry = obj;
     } else {
         for (const QJsonValue &value : obj.value("extra").toArray()) {
@@ -449,10 +655,9 @@ bool CoinVault::addWallet(const CoinParams &params, const QString &name, const Q
         return false;
     }
     // Same keys as a wallet already here: nothing to add.
-    auto account = HdAccount::fromSeed(*seed, params);
-    const QString firstAddress = account ? account->address(HdAccount::Receive, 0) : QString();
+    const QString firstAddress = firstAddressOf(*seed, params);
     for (const Entry &e : wallets(params)) {
-        if (e.wallet->firstAddress() == firstAddress) {
+        if (e.firstAddress() == firstAddress) {
             if (error) *error = QString("This %1 wallet is already in Biscuit (\"%2\").").arg(params.name, e.name);
             return false;
         }
@@ -488,11 +693,46 @@ bool CoinVault::addWallet(const CoinParams &params, const QString &name, const Q
 
 bool CoinVault::removeWallet(const QString &id, QString *error) {
     const auto it = std::find_if(m_entries.begin(), m_entries.end(), [&id](const Entry &e) { return e.id == id; });
-    if (it == m_entries.end() || it->mainSeed) {
-        if (error) *error = "This wallet cannot be removed";
+    if (it == m_entries.end() || !m_session) {
+        if (error) *error = "This wallet is no longer in Biscuit";
         return false;
     }
-    const bool written = rewrite([&id](QJsonObject &obj) {
+    if (it->wallet && !it->wallet->spendLock().isEmpty()) {
+        if (error) *error = it->wallet->spendLock();   // an atomic swap uses it
+        return false;
+    }
+
+    // The last one: nothing is left to keep, the file goes.
+    if (m_entries.size() == 1) {
+        m_saveTimer.stop();
+        if (!QFile::remove(path())) {
+            if (error) *error = "Unable to delete the wallet file";
+            return false;
+        }
+        clearWallets();
+        m_session.reset();   // wipes the key
+        emit walletsChanged();
+        return true;
+    }
+
+    const CoinParams &params = *it->params;
+    const bool mainSeed = it->mainSeed;
+    QStringList mainCoins = m_mainCoins;
+    mainCoins.removeAll(params.ticker);
+    // The last Ethereum wallet: its tokens go with it.
+    const bool lastOfCoin = wallets(params).size() == 1;
+    const bool dropTokens = params.ethereum && lastOfCoin;
+    const bool written = rewrite([&](QJsonObject &obj) {
+        if (dropTokens) {
+            obj["tokens"] = QJsonArray();
+        }
+        if (mainSeed) {
+            obj["mainCoins"] = tickers(mainCoins);
+            QJsonObject caches = obj.value("coins").toObject();
+            caches.remove(params.ticker);
+            obj["coins"] = caches;
+            return;
+        }
         QJsonArray kept;
         for (const QJsonValue &v : obj.value("extra").toArray()) {
             if (v.toObject().value("id").toString() != id) kept.append(v);
@@ -502,11 +742,19 @@ bool CoinVault::removeWallet(const QString &id, QString *error) {
     if (!written) {
         return false;
     }
-    const CoinParams &params = it->wallet->params();
     delete it->wallet;
+    delete it->eth;
     m_entries.erase(it);
+    if (mainSeed) {
+        m_mainCoins = mainCoins;
+    }
+    if (dropTokens) {
+        m_tokens.clear();
+    }
     if (m_selected.value(params.ticker) == id) {
-        m_selected[params.ticker] = mainId(params);
+        const auto rest = wallets(params);
+        m_selected[params.ticker] = rest.isEmpty() ? mainId(params) : rest.first().id;
+        m_coinSelection.remove(params.ticker);
     }
     scheduleSave();
     emit walletsChanged();
@@ -528,7 +776,7 @@ bool CoinVault::renameWallet(const QString &id, const QString &name, QString *er
         if (error) *error = "The name is too long (32 characters at most).";
         return false;
     }
-    const CoinParams &params = it->wallet->params();
+    const CoinParams &params = *it->params;
     for (const Entry &e : wallets(params)) {
         if (e.id != id && e.name.compare(clean, Qt::CaseInsensitive) == 0) {
             if (error) *error = QString("Another %1 wallet is already called \"%2\".").arg(params.name, e.name);
@@ -583,6 +831,16 @@ void CoinVault::applyNetworkSettings() {
         w->setConnection(networkProxy, server);   // reconnects if anything changed
         if (!w->isRunning()) w->start();
     }
+    // Ethereum follows the same settings by itself (Tor, offline mode), with
+    // the user's own node and Blockscout if set.
+    for (const Entry &e : m_entries) {
+        if (!e.eth) {
+            continue;
+        }
+        e.eth->setCustomNode(conf()->get(Config::ethereumNode).toString());
+        e.eth->setCustomBlockscout(conf()->get(Config::ethereumBlockscout).toString());
+        e.eth->isRunning() ? e.eth->refresh() : e.eth->start();
+    }
 }
 
 void CoinVault::scheduleSave() {
@@ -600,10 +858,11 @@ void CoinVault::save() {
         QJsonObject caches;
         QHash<QString, QJsonObject> extraCaches;
         for (const Entry &e : m_entries) {
+            const QJsonObject cache = e.eth ? e.eth->cache() : e.wallet->cache();
             if (e.mainSeed) {
-                caches[e.wallet->params().ticker] = e.wallet->cache();
+                caches[e.params->ticker] = cache;
             } else {
-                extraCaches.insert(e.id, e.wallet->cache());
+                extraCaches.insert(e.id, cache);
             }
         }
         obj["coins"] = caches;

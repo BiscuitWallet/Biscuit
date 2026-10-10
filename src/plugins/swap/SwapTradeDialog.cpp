@@ -109,10 +109,13 @@ void SwapTradeDialog::updateView() {
     setRowVisible(ui->label_supportTitle, ui->line_support, !t->supportUrl.isEmpty());
     ui->line_support->setText(t->supportUrl);
 
-    // Biscuit holds XMR, BTC and LTC: the deposit can always be sent from here.
-    const bool fromThisWallet = t->from.ticker == QLatin1String("xmr")
-                                || ((t->from.ticker == QLatin1String("btc") || t->from.ticker == QLatin1String("ltc"))
-                                    && t->from.network == QLatin1String("Mainnet"));
+    // Biscuit holds XMR, BTC, LTC, and ETH, USDT and USDC on Ethereum: the
+    // deposit can be sent from here (or the user is told how, if not added).
+    const QString f = t->from.ticker;
+    const bool fromThisWallet = f == QLatin1String("xmr")
+                                || ((f == QLatin1String("btc") || f == QLatin1String("ltc")) && t->from.network == QLatin1String("Mainnet"))
+                                || ((f == QLatin1String("eth") || f == QLatin1String("usdt") || f == QLatin1String("usdc"))
+                                    && t->from.network == QLatin1String("ERC20"));
     const bool awaitingDeposit = t->status == TradeStatus::New || t->status == TradeStatus::Waiting;
     ui->btn_send->setVisible(fromThisWallet && !demo);
     ui->btn_send->setEnabled(awaitingDeposit && t->depositTxId.isEmpty());

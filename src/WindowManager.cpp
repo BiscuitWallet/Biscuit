@@ -3,6 +3,7 @@
 
 #include "WindowManager.h"
 
+#include <QCursor>
 #include <QDialogButtonBox>
 #include <QInputDialog>
 #include <QMessageBox>
@@ -111,6 +112,8 @@ void WindowManager::close() {
     }
     if (m_tray) {
         m_tray->deleteLater();
+        if (m_trayMenu) m_trayMenu->deleteLater();
+        m_trayMenu = nullptr;
     }
     if (m_wizard) {
         m_wizard->deleteLater();
@@ -369,12 +372,21 @@ void WindowManager::onWalletOpened(Wallet *wallet) {
     // Biscuit: one password for everything. Bitcoin/Litecoin are unlocked with
     // the password that just opened the Monero wallet, which is then forgotten.
     auto *vault = biscuit::coins::CoinVault::forWallet(wallet);
-    if (!m_pendingCoinMnemonic.isEmpty() && !vault->exists()) {
-        // New wallet: the Bitcoin/Litecoin seed written down in the wizard.
+    QList<const biscuit::coins::CoinParams *> pendingCoins;
+    for (const auto *params : biscuit::coins::walletCoins()) {
+        if (m_pendingCoinTickers.contains(params->ticker)) pendingCoins << params;
+    }
+    if (!m_pendingCoinMnemonic.isEmpty() && !pendingCoins.isEmpty() && !vault->exists()) {
+        // New wallet: the seed of the other coins chosen, written down in the wizard.
         QString error;
-        if (!vault->setUp(m_pendingCoinMnemonic, {}, m_pendingPassword, &error)) {
-            Utils::showError(window, "Bitcoin and Litecoin not set up", error,
-                             {"Set them up from the Receive tab, with the 12 words you wrote down."});
+        if (!vault->setUp(m_pendingCoinMnemonic, {}, m_pendingPassword, pendingCoins, &error)) {
+            Utils::showError(window, QString("%1 not added").arg(biscuit::coins::coinNames(pendingCoins)), error,
+                             {"Add it again with + in Receive, and restore it with the 12 words you wrote down."});
+        }
+        // The tokens chosen too (USDT, USDC), on the Ethereum just set up.
+        for (const QString &ticker : m_pendingCoinTickers) {
+            const auto *params = biscuit::coins::coinOfTicker(ticker);
+            if (params && params->ticker != ticker) vault->setTokenEnabled(ticker, true, nullptr);
         }
     } else if (vault->exists() && !vault->isUnlocked()) {
         QString error;
@@ -384,6 +396,7 @@ void WindowManager::onWalletOpened(Wallet *wallet) {
     }
     m_pendingCoinMnemonic.fill(QChar(' '));
     m_pendingCoinMnemonic.clear();
+    m_pendingCoinTickers.clear();
     m_pendingPassword.fill(QChar(' '));
     m_pendingPassword.clear();
 }
@@ -425,7 +438,7 @@ bool WindowManager::autoOpenWallet() {
 
 void WindowManager::tryCreateWallet(Seed seed, const QString &path, const QString &password, const QString &seedLanguage,
                                     const QString &seedOffset, const QString &subaddressLookahead, bool newWallet,
-                                    const QString &coinMnemonic) {
+                                    const QString &coinMnemonic, const QStringList &coinTickers) {
     m_pendingPassword = password;
     if (Utils::fileExists(path)) {
         this->handleWalletError({nullptr, Utils::ERROR, "Failed to create wallet", QString("File already exists: %1").arg(path)});
@@ -461,6 +474,7 @@ void WindowManager::tryCreateWallet(Seed seed, const QString &path, const QStrin
 
     // Only set once this wallet exists, so it can never reach another wallet.
     m_pendingCoinMnemonic = coinMnemonic;
+    m_pendingCoinTickers = coinTickers;
     this->onWalletOpened(wallet);
 }
 
@@ -693,12 +707,20 @@ void WindowManager::onWalletPassphraseNeeded(bool on_device) {
 // ######################## TRAY ########################
 
 void WindowManager::buildTrayMenu() {
-    QMenu *menu;
-    if (!m_tray->contextMenu()) {
-        menu = new QMenu();
+    QMenu *menu = m_trayMenu;
+    if (!menu) {
+        menu = m_trayMenu = new QMenu();
+#ifdef Q_OS_MACOS
+        // Biscuit: a menu attached to the menu bar icon crashes Qt on recent
+        // macOS (QCocoaSystemTrayIcon asks a non-mouse event for its click
+        // count when the menu opens). Shown on click instead, same menu.
+        connect(m_tray, &QSystemTrayIcon::activated, this, [this] {
+            m_trayMenu->popup(QCursor::pos());
+        });
+#else
         m_tray->setContextMenu(menu);
+#endif
     } else {
-        menu = m_tray->contextMenu();
         menu->clear();
     }
 

@@ -61,6 +61,9 @@ private:
     void clearOffers();
     void onMax();
     void updateWalletRows();
+    void updateWalletChoices();
+    void updateScanIcons();
+    void changeEvent(QEvent *event) override;   // "My … wallet" or another address, Max
     void showOffers();
     void showOffersRows(bool visible);
     void showOffersMenu(const QPoint &pos);
@@ -71,6 +74,14 @@ private:
     // was told why, or cancelled).
     QString coinWalletAddress(const biscuit::swap::Asset &asset);
     QString coinWalletLabel(const biscuit::swap::Asset &asset) const;
+    // XMR always; BTC or LTC only once added to this wallet (locked counts:
+    // the password is asked when needed). Otherwise only other addresses.
+    bool walletHolds(const biscuit::swap::Asset &asset) const;
+    // Biscuit's ticker for a swap coin: "BTC", "ETH", "USDT"… (empty: Monero
+    // or a coin Biscuit does not hold).
+    static QString walletTicker(const biscuit::swap::Asset &asset);
+    // The same coin on both sides: picks another one in `combo`.
+    void moveAway(QComboBox *combo);
     void validateTypedAddresses(QList<QPair<biscuit::swap::Asset, QString>> addresses, std::function<void()> done);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);
@@ -81,6 +92,8 @@ private:
     QPointer<Wallet> m_wallet;
     biscuit::swap::SwapManager *m_manager;
     biscuit::coins::CoinSendController *m_coins;
+    QPushButton *m_scanReceive = nullptr;   // QR code of an address, with the webcam
+    QPushButton *m_scanRefund = nullptr;
     QPushButton *m_btnMax = nullptr;
     // Which Bitcoin/Litecoin wallet sends, and which one receives.
     QWidget *m_fromWalletRow = nullptr;
