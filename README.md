@@ -5,7 +5,7 @@
 <h1 align="center">Biscuit Wallet</h1>
 
 <p align="center">
-  <em>A private and modern desktop wallet for Monero, Bitcoin, Litecoin and Ethereum.</em><br><br>
+  <em>A private and modern multi-crypto desktop wallet.</em><br><br>
   <a href="https://biscuitwallet.com">Website</a> ·
   <a href="https://biscuitwallet.com/download/">Download</a> ·
   <a href="https://biscuitwallet.com/docs/">Documentation</a> ·
