@@ -136,6 +136,7 @@ private slots:
     void updateBalance();
     void onBalanceUpdated(quint64 balance, quint64 spendable);
     void onSyncStatus(quint64 height, quint64 target, bool daemonSync);
+    void updateCoinsSyncStatus();
     void onWalletOpened();
     void onConnectionStatusChanged(int status);
     void onTransactionCreated(PendingTransaction *tx, const QVector<QString> &address);

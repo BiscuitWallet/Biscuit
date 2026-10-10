@@ -157,6 +157,7 @@ MainWindow::MainWindow(WindowManager *windowManager, Wallet *wallet, QWidget *pa
     for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked,
                         &biscuit::coins::CoinVault::walletsChanged, &biscuit::coins::CoinVault::walletUpdated}) {
         connect(coinVault, signal, this, &MainWindow::updateBalance);
+        connect(coinVault, signal, this, &MainWindow::updateCoinsSyncStatus);
     }
 
     connect(m_windowManager->eventFilter, &EventFilter::userActivity, this, &MainWindow::userActivity);
@@ -927,6 +928,49 @@ void MainWindow::onSyncStatus(quint64 height, quint64 target, bool daemonSync) {
     }
     this->setStatusText(Utils::formatSyncStatus(height, target, daemonSync));
     m_statusLabelStatus->setToolTip(QString("Wallet height: %1").arg(QString::number(height)));
+    this->updateCoinsSyncStatus();
+}
+
+// Biscuit: "Synchronized" only once every coin is, not Monero alone; until
+// then, the coins still on their way are named (their balances may still be 0).
+void MainWindow::updateCoinsSyncStatus() {
+    if (conf()->get(Config::offlineMode).toBool() || !m_wallet->isSynchronized()) {
+        return;   // Monero's own state is shown as it is
+    }
+    // Connecting or synchronizing: on its way. Disconnected: not trying (no
+    // network allowed, e.g. no onion node in "onion services only").
+    QStringList pending, offline;
+    auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
+    if (vault->isUnlocked()) {
+        using biscuit::coins::CoinWallet;
+        using biscuit::coins::EthWallet;
+        for (const auto *params : biscuit::coins::walletCoins()) {
+            bool synchronizing = false, disconnected = false;
+            if (params->ethereum) {
+                if (const EthWallet *eth = vault->ethereum()) {
+                    disconnected = eth->status() == EthWallet::Status::Disconnected;
+                    synchronizing = eth->status() == EthWallet::Status::Connecting;
+                }
+            } else {
+                for (const auto &entry : vault->wallets(*params)) {
+                    disconnected = disconnected || entry.wallet->status() == CoinWallet::Status::Disconnected;
+                    synchronizing = synchronizing || (entry.wallet->status() != CoinWallet::Status::Synchronized
+                                                      && entry.wallet->status() != CoinWallet::Status::Disconnected);
+                }
+            }
+            if (synchronizing) {
+                pending << params->name;
+            } else if (disconnected) {
+                offline << params->name;
+            }
+        }
+    }
+    QString text = pending.isEmpty() ? QString("Synchronized") : QString("Synchronizing %1…").arg(pending.join(", "));
+    if (!offline.isEmpty()) {
+        text += QString(" · %1 not connected").arg(offline.join(", "));
+    }
+    this->setStatusText(text);
+    m_statusBtnConnectionStatusIndicator->setIcon(PixelIcons::icon(pending.isEmpty() ? "status_connected" : "status_synchronizing"));
 }
 
 void MainWindow::onConnectionStatusChanged(int status)
@@ -969,6 +1013,7 @@ void MainWindow::onConnectionStatusChanged(int status)
     }
 
     m_statusBtnConnectionStatusIndicator->setIcon(icon);
+    this->updateCoinsSyncStatus();
 }
 
 void MainWindow::onTransactionCreated(PendingTransaction *tx, const QVector<QString> &address) {
