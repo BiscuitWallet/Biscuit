@@ -5,11 +5,11 @@
 <h1 align="center">Biscuit Wallet</h1>
 
 <p align="center">
-  <em>A private and modern desktop wallet for Monero, Bitcoin and Litecoin.</em><br><br>
+  <em>A private and modern desktop wallet for Monero, Bitcoin, Litecoin and Ethereum.</em><br><br>
   <a href="https://biscuitwallet.com">Website</a> ·
   <a href="https://biscuitwallet.com/download/">Download</a> ·
   <a href="https://biscuitwallet.com/docs/">Documentation</a> ·
-  <a href="https://biscuitwallet.com/news/">Journal</a> ·
+  <a href="https://biscuitwallet.com/journal/">Journal</a> ·
   <a href="https://biscuitwallet.com/features/">Features</a> ·
   <a href="https://biscuitwallet.com/donate/">Donate</a>
 </p>
@@ -18,13 +18,14 @@
   <img src="https://biscuitwallet.com/img/gallery/atomic-search.png" width="760" alt="Biscuit looking for atomic swap makers over Tor, with offers to swap Bitcoin for Monero">
 </p>
 
-Biscuit started as a fork of [Feather Wallet](https://featherwallet.org), which is about as good as a Monero wallet gets on a computer. We added everything we love: Bitcoin and Litecoin next to Monero, swaps between all three, atomic swaps with no exchange in the middle, Tor for the whole app, and lots of little details. It runs on Windows, macOS and Linux.
+Biscuit started as a fork of [Feather Wallet](https://featherwallet.org), which is about as good as a Monero wallet gets on a computer. We added everything we love: Bitcoin, Litecoin, Ethereum, USDT and USDC next to Monero, each one optional, swaps between any two, atomic swaps with no exchange in the middle, Tor for the whole app, and lots of little details. It runs on Windows, macOS and Linux.
 
 ## What's inside
 
 - **Monero**, the way Feather does it: subaddresses, coin control, transaction proofs, view-only wallets, Ledger and Trezor, offline signing with QR codes, your own node.
 - **Bitcoin and Litecoin**: light wallets over Electrum servers (public ones or your own), several wallets per coin under one password, coin control, coin freezing, fee bumping, silent payment sending, signed messages.
-- **Swaps**: any pair of XMR, BTC and LTC through [Trocador](https://trocador.app), offers from exchanges that ask for no identity checks, ranked only by what you receive.
+- **Ethereum, USDT and USDC** (ERC-20): the same 12 words as Bitcoin and Litecoin, fees shown in your currency, speed-up for a slow payment, several wallets and an address book; balances from public Ethereum nodes or your own, history from Blockscout or your own, all of it through Tor if you want.
+- **Swaps**: any pair of XMR, BTC, LTC, ETH, USDT and USDC through [Trocador](https://trocador.app), offers from exchanges that ask for no identity checks, ranked only by what you receive.
 - **Atomic swaps** (beta): Bitcoin to Monero directly with a market maker, using the [eigenwallet](https://eigenwallet.org) protocol. No exchange holds your coins along the way.
 - **Tor**: built in, for every connection, or only for prices and news. On Tails and Whonix, Biscuit uses the system's Tor. In Tor mode, prices, the Journal and updates come from our onion service.
 - **No account, no analytics, no crash reports.** Wallet files are encrypted with your password and stay on your computer.
@@ -66,11 +67,11 @@ Please report vulnerabilities privately, as described in [SECURITY.md](SECURITY.
 
 ## Support Biscuit
 
-Biscuit is made and looked after with a lot of love. If you've grown fond of it too, [donations](https://biscuitwallet.com/donate/) in Monero, Bitcoin or Litecoin help us keep going.
+Biscuit is made and looked after with a lot of love. If you've grown fond of it too, [donations](https://biscuitwallet.com/donate/) help us keep going.
 
 ## Credits
 
-Biscuit stands on the work of others: [Feather Wallet](https://featherwallet.org), [The Monero Project](https://getmonero.org), [eigenwallet](https://eigenwallet.org) for atomic swaps, [libwally-core](https://github.com/ElementsProject/libwally-core) for Bitcoin and Litecoin, [Trocador](https://trocador.app) for exchange swaps, and [Tor](https://www.torproject.org).
+Biscuit stands on the work of others: [Feather Wallet](https://featherwallet.org), [The Monero Project](https://getmonero.org), [eigenwallet](https://eigenwallet.org) for atomic swaps, [libwally-core](https://github.com/ElementsProject/libwally-core) for Bitcoin, Litecoin and Ethereum keys, [Blockscout](https://www.blockscout.com) for Ethereum history, [Trocador](https://trocador.app) for exchange swaps, and [Tor](https://www.torproject.org).
 
 ## License
 
