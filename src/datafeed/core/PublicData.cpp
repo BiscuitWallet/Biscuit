@@ -74,7 +74,7 @@ std::optional<QJsonObject> updatesMessage(const QByteArray &body) {
 }
 
 QString newsUrl() {
-    return "https://biscuitwallet.com/news/feed.xml";
+    return "https://biscuitwallet.com/journal/feed.xml";
 }
 
 std::optional<QJsonObject> cryptoRatesMessage(const QByteArray &body) {
