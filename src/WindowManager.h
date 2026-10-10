@@ -107,6 +107,7 @@ private:
     DocsDialog *m_docsDialog = nullptr;
 
     QSystemTrayIcon *m_tray = nullptr;
+    QMenu *m_trayMenu = nullptr;
 
     QMap<QString, QString> m_skins;
 

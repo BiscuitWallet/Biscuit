@@ -3,6 +3,7 @@
 
 #include "WindowManager.h"
 
+#include <QCursor>
 #include <QDialogButtonBox>
 #include <QInputDialog>
 #include <QMessageBox>
@@ -111,6 +112,8 @@ void WindowManager::close() {
     }
     if (m_tray) {
         m_tray->deleteLater();
+        if (m_trayMenu) m_trayMenu->deleteLater();
+        m_trayMenu = nullptr;
     }
     if (m_wizard) {
         m_wizard->deleteLater();
@@ -704,12 +707,20 @@ void WindowManager::onWalletPassphraseNeeded(bool on_device) {
 // ######################## TRAY ########################
 
 void WindowManager::buildTrayMenu() {
-    QMenu *menu;
-    if (!m_tray->contextMenu()) {
-        menu = new QMenu();
+    QMenu *menu = m_trayMenu;
+    if (!menu) {
+        menu = m_trayMenu = new QMenu();
+#ifdef Q_OS_MACOS
+        // Biscuit: a menu attached to the menu bar icon crashes Qt on recent
+        // macOS (QCocoaSystemTrayIcon asks a non-mouse event for its click
+        // count when the menu opens). Shown on click instead, same menu.
+        connect(m_tray, &QSystemTrayIcon::activated, this, [this] {
+            m_trayMenu->popup(QCursor::pos());
+        });
+#else
         m_tray->setContextMenu(menu);
+#endif
     } else {
-        menu = m_tray->contextMenu();
         menu->clear();
     }
 
