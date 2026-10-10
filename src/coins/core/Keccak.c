@@ -5,6 +5,12 @@
 // names so that it never clashes with Monero's own copy in the same binary.
 // Same variant as Ethereum (original Keccak padding, not SHA3-256).
 
+// Monero compiles it with _GNU_SOURCE: without it, glibc's <sys/param.h>
+// leaves BYTE_ORDER undefined and int-util.h stops the build (GCC, Linux).
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #define keccak biscuit_keccak
 #define keccakf biscuit_keccakf
 #define keccak1600 biscuit_keccak1600
