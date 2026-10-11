@@ -78,9 +78,18 @@ void AtomicSwapDaemon::start(bool tor) {
         return;
     }
 
-    // Tor state (guards, directory cache) is kept between runs.
-    const QString dataDir = Config::defaultConfigDir().filePath("swapd");
+    // Tor state (guards, directory cache) is kept between runs. Discovery uses
+    // the swaps' folder so both share one Tor directory cache (about 50 MB).
+    const QString dataDir = Config::defaultConfigDir().filePath("atomicswaps");
     QDir().mkpath(dataDir);
+
+    // Up to 1.1.1 discovery had its own folder: keep the known makers, drop
+    // its Tor cache.
+    const QDir oldDir(Config::defaultConfigDir().filePath("swapd"));
+    if (oldDir.exists()) {
+        QFile::rename(oldDir.filePath("known-makers.json"), QDir(dataDir).filePath("known-makers.json"));
+        QDir(oldDir).removeRecursively();
+    }
 
     m_reportedError = false;
     m_stopping = false;
