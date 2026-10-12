@@ -147,6 +147,10 @@ QString TrocadorSwapProvider::supportUrl() const {
     return "https://trocador.app/en/contact/";
 }
 
+bool TrocadorSwapProvider::available() const {
+    return !proxyActive();
+}
+
 void TrocadorSwapProvider::get(const QString &method, const QUrlQuery &query, ReplyHandler handler, int attempt) {
     // Over the limit, requests are delayed, never sent in bursts.
     const qint64 delay = limiter().reserve(QDateTime::currentMSecsSinceEpoch());

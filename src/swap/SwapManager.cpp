@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "DemoSwapProvider.h"
+#include "ExchangesSwapProvider.h"
 #include "QuoteRanking.h"
 #include "RequestPolicy.h"
 #include "TrocadorSwapProvider.h"
@@ -29,6 +30,11 @@ SwapManager::SwapManager(Wallet *wallet, QObject *parent)
         m_allProviders.append(new DemoSwapProvider(this));
     } else {
         m_allProviders.append(new TrocadorSwapProvider(baseUrl, TrocadorSwapProvider::builtInApiKey(), this));
+        // Biscuit's own exchanges live on the same relay.
+        const QString exchangesUrl = ExchangesSwapProvider::builtInBaseUrl();
+        if (!exchangesUrl.isEmpty()) {
+            m_allProviders.append(new ExchangesSwapProvider(exchangesUrl, this));
+        }
     }
 
     m_history = SwapHistory::fromJson(m_wallet->getCacheAttribute(SwapHistory::walletAttribute).toUtf8());
@@ -50,7 +56,7 @@ QList<SwapProvider *> SwapManager::providers() const {
     const QStringList disabled = conf()->get(Config::swapDisabledProviders).toStringList();
     QList<SwapProvider *> enabled;
     for (SwapProvider *p : m_allProviders) {
-        if (!disabled.contains(p->id())) {
+        if (!disabled.contains(p->id()) && p->available()) {
             enabled.append(p);
         }
     }

@@ -42,6 +42,7 @@ public:
     QString displayName() const override;
     QString kycPolicy() const override;
     QString supportUrl() const override;
+    bool available() const override;
 
     void supportedAssets(AssetsCallback callback) override;
     void getQuotes(const QuoteRequest &request, QuotesCallback callback) override;

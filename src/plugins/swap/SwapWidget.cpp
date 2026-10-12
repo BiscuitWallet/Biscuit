@@ -108,13 +108,9 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
                                 "no exchange is contacted and nothing can be sent.");
     }
 
-    // Shown in Tor mode, where exchange swaps are off.
+    // Shown in Tor mode, where Trocador is off (text set by updateTorMode).
     m_torNotice = new InfoFrame(this);
     m_torNotice->setFrameShape(QFrame::StyledPanel);
-    m_torNotice->setInfo(icons()->icon("info2.svg"),
-                         "Tor mode is on: exchange swaps are not available, because our swap partner "
-                         "requires the IP address of each swap to be recorded. Atomic swaps work over Tor. Swaps already started "
-                         "still complete at the exchange; their status updates resume when Tor mode is off.");
     ui->verticalLayout->insertWidget(1, m_torNotice);
 
     // Swap partners work on mainnet only: a stagenet or testnet address would
@@ -262,16 +258,29 @@ void SwapWidget::updateTorMode() {
     }
     const bool torMode = !m_manager->demoMode() && TrocadorSwapProvider::proxyActive();
     const bool onAtomicTab = ui->tabWidget->currentWidget() == m_atomicTab;
+    const auto providers = m_manager->providers();
 
     ui->frame_demo->setVisible(m_manager->demoMode() && !onAtomicTab);
+    m_torNotice->setInfo(icons()->icon("info2.svg"), providers.isEmpty()
+        ? "Exchange swaps are not available with this proxy. Atomic swaps work over Tor. Swaps already started "
+          "still complete at the exchange; their status updates resume when Tor mode is on or the proxy is off."
+        : "Tor mode is on: only exchanges that accept Tor are offered, through Biscuit's onion address. Trocador is off "
+          "because it requires the IP address of each swap to be recorded; swaps already started with it still "
+          "complete, and their status updates resume when Tor mode is off.");
     m_torNotice->setVisible(torMode && !onAtomicTab);
-    ui->tab_new->setEnabled(m_mainnet && !torMode);
-    // The coin list cannot load in Tor mode: ask again once it is off.
-    if (!torMode && !m_assetsLoaded && !m_loadingAssets) {
+    ui->tab_new->setEnabled(m_mainnet && !providers.isEmpty());
+    // The coin list comes from the first usable provider: ask again when it
+    // changes (Tor mode switched on or off).
+    const QString from = providers.isEmpty() ? QString() : providers.first()->id();
+    if (from != m_assetsFrom && !m_loadingAssets) {
+        m_assetsLoaded = false;
+    }
+    if (!from.isEmpty() && !m_assetsLoaded && !m_loadingAssets) {
         loadAssets();
     }
-    ui->btn_offers->setEnabled(!TrocadorSwapProvider::keyRejected());
-    if (TrocadorSwapProvider::keyRejected()) {
+    const bool onlyTrocador = providers.size() == 1 && providers.first()->id() == "trocador";
+    ui->btn_offers->setEnabled(!(onlyTrocador && TrocadorSwapProvider::keyRejected()));
+    if (onlyTrocador && TrocadorSwapProvider::keyRejected()) {
         ui->label_status->setText("Swaps are unavailable in this version of Biscuit. Please update Biscuit.");
     }
 }
@@ -336,16 +345,18 @@ void SwapWidget::loadAssets() {
         ui->label_status->setText("All swap providers are disabled in the settings.");
         return;
     }
-    // One provider for now. With several, their lists will be merged.
+    // The first provider's list: the others offer the same coins Biscuit holds.
     m_loadingAssets = true;
+    const QString from = providers.first()->id();
     ui->label_status->clear();
-    providers.first()->supportedAssets([this](const QList<AssetInfo> &partnerAssets, const QString &error) {
+    providers.first()->supportedAssets([this, from](const QList<AssetInfo> &partnerAssets, const QString &error) {
         m_loadingAssets = false;
         if (!error.isEmpty()) {
             ui->label_status->setText("Unable to load coins: " + error);
             return;
         }
         m_assetsLoaded = true;
+        m_assetsFrom = from;
         const QList<AssetInfo> assets = walletAssets(partnerAssets);
         m_updating = true;
         for (QComboBox *combo : {ui->combo_from, ui->combo_to}) {

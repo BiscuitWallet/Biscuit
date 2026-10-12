@@ -8,6 +8,7 @@ add_library(biscuit_swap_core STATIC
         QuoteRanking.cpp
         SwapTypes.cpp
         TrocadorApi.cpp
+        ExchangesApi.cpp
         SwapHistory.cpp
         AtomicEvents.cpp
         AtomicSwapRecord.cpp

@@ -104,6 +104,7 @@ private:
     bool m_updating = false;
     bool m_assetsLoaded = false;    // the coin list came in
     bool m_loadingAssets = false;   // a request for it is on its way
+    QString m_assetsFrom;           // provider the coin list came from (it changes with Tor mode)
     InfoFrame *m_torNotice = nullptr;
     QWidget *m_atomicTab = nullptr;
     bool m_mainnet = true;

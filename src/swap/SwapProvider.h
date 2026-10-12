@@ -33,6 +33,9 @@ public:
     virtual QString kycPolicy() const = 0;
     virtual QString supportUrl() const = 0;
     virtual bool isDemo() const { return false; }
+    // Usable with the current network settings (Tor mode...). Trades already
+    // created are still followed when it changes back.
+    virtual bool available() const { return true; }
 
     // Assets the provider can swap; any two different assets form a pair.
     virtual void supportedAssets(AssetsCallback callback) = 0;
