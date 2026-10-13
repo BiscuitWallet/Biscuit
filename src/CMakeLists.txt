@@ -25,6 +25,12 @@ IF (UNIX AND NOT APPLE)
     list(APPEND QT_COMPONENTS WaylandClient)
 endif()
 
+# Biscuit: utils/MacFonts registers a font family with the platform font
+# database (qpa/qplatformfontdatabase.h).
+if (APPLE)
+    list(APPEND QT_COMPONENTS GuiPrivate)
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS ${QT_COMPONENTS})
 
 if (CHECK_UPDATES)
@@ -382,6 +388,10 @@ endif()
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(feather PRIVATE Qt::WaylandClient)
+endif()
+
+if(APPLE)
+    target_link_libraries(feather PRIVATE Qt::GuiPrivate "-framework CoreText")
 endif()
 
 if(STATIC AND APPLE)

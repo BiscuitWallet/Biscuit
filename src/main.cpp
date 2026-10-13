@@ -5,6 +5,7 @@
 
 #include "Application.h"
 #include "constants.h"
+#include "utils/MacFonts.h"
 #include "utils/EventFilter.h"
 #include "utils/MacLayoutStyle.h"
 #include "WindowManager.h"
@@ -97,6 +98,8 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", "cocoa:fontengine=freetype");
     }
+    // Bold is a face of its own (MacFonts): never thicken a regular one.
+    qputenv("QT_NO_SYNTHESIZED_BOLD", "1");
 #endif
 
     Application app(argc, argv);
@@ -243,7 +246,8 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     // Biscuit: the macOS system font is a variable font; with Fusion, Qt drew
     // some capitals and digits in a heavier weight. Helvetica Neue has fixed
     // weights and renders evenly.
-    fontDef.setFamily("Helvetica Neue");
+    const QString uiFamily = MacFonts::registerUiFamily();
+    fontDef.setFamily(uiFamily.isEmpty() ? QString("Helvetica Neue") : uiFamily);
     // Inherited by every font the widgets use (FreeType, see above). Grey
     // antialiasing only: Qt's Cocoa screen always reports RGB subpixels, and
     // FreeType's LCD rendering then draws coloured fringes, which macOS has
