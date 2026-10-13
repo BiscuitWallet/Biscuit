@@ -245,8 +245,12 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     // some capitals and digits in a heavier weight. Helvetica Neue has fixed
     // weights and renders evenly.
     fontDef.setFamily("Helvetica Neue");
-    // Inherited by every font the widgets use (FreeType, see above).
+    // Inherited by every font the widgets use (FreeType, see above). Grey
+    // antialiasing only: Qt's Cocoa screen always reports RGB subpixels, and
+    // FreeType's LCD rendering then draws coloured fringes, which macOS has
+    // not done since 10.14.
     fontDef.setHintingPreference(QFont::PreferFullHinting);
+    fontDef.setStyleStrategy(QFont::NoSubpixelAntialias);
     QApplication::setFont(fontDef);
 #endif
 
