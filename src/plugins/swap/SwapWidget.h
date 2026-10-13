@@ -115,6 +115,7 @@ private:
     // Memo or tag of an address typed by the user (XRP, XLM, TON…).
     QLineEdit *m_receiveMemo = nullptr;
     QLineEdit *m_refundMemo = nullptr;
+    QLabel *m_ratingsLink = nullptr;   // Exchange ratings, under the offers
     QList<biscuit::swap::Quote> m_quotes;
     QList<biscuit::swap::AssetInfo> m_partnerAssets;   // every coin of the partners
     // Selected coins before the last change, for a cancelled "Other coin…".

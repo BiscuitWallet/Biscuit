@@ -272,6 +272,15 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
     m_refundMemo->setPlaceholderText("Memo or tag of the refund address, only if it needs one");
     ui->formLayout->getWidgetPosition(ui->label_refundTo, &formRow, &role);
     ui->formLayout->insertRow(formRow + 1, "Refund memo", m_refundMemo);
+    // Who the exchanges behind the offers are, in Help > Documentation.
+    m_ratingsLink = new QLabel("<a href=\"exchange-ratings\">Who are these exchanges?</a> "
+                               "What their terms allow, and what users have reported.", this);
+    connect(m_ratingsLink, &QLabel::linkActivated, this, [this](const QString &doc) {
+        windowManager()->showDocs(this, doc);
+    });
+    ui->formLayout->getWidgetPosition(ui->tree_offers, &formRow, &role);
+    ui->formLayout->insertRow(formRow + 1, QString(), m_ratingsLink);
+    ui->formLayout->setRowVisible(m_ratingsLink, false);   // with the offers
     for (auto signal : {&biscuit::coins::CoinVault::unlocked, &biscuit::coins::CoinVault::locked}) {
         connect(vault, signal, this, &SwapWidget::updateWalletRows);
     }
@@ -740,6 +749,9 @@ void SwapWidget::onGetOffers() {
 // there are offers: before that, the form stays short.
 void SwapWidget::showOffersRows(bool visible) {
     ui->formLayout->setRowVisible(ui->tree_offers, visible);
+    if (m_ratingsLink) {
+        ui->formLayout->setRowVisible(m_ratingsLink, visible);
+    }
     ui->btn_create->setVisible(visible);
 }
 
