@@ -151,7 +151,10 @@ $(package)_config_opts_darwin += -DQT_QMAKE_TARGET_MKSPEC=macx-clang
 # see #138
 $(package)_config_opts_darwin += -DQT_FEATURE_accessibility=OFF
 $(package)_config_opts_darwin += -DQT_FEATURE_dbus=OFF
-$(package)_config_opts_darwin += -DQT_FEATURE_freetype=OFF
+# Biscuit: FreeType draws the app's text on macOS (src/main.cpp: whole-pixel,
+# hinted glyphs on non-Retina screens). Qt's bundled copy, no new package.
+$(package)_config_opts_darwin += -DQT_FEATURE_freetype=ON
+$(package)_config_opts_darwin += -DQT_FEATURE_system_freetype=OFF
 $(package)_config_opts_darwin += -DQT_FEATURE_ffmpeg=OFF
 $(package)_config_opts_darwin += -DBUILD_WITH_PCH=OFF
 $(package)_config_opts_darwin += '-DQT_QMAKE_DEVICE_OPTIONS=MAC_SDK_PATH=$(host_prefix)/native/SDK;MAC_SDK_VERSION=$(OSX_SDK_VERSION);CROSS_COMPILE=$(host)-;MAC_TARGET=$(host);XCODE_VERSION=$(XCODE_VERSION)'

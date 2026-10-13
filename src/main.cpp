@@ -85,6 +85,21 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::Round);
 #endif
 
+#if defined(Q_OS_MACOS)
+    // Biscuit: Qt's Core Text engine places each glyph at a quarter pixel and
+    // never hints, so on a non-Retina screen the same stroke is one dark pixel
+    // in one letter and two grey ones in the next: some letters look bolder.
+    // FreeType with classic TrueType hinting (interpreter 35, both directions)
+    // and full hinting (main font below) puts every glyph and stem on whole
+    // pixels. Needs a Qt built with FreeType; without it, Core Text stays.
+    if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM")) {
+        qputenv("QT_QPA_PLATFORM", "cocoa:fontengine=freetype");
+    }
+    if (!qEnvironmentVariableIsSet("FREETYPE_PROPERTIES")) {
+        qputenv("FREETYPE_PROPERTIES", "truetype:interpreter-version=35");
+    }
+#endif
+
     Application app(argc, argv);
 
     // Biscuit: one square, consistent look on every platform (Fusion), with
@@ -230,6 +245,8 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     // some capitals and digits in a heavier weight. Helvetica Neue has fixed
     // weights and renders evenly.
     fontDef.setFamily("Helvetica Neue");
+    // Inherited by every font the widgets use (FreeType, see above).
+    fontDef.setHintingPreference(QFont::PreferFullHinting);
     QApplication::setFont(fontDef);
 #endif
 
