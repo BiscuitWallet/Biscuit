@@ -120,6 +120,9 @@ private:
     // Selected coins before the last change, for a cancelled "Other coin…".
     int m_lastFrom = -1;
     int m_lastTo = -1;
+    // Coins the "Receive at" / "Refund to" choices were set for.
+    biscuit::swap::Asset m_choicesFrom;
+    biscuit::swap::Asset m_choicesTo;
     bool m_updating = false;
     bool m_assetsLoaded = false;    // the coin list came in
     bool m_loadingAssets = false;   // a request for it is on its way
