@@ -275,6 +275,44 @@ private slots:
         QCOMPARE(Asset({"eth", "ERC20"}).displayName(), QString("ETH"));
     }
 
+    void outsideAssetsArePopularCoinsOnTheirNetwork() {
+        const QByteArray coins = R"json([
+            {"name": "Monero", "ticker": "xmr", "network": "Mainnet", "memo": false, "minimum": 0.01, "maximum": 100},
+            {"name": "Solana (BEP20)", "ticker": "sol", "network": "BEP20", "memo": false, "minimum": 0.05, "maximum": 100},
+            {"name": "Ripple (Mainnet)", "ticker": "xrp", "network": "Mainnet", "memo": true, "minimum": 4, "maximum": 1000},
+            {"name": "Solana", "ticker": "sol", "network": "Mainnet", "memo": false, "minimum": 0.05, "maximum": 100},
+            {"name": "Tether (ERC20)", "ticker": "usdt", "network": "ERC20", "memo": false, "minimum": 5, "maximum": 1000},
+            {"name": "Tether (TRC20)", "ticker": "usdt", "network": "TRC20", "memo": false, "minimum": 5, "maximum": 1000},
+            {"name": "Gram (prev. TON/Toncoin)", "ticker": "gram", "network": "TON", "memo": true, "minimum": 4, "maximum": 1000}
+        ])json";
+        const auto parsed = trocador::parseCoins(coins, nullptr);
+        QVERIFY(parsed.has_value());
+        const QList<AssetInfo> outside = outsideAssets(*parsed);
+        // Biscuit's order, never a wrapped copy on another network (SOL on BSC)
+        // nor a coin Biscuit holds (XMR, USDT on Ethereum).
+        QCOMPARE(outside.size(), 4);
+        QCOMPARE(outside.at(0).asset, Asset({"usdt", "TRC20"}));
+        QCOMPARE(outside.at(0).name, QString("USDT (Tron)"));
+        QCOMPARE(outside.at(1).asset, Asset({"sol", "Mainnet"}));
+        QCOMPARE(outside.at(2).asset, Asset({"xrp", "Mainnet"}));
+        QVERIFY(outside.at(2).hasMemo);
+        QCOMPARE(outside.at(2).minimum, QString("4"));
+        QCOMPARE(outside.at(3).asset, Asset({"gram", "TON"}));
+        QCOMPARE(outside.at(3).name, QString("TON (Toncoin)"));
+    }
+
+    void mergedAssetsKeepTheFirstListing() {
+        const AssetInfo xmr{{"xmr", "Mainnet"}, "Monero", "0.01", "", false};
+        const AssetInfo xmrOther{{"xmr", "Mainnet"}, "Monero (other)", "0.2", "", false};
+        const AssetInfo btc{{"btc", "Mainnet"}, "Bitcoin", "", "", false};
+        const AssetInfo sol{{"sol", "Mainnet"}, "Solana", "", "", false};
+        const QList<AssetInfo> merged = mergeAssets({{xmr, btc}, {xmrOther, sol}, {}});
+        QCOMPARE(merged.size(), 3);
+        QCOMPARE(merged.at(0).name, QString("Monero"));
+        QCOMPARE(merged.at(1).asset, btc.asset);
+        QCOMPARE(merged.at(2).asset, sol.asset);
+    }
+
     void relayErrorsAreNotTrocadorErrors() {
         QCOMPARE(trocador::parseRelayError(R"({"error":"tor_exit","message":"Not through Tor."})"),
                  QString("Not through Tor."));
