@@ -86,17 +86,16 @@ if (AttachConsole(ATTACH_PARENT_PROCESS)) {
 #endif
 
 #if defined(Q_OS_MACOS)
-    // Biscuit: Qt's Core Text engine places each glyph at a quarter pixel and
-    // never hints, so on a non-Retina screen the same stroke is one dark pixel
-    // in one letter and two grey ones in the next: some letters look bolder.
-    // FreeType with classic TrueType hinting (interpreter 35, both directions)
-    // and full hinting (main font below) puts every glyph and stem on whole
-    // pixels. Needs a Qt built with FreeType; without it, Core Text stays.
+    // Biscuit: Qt's Core Text engine places each glyph at a quarter pixel, so
+    // on a non-Retina screen the same stroke is one dark pixel in one letter
+    // and two grey ones in the next: some letters look bolder. Its FreeType
+    // engine with full hinting (main font below) puts every glyph on whole
+    // pixels, drawn the same each time. FreeType's default TrueType
+    // interpreter: the classic one (35) distorts some sizes (Menlo 11 px,
+    // Helvetica Neue 16 px). Needs a Qt built with FreeType; without it, Core
+    // Text stays.
     if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", "cocoa:fontengine=freetype");
-    }
-    if (!qEnvironmentVariableIsSet("FREETYPE_PROPERTIES")) {
-        qputenv("FREETYPE_PROPERTIES", "truetype:interpreter-version=35");
     }
 #endif
 
