@@ -288,17 +288,16 @@ private slots:
         const auto parsed = trocador::parseCoins(coins, nullptr);
         QVERIFY(parsed.has_value());
         const QList<AssetInfo> outside = outsideAssets(*parsed);
-        // Biscuit's order, never a wrapped copy on another network (SOL on BSC)
-        // nor a coin Biscuit holds (XMR, USDT on Ethereum).
-        QCOMPARE(outside.size(), 4);
+        // Biscuit's order, never a wrapped copy on another network (SOL on BSC),
+        // a coin Biscuit holds (XMR, USDT on Ethereum) or one without no-KYC
+        // offers (TON).
+        QCOMPARE(outside.size(), 3);
         QCOMPARE(outside.at(0).asset, Asset({"usdt", "TRC20"}));
         QCOMPARE(outside.at(0).name, QString("USDT (Tron)"));
         QCOMPARE(outside.at(1).asset, Asset({"sol", "Mainnet"}));
         QCOMPARE(outside.at(2).asset, Asset({"xrp", "Mainnet"}));
         QVERIFY(outside.at(2).hasMemo);
         QCOMPARE(outside.at(2).minimum, QString("4"));
-        QCOMPARE(outside.at(3).asset, Asset({"gram", "TON"}));
-        QCOMPARE(outside.at(3).name, QString("TON (Toncoin)"));
     }
 
     void mergedAssetsKeepTheFirstListing() {

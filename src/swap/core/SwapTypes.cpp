@@ -279,8 +279,8 @@ QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets) {
         Asset asset;
         const char *label;
     };
-    // The coins most swapped with Monero, by usage: USDT on Tron first.
-    // Trocador's names: Toncoin is listed as "gram" since its rename.
+    // The coins most swapped with Monero, by usage, USDT on Tron first, that
+    // no-KYC exchanges swap (checked 2026-10-13: none for TON or XLM).
     const Outside popular[] = {
         {{"usdt", "TRC20"}, "USDT (Tron)"},
         {{"sol", "Mainnet"}, "SOL (Solana)"},
@@ -289,9 +289,7 @@ QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets) {
         {{"trx", "Mainnet"}, "TRX (Tron)"},
         {{"doge", "Mainnet"}, "DOGE (Dogecoin)"},
         {{"ada", "Mainnet"}, "ADA (Cardano)"},
-        {{"xlm", "Mainnet"}, "XLM (Stellar)"},
         {{"bnb", "BEP20"}, "BNB (BNB Chain)"},
-        {{"gram", "TON"}, "TON (Toncoin)"},
         {{"bch", "Mainnet"}, "BCH (Bitcoin Cash)"},
         {{"usdc", "SOL"}, "USDC (Solana)"},
     };
