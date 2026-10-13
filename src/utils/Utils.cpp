@@ -646,7 +646,15 @@ QFont getMonospaceFont()
     if (QFontInfo(QApplication::font()).fixedPitch()) {
         return QApplication::font();
     }
-    return QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+#ifdef Q_OS_MACOS
+    // Biscuit: Menlo at the system's 10 px draws its e a pixel taller than the
+    // other lowercase letters once hinted (main.cpp); from 11 px it is even.
+    if (font.pointSizeF() < 11) {
+        font.setPointSizeF(11);
+    }
+#endif
+    return font;
 }
 
 QFont relativeFont(int delta) {

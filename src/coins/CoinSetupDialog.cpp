@@ -7,7 +7,6 @@
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
-#include <QFontDatabase>
 #include <QFormLayout>
 #include <QInputDialog>
 #include <QLabel>
@@ -24,6 +23,7 @@
 #include "Bip39.h"
 #include "CoinParams.h"
 #include "CoinVault.h"
+#include "utils/Utils.h"
 
 namespace biscuit::coins {
 
@@ -47,9 +47,9 @@ QPlainTextEdit *seedWordsView(const QString &mnemonic, QWidget *parent) {
     const QString words = numberedWords(mnemonic);
     auto *view = new QPlainTextEdit(words, parent);
     view->setReadOnly(true);
-    // The system's fixed-width font (Menlo is macOS only), and never wrapped:
-    // the view is as wide as the longest row, so every row keeps its 4 words.
-    view->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    // The fixed-width font (Menlo on macOS), and never wrapped: the view is
+    // as wide as the longest row, so every row keeps its 4 words.
+    view->setFont(Utils::getMonospaceFont());
     view->setLineWrapMode(QPlainTextEdit::NoWrap);
     view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     int widest = 0;
