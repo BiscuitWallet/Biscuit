@@ -392,7 +392,7 @@ void SwapWidget::selectAsset(QComboBox *combo, const Asset &asset) {
     if (index < 0 && info) {
         // Before the separator and "Other coin…".
         index = std::max(0, combo->count() - 2);
-        combo->insertItem(index, coinLabel(asset), assetData(asset));
+        combo->insertItem(index, assetLabel(asset), assetData(asset));
         combo->setItemData(index, info->name, Qt::ToolTipRole);
     }
     if (index >= 0) {
@@ -477,7 +477,7 @@ void SwapWidget::loadAssets() {
 // "Other coin…" for the partners' full list.
 void SwapWidget::showAssets(const QList<AssetInfo> &assets) {
     m_partnerAssets = assets;
-    m_outsideAssets = outsideAssets(assets);
+    const QList<AssetInfo> outside = outsideAssets(assets);
     const QList<AssetInfo> held = walletAssets(assets);
     m_updating = true;
     for (QComboBox *combo : {ui->combo_from, ui->combo_to}) {
@@ -486,13 +486,13 @@ void SwapWidget::showAssets(const QList<AssetInfo> &assets) {
             combo->addItem(info.asset.displayName(), assetData(info.asset));
             combo->setItemData(combo->count() - 1, info.name, Qt::ToolTipRole);
         }
-        if (!m_outsideAssets.isEmpty()) {
+        if (!outside.isEmpty()) {
             combo->insertSeparator(combo->count());
             combo->addItem("In another wallet:");
             if (auto *model = qobject_cast<QStandardItemModel *>(combo->model())) {
                 model->item(combo->count() - 1)->setEnabled(false);
             }
-            for (const AssetInfo &info : m_outsideAssets) {
+            for (const AssetInfo &info : outside) {
                 combo->addItem(info.name, assetData(info.asset));
                 combo->setItemData(combo->count() - 1, "Sent to, or from, a wallet outside Biscuit", Qt::ToolTipRole);
             }
@@ -516,15 +516,6 @@ void SwapWidget::pickOtherCoin(QComboBox *combo, int previous) {
     if (const auto chosen = askOtherCoin(this, m_partnerAssets)) {
         selectAsset(combo, chosen->asset);
     }
-}
-
-QString SwapWidget::coinLabel(const Asset &asset) const {
-    for (const AssetInfo &info : m_outsideAssets) {
-        if (info.asset == asset) {
-            return info.name;
-        }
-    }
-    return asset.displayName();
 }
 
 const AssetInfo *SwapWidget::assetInfo(const Asset &asset) const {
@@ -613,11 +604,11 @@ void SwapWidget::updateForm() {
     m_lastTo = ui->combo_to->currentIndex();
     updateWalletChoices();
     if (to.isValid()) {
-        ui->line_receive->setPlaceholderText(QString("%1 address").arg(coinLabel(to)));
+        ui->line_receive->setPlaceholderText(QString("%1 address").arg(assetLabel(to)));
     }
     if (from.isValid()) {
         ui->line_refund->setPlaceholderText(sendXmr ? QString("XMR address")
-                                                    : QString("%1 address, used only if the swap fails (optional)").arg(coinLabel(from)));
+                                                    : QString("%1 address, used only if the swap fails (optional)").arg(assetLabel(from)));
     }
     clearOffers();
 }
@@ -633,7 +624,7 @@ void SwapWidget::updateWalletChoices() {
         combo->setItemText(ModeNewWalletAddress,
                            asset == xmr()                 ? QString("New XMR subaddress (Biscuit)")
                            : held                         ? QString("My %1 wallet (Biscuit)").arg(asset.ticker.toUpper())
-                           : walletTicker(asset).isEmpty() ? QString("No %1 wallet in Biscuit").arg(coinLabel(asset))
+                           : walletTicker(asset).isEmpty() ? QString("No %1 wallet in Biscuit").arg(assetLabel(asset))
                                                           : QString("My %1 wallet (not added to Biscuit)").arg(asset.ticker.toUpper()));
         if (auto *model = qobject_cast<QStandardItemModel *>(combo->model())) {
             model->item(ModeNewWalletAddress)->setEnabled(held);
@@ -1054,7 +1045,7 @@ void SwapWidget::validateTypedAddresses(const QString &providerId, QList<QPair<A
             return;
         }
         if (!*valid) {
-            Utils::showError(this, "Invalid address", QString("This is not a valid %1 address.").arg(coinLabel(asset)));
+            Utils::showError(this, "Invalid address", QString("This is not a valid %1 address.").arg(assetLabel(asset)));
             return;
         }
         validateTypedAddresses(providerId, addresses, done);
@@ -1073,7 +1064,7 @@ void SwapWidget::createTrade(const Quote &quote) {
 
     if (!receiveInWallet && receiveTyped.isEmpty()) {
         Utils::showError(this, "Missing address", QString("Enter the %1 address where you want to get the coins.")
-                                                          .arg(coinLabel(quote.to)));
+                                                          .arg(assetLabel(quote.to)));
         ui->line_receive->setFocus();
         return;
     }
@@ -1132,7 +1123,7 @@ void SwapWidget::createTrade(const Quote &quote) {
         box.setIcon(QMessageBox::Question);
         box.setText(QString(quote.rateType == RateType::Fixed ? "Swap %1 %2 for exactly %3 %4 (fixed rate)?"
                                                               : "Swap %1 %2 for about %3 %4?")
-                    .arg(quote.amountFrom, coinLabel(quote.from), quote.amountTo, coinLabel(quote.to)));
+                    .arg(quote.amountFrom, assetLabel(quote.from), quote.amountTo, assetLabel(quote.to)));
         box.setInformativeText(QString("Exchange: %1 (no KYC)\nYou get the coins at: %2%3")
                                .arg(quote.exchange,
                                     receiveInWallet ? (receiveXmr ? QString("a new subaddress of your XMR wallet")
@@ -1192,7 +1183,7 @@ void SwapWidget::refreshTrades() {
     for (const Trade &t : trades) {
         auto *item = new QTreeWidgetItem(ui->tree_trades);
         item->setText(TradeDate, t.createdAt.toLocalTime().toString("yyyy-MM-dd HH:mm"));
-        item->setText(TradePair, QString("%1 → %2").arg(t.from.ticker.toUpper(), t.to.ticker.toUpper()));
+        item->setText(TradePair, QString("%1 → %2").arg(assetLabel(t.from), assetLabel(t.to)));
         item->setText(TradeSent, t.amountFrom);
         item->setTextAlignment(TradeSent, Qt::AlignRight | Qt::AlignVCenter);
         item->setText(TradeReceived, t.amountTo);

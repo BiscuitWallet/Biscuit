@@ -57,8 +57,6 @@ private:
     // "Other coin…": the coin picked in the partners' full list, or the one
     // selected before if cancelled.
     void pickOtherCoin(QComboBox *combo, int previous);
-    // Biscuit's label of a coin: "USDT (Tron)", "XMR", "PEPE (ERC20)"…
-    QString coinLabel(const biscuit::swap::Asset &asset) const;
     // What the partners say about a coin (memo, minimum), null if unknown.
     const biscuit::swap::AssetInfo *assetInfo(const biscuit::swap::Asset &asset) const;
     bool sendsXmr() const;
@@ -119,7 +117,6 @@ private:
     QLineEdit *m_refundMemo = nullptr;
     QList<biscuit::swap::Quote> m_quotes;
     QList<biscuit::swap::AssetInfo> m_partnerAssets;   // every coin of the partners
-    QList<biscuit::swap::AssetInfo> m_outsideAssets;   // the popular ones, with their label
     // Selected coins before the last change, for a cancelled "Other coin…".
     int m_lastFrom = -1;
     int m_lastTo = -1;
