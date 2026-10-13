@@ -274,11 +274,12 @@ QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets) {
     return result;
 }
 
-QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets) {
+namespace {
     struct Outside {
         Asset asset;
         const char *label;
     };
+
     // The coins most swapped with Monero, by usage, USDT on Tron first, that
     // no-KYC exchanges swap (checked 2026-10-13: none for TON or XLM).
     const Outside popular[] = {
@@ -293,6 +294,9 @@ QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets) {
         {{"bch", "Mainnet"}, "BCH (Bitcoin Cash)"},
         {{"usdc", "SOL"}, "USDC (Solana)"},
     };
+}
+
+QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets) {
     QList<AssetInfo> result;
     for (const Outside &wanted : popular) {
         for (const AssetInfo &info : partnerAssets) {
@@ -305,6 +309,15 @@ QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets) {
         }
     }
     return result;
+}
+
+QString assetLabel(const Asset &asset) {
+    for (const Outside &outside : popular) {
+        if (outside.asset == asset) {
+            return QString::fromUtf8(outside.label);
+        }
+    }
+    return asset.displayName();
 }
 
 QList<AssetInfo> mergeAssets(const QList<QList<AssetInfo>> &lists) {

@@ -300,6 +300,14 @@ private slots:
         QCOMPARE(outside.at(2).minimum, QString("4"));
     }
 
+    void assetLabelsNameTheNetwork() {
+        // Swap history and dialogs: USDT on Tron is not USDT on Ethereum.
+        QCOMPARE(assetLabel({"usdt", "TRC20"}), QString("USDT (Tron)"));
+        QCOMPARE(assetLabel({"usdt", "ERC20"}), QString("USDT (ERC20)"));
+        QCOMPARE(assetLabel({"xmr", "Mainnet"}), QString("XMR"));
+        QCOMPARE(assetLabel({"pepe", "ERC20"}), QString("PEPE (ERC20)"));
+    }
+
     void mergedAssetsKeepTheFirstListing() {
         const AssetInfo xmr{{"xmr", "Mainnet"}, "Monero", "0.01", "", false};
         const AssetInfo xmrOther{{"xmr", "Mainnet"}, "Monero (other)", "0.2", "", false};

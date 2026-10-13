@@ -66,7 +66,7 @@ void SwapTradeDialog::updateView() {
                                     && t->from.network == QLatin1String("ERC20"));
     const bool awaitingDeposit = t->status == TradeStatus::New || t->status == TradeStatus::Waiting;
     ui->label_status->setText(QString("%1%2 → %3: %4")
-                              .arg(demo ? "[Demo] " : "", t->from.displayName(), t->to.displayName(),
+                              .arg(demo ? "[Demo] " : "", assetLabel(t->from), assetLabel(t->to),
                                    tradeStatusText(*t)));
 
     if (needsSupport(t->status)) {
@@ -80,7 +80,7 @@ void SwapTradeDialog::updateView() {
         // A coin Biscuit does not hold (SOL, USDT on Tron…): sent from elsewhere.
         ui->frame_attention->setInfo(icons()->icon("info2.svg"),
                                      QString("Send exactly %1 %2 from your other wallet to the deposit address below%3.")
-                                     .arg(t->amountFrom, t->from.displayName(),
+                                     .arg(t->amountFrom, assetLabel(t->from),
                                           t->depositMemo.isEmpty() ? QString() : QString(", with its memo")));
         ui->frame_attention->show();
     } else {
