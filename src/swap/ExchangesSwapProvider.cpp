@@ -229,8 +229,9 @@ void ExchangesSwapProvider::validateAddress(const Asset &asset, const QString &a
     } else if (asset.network == "ERC20") {
         valid = coins::eth::parseAddress(address).has_value();
     } else {
-        callback(std::nullopt, "Unsupported coin");
-        return;
+        // A coin Biscuit does not hold (SOL, USDT on Tron…): the exchange
+        // checks the address when the swap is created, and refuses a bad one.
+        valid = !address.isEmpty();
     }
     callback(valid, {});
 }

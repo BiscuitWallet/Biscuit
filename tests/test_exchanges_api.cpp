@@ -57,6 +57,20 @@ private slots:
         QCOMPARE(q.queryItemValue("fixed"), QString("1"));
     }
 
+    void parseAssets() {
+        const auto assets = exchanges::parseAssets(R"json({"assets": [
+            {"ticker": "xmr", "network": "Mainnet", "name": "Monero", "memo": false},
+            {"ticker": "xrp", "network": "Mainnet", "name": "XRP", "memo": true},
+            {"ticker": "usdt", "network": "TRC20", "name": "Tether (Tron)"}
+        ]})json", nullptr);
+        QVERIFY(assets.has_value());
+        QCOMPARE(assets->size(), 3);
+        QVERIFY(!assets->at(0).hasMemo);
+        QVERIFY(assets->at(1).hasMemo);
+        QCOMPARE(assets->at(2).asset, Asset({"usdt", "TRC20"}));
+        QVERIFY(!assets->at(2).hasMemo);
+    }
+
     void parseQuotes() {
         const QByteArray body = R"({"quotes": [
             {"exchange": "pegasus", "name": "PegasusSwap", "kyc": "A", "amount_from": "0.01", "amount_to": "1.541617520325", "fixed": false},

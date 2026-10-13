@@ -96,6 +96,7 @@ std::optional<QList<AssetInfo>> parseAssets(const QByteArray &body, QString *err
         AssetInfo info;
         info.asset = assetOf(v);
         info.name = v.toObject().value("name").toString();
+        info.hasMemo = v.toObject().value("memo").toBool();   // XRP, XLM…
         if (info.asset.isValid()) {
             assets.append(info);
         }
