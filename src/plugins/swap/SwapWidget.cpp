@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <tuple>
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -602,6 +603,17 @@ void SwapWidget::updateForm() {
 
     m_lastFrom = ui->combo_from->currentIndex();
     m_lastTo = ui->combo_to->currentIndex();
+    // Another coin: back to this wallet by default, where Biscuit holds it
+    // (updateWalletChoices picks another address otherwise). A choice the
+    // user made stays while the coin does.
+    for (const auto &[combo, asset, last] : {std::tuple{ui->combo_receiveMode, to, &m_choicesTo},
+                                            std::tuple{ui->combo_refundMode, from, &m_choicesFrom}}) {
+        if (asset != *last) {
+            const QSignalBlocker blocker(combo);
+            combo->setCurrentIndex(ModeNewWalletAddress);
+            *last = asset;
+        }
+    }
     updateWalletChoices();
     if (to.isValid()) {
         ui->line_receive->setPlaceholderText(QString("%1 address").arg(assetLabel(to)));
