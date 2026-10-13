@@ -128,7 +128,7 @@ std::optional<QList<AssetInfo>> parseCoins(const QByteArray &body, QString *erro
         info.name = obj.value("name").toString();
         info.minimum = amountValue(obj.value("minimum"));
         info.maximum = amountValue(obj.value("maximum"));
-        info.hasMemo = obj.value("memo").toBool();  // to verify
+        info.hasMemo = obj.value("memo").toBool();  // XRP, XLM, TON…
         if (info.asset.isValid()) {
             coins.append(info);
         }

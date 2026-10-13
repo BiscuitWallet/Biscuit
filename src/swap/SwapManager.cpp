@@ -114,13 +114,14 @@ void SwapManager::requestQuotes(const QuoteRequest &request, QuotesCallback call
     }
 }
 
-void SwapManager::validateAddress(const Asset &asset, const QString &address, SwapProvider::ValidationCallback callback) {
-    const QList<SwapProvider *> active = providers();
-    if (active.isEmpty()) {
-        callback(std::nullopt, "No swap provider enabled");
+void SwapManager::validateAddress(const QString &providerId, const Asset &asset, const QString &address,
+                                  SwapProvider::ValidationCallback callback) {
+    SwapProvider *p = provider(providerId);
+    if (!p) {
+        callback(std::nullopt, "Unknown swap provider");
         return;
     }
-    active.first()->validateAddress(asset, address, std::move(callback));
+    p->validateAddress(asset, address, std::move(callback));
 }
 
 void SwapManager::createTrade(const TradeRequest &request, SwapProvider::TradeCallback callback) {
