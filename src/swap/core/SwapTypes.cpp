@@ -3,6 +3,8 @@
 
 #include "SwapTypes.h"
 
+#include <algorithm>
+
 #include <QJsonValue>
 
 #include "Amount.h"
@@ -266,6 +268,66 @@ QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets) {
             if (info.asset == wanted) {
                 result.append(info);
                 break;
+            }
+        }
+    }
+    return result;
+}
+
+namespace {
+    struct Outside {
+        Asset asset;
+        const char *label;
+    };
+
+    // The coins most swapped with Monero, by usage, USDT on Tron first, that
+    // no-KYC exchanges swap (checked 2026-10-13: none for TON or XLM).
+    const Outside popular[] = {
+        {{"usdt", "TRC20"}, "USDT (Tron)"},
+        {{"sol", "Mainnet"}, "SOL (Solana)"},
+        {{"zec", "Mainnet"}, "ZEC (Zcash)"},
+        {{"xrp", "Mainnet"}, "XRP"},
+        {{"trx", "Mainnet"}, "TRX (Tron)"},
+        {{"doge", "Mainnet"}, "DOGE (Dogecoin)"},
+        {{"ada", "Mainnet"}, "ADA (Cardano)"},
+        {{"bnb", "BEP20"}, "BNB (BNB Chain)"},
+        {{"bch", "Mainnet"}, "BCH (Bitcoin Cash)"},
+        {{"usdc", "SOL"}, "USDC (Solana)"},
+    };
+}
+
+QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets) {
+    QList<AssetInfo> result;
+    for (const Outside &wanted : popular) {
+        for (const AssetInfo &info : partnerAssets) {
+            if (info.asset == wanted.asset) {
+                AssetInfo labelled = info;
+                labelled.name = QString::fromUtf8(wanted.label);
+                result.append(labelled);
+                break;
+            }
+        }
+    }
+    return result;
+}
+
+QString assetLabel(const Asset &asset) {
+    for (const Outside &outside : popular) {
+        if (outside.asset == asset) {
+            return QString::fromUtf8(outside.label);
+        }
+    }
+    return asset.displayName();
+}
+
+QList<AssetInfo> mergeAssets(const QList<QList<AssetInfo>> &lists) {
+    QList<AssetInfo> result;
+    for (const QList<AssetInfo> &list : lists) {
+        for (const AssetInfo &info : list) {
+            const bool known = std::any_of(result.cbegin(), result.cend(),
+                                           [&info](const AssetInfo &other) { return other.asset == info.asset; });
+            if (!known) {
+                result.append(info);
             }
         }
     }

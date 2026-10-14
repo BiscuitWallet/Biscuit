@@ -173,6 +173,18 @@ bool applyStatus(Trade &trade, TradeStatus status, const QDateTime &now);
 // Biscuit cannot receive.
 QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets);
 
+// Popular coins Biscuit does not hold, in display order (USDT on Tron, SOL,
+// ZEC…): a swap sends them to, or takes them from, a wallet outside Biscuit.
+// Only those the partners list; `name` is Biscuit's label, e.g. "USDT (Tron)".
+QList<AssetInfo> outsideAssets(const QList<AssetInfo> &partnerAssets);
+
+// Biscuit's label of a coin: "USDT (Tron)" for a popular outside coin,
+// otherwise displayName() ("XMR", "USDT (ERC20)", "PEPE (ERC20)"…).
+QString assetLabel(const Asset &asset);
+
+// All the coins of several partners, each once, in the order first listed.
+QList<AssetInfo> mergeAssets(const QList<QList<AssetInfo>> &lists);
+
 }
 
 #endif // BISCUIT_SWAP_TYPES_H

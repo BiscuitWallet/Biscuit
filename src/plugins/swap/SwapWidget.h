@@ -13,6 +13,7 @@ class InfoFrame;
 class QComboBox;
 class QFrame;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class Wallet;
 
@@ -22,8 +23,10 @@ namespace Ui {
 class SwapWidget;
 }
 
-// Swap tab: exchanges between XMR, BTC and LTC through Trocador. Coins are
-// received (and refunded) to this wallet by default, or to any address.
+// Swap tab: exchanges between the coins Biscuit holds through Trocador. Coins
+// are received (and refunded) to this wallet by default, or to any address.
+// Popular coins Biscuit does not hold (USDT on Tron, SOL…) and any other coin
+// of the partners are sent to, or taken from, a wallet outside Biscuit.
 class SwapWidget : public QWidget
 {
     Q_OBJECT
@@ -48,13 +51,21 @@ private slots:
 private:
     biscuit::swap::Asset xmr() const;
     static biscuit::swap::Asset assetOf(const QComboBox *combo);
-    static void selectAsset(QComboBox *combo, const biscuit::swap::Asset &asset);
+    // Selects `asset`, adding it first if it came from "Other coin…" on the
+    // other side.
+    void selectAsset(QComboBox *combo, const biscuit::swap::Asset &asset);
+    // "Other coin…": the coin picked in the partners' full list, or the one
+    // selected before if cancelled.
+    void pickOtherCoin(QComboBox *combo, int previous);
+    // What the partners say about a coin (memo, minimum), null if unknown.
+    const biscuit::swap::AssetInfo *assetInfo(const biscuit::swap::Asset &asset) const;
     bool sendsXmr() const;
     bool receivesXmr() const;
     bool fixedRate() const;
     void placeAmountField();
 
     void loadAssets();
+    void showAssets(const QList<biscuit::swap::AssetInfo> &assets);
     // Tor mode: exchange swaps are off, atomic swaps remain.
     void updateTorMode();
     void updateForm();
@@ -82,7 +93,8 @@ private:
     static QString walletTicker(const biscuit::swap::Asset &asset);
     // The same coin on both sides: picks another one in `combo`.
     void moveAway(QComboBox *combo);
-    void validateTypedAddresses(QList<QPair<biscuit::swap::Asset, QString>> addresses, std::function<void()> done);
+    void validateTypedAddresses(const QString &providerId, QList<QPair<biscuit::swap::Asset, QString>> addresses,
+                                std::function<void()> done);
     void createTrade(const biscuit::swap::Quote &quote);
     void showTrade(const QString &providerId, const QString &tradeId);
     void sendDeposit(const biscuit::swap::Trade &trade);
@@ -100,7 +112,17 @@ private:
     QWidget *m_toWalletRow = nullptr;
     QList<biscuit::coins::CoinWalletBar *> m_fromBars;   // Bitcoin, Litecoin
     QList<biscuit::coins::CoinWalletBar *> m_toBars;
+    // Memo or tag of an address typed by the user (XRP, XLM, TON…).
+    QLineEdit *m_receiveMemo = nullptr;
+    QLineEdit *m_refundMemo = nullptr;
     QList<biscuit::swap::Quote> m_quotes;
+    QList<biscuit::swap::AssetInfo> m_partnerAssets;   // every coin of the partners
+    // Selected coins before the last change, for a cancelled "Other coin…".
+    int m_lastFrom = -1;
+    int m_lastTo = -1;
+    // Coins the "Receive at" / "Refund to" choices were set for.
+    biscuit::swap::Asset m_choicesFrom;
+    biscuit::swap::Asset m_choicesTo;
     bool m_updating = false;
     bool m_assetsLoaded = false;    // the coin list came in
     bool m_loadingAssets = false;   // a request for it is on its way
