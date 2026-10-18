@@ -760,8 +760,8 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
     if (vault->isUnlocked()) {
         // All the wallets of a coin together.
         for (const auto *params : biscuit::coins::walletCoins()) {
-            if (params->ethereum) {
-                continue;   // below, asset by asset
+            if (params->ethereum || params->solana) {
+                continue;   // below
             }
             quint64 total = 0;
             for (const auto &entry : vault->wallets(*params)) {
@@ -781,6 +781,13 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
                 parts << QString("%1 %2").arg(text, biscuit::coins::eth::assetName(asset.id));
                 addValue(asset.symbol, text.toDouble());
             }
+        }
+        quint64 lamports = 0;
+        for (const auto &entry : vault->wallets(biscuit::coins::solana())) lamports += entry.sol->balance();
+        if (lamports > 0) {
+            const QString text = biscuit::coins::sol::formatAmount(lamports);
+            parts << QString("%1 SOL").arg(text);
+            addValue("SOL", text.toDouble());
         }
     }
 
@@ -952,6 +959,11 @@ void MainWindow::updateCoinsSyncStatus() {
                 if (const EthWallet *eth = vault->ethereum()) {
                     disconnected = eth->status() == EthWallet::Status::Disconnected;
                     synchronizing = eth->status() == EthWallet::Status::Connecting;
+                }
+            } else if (params->solana) {
+                if (const auto *sol = vault->solana()) {
+                    disconnected = sol->status() == biscuit::coins::SolWallet::Status::Disconnected;
+                    synchronizing = sol->status() == biscuit::coins::SolWallet::Status::Connecting;
                 }
             } else {
                 for (const auto &entry : vault->wallets(*params)) {

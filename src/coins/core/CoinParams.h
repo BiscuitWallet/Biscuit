@@ -10,8 +10,9 @@
 namespace biscuit::coins {
 
 // Network parameters of a Bitcoin-like coin. BTC and LTC share all the wallet
-// code; only these values differ. Ethereum has its own wallet (EthWallet):
-// only its names and decimals are here, so that it is listed like the others.
+// code; only these values differ. Ethereum and Solana have their own wallets
+// (EthWallet, SolWallet): only their names and decimals are here, so that
+// they are listed like the others.
 struct CoinParams {
     QString ticker;           // "BTC"
     QString name;             // "Bitcoin"
@@ -21,6 +22,7 @@ struct CoinParams {
     quint8 p2pkhVersion;      // base58 version byte of "1..." / "L..." addresses
     QList<quint8> p2shVersions;  // base58 version bytes of script hash addresses
     bool ethereum = false;       // ETH (with its tokens), not a Bitcoin-like coin
+    bool solana = false;         // SOL, not a Bitcoin-like coin
 
     bool operator==(const CoinParams &other) const { return ticker == other.ticker && bech32Hrp == other.bech32Hrp; }
 };
@@ -28,6 +30,7 @@ struct CoinParams {
 const CoinParams &bitcoin();
 const CoinParams &litecoin();
 const CoinParams &ethereum();
+const CoinParams &solana();
 const CoinParams &bitcoinTestnet();
 const CoinParams &litecoinTestnet();
 

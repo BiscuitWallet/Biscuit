@@ -49,9 +49,12 @@ CoinContactsSwitcher::CoinContactsSwitcher(Wallet *wallet, QWidget *moneroPage, 
     m_ltcStatus = new QLabel(this);
     m_eth = new QTreeWidget(this);
     m_ethStatus = new QLabel(this);
+    m_sol = new QTreeWidget(this);
+    m_solStatus = new QLabel(this);
     m_pages->addWidget(makePage(bitcoin(), m_btc, m_btcStatus));
     m_pages->addWidget(makePage(litecoin(), m_ltc, m_ltcStatus));
     m_pages->addWidget(makePage(ethereum(), m_eth, m_ethStatus));
+    m_pages->addWidget(makePage(solana(), m_sol, m_solStatus));
     layout->addWidget(m_pages);
 
     connect(m_picker, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
@@ -114,7 +117,8 @@ QWidget *CoinContactsSwitcher::makePage(const CoinParams &params, QTreeWidget *t
 void CoinContactsSwitcher::refresh() {
     for (auto [tree, status, params] : {std::tuple{m_btc, m_btcStatus, &bitcoin()},
                                         std::tuple{m_ltc, m_ltcStatus, &litecoin()},
-                                        std::tuple{m_eth, m_ethStatus, &ethereum()}}) {
+                                        std::tuple{m_eth, m_ethStatus, &ethereum()},
+                                        std::tuple{m_sol, m_solStatus, &solana()}}) {
         tree->setSortingEnabled(false);
         tree->clear();
         const bool unlocked = m_vault->isUnlocked();
@@ -154,6 +158,7 @@ void CoinContactsSwitcher::editContact(const CoinParams &params, int index) {
     auto *address = new QLineEdit(isNew ? QString() : contacts[index].address, &dialog);
     address->setMinimumWidth(420);
     address->setPlaceholderText(params.ethereum     ? "0x… (ETH, USDT and USDC on Arbitrum)"
+                                : params.solana       ? "Solana address"
                                 : params == bitcoin() ? "bc1…, 1…, 3… or a silent payment address (sp1…)" : "ltc1…, L…, M…");
     form->addRow("Name:", name);
     form->addRow("Address:", address);
@@ -168,6 +173,12 @@ void CoinContactsSwitcher::editContact(const CoinParams &params, int index) {
         if (params.ethereum) {
             QString error;
             if (!eth::parseAddress(address->text(), &error)) {
+                Utils::showError(&dialog, "Invalid address", error);
+                return;
+            }
+        } else if (params.solana) {
+            QString error;
+            if (!sol::parseAddress(address->text(), &error)) {
                 Utils::showError(&dialog, "Invalid address", error);
                 return;
             }

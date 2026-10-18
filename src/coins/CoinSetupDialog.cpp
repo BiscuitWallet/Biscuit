@@ -183,6 +183,8 @@ QWidget *CoinSetupDialog::pageRestore() {
     if (m_addTo) {
         auto *note = new QLabel(m_addTo->ethereum
             ? QString("The first address of this seed (m/44'/60'/0'/0/0), as in MetaMask and most Ethereum wallets.")
+            : m_addTo->solana
+            ? QString("The first address of this seed (m/44'/501'/0'/0'), as in Phantom, Solflare and most Solana wallets.")
             : QString("Biscuit uses native SegWit addresses (%1, BIP84), like most recent wallets. "
                       "Coins on older address types of this seed are not shown.")
                   .arg(*m_addTo == coins::bitcoin() ? "bc1q…" : "ltc1q…"), page);
@@ -474,6 +476,7 @@ void showCoinSeed(CoinVault *vault, QWidget *parent, const QString &id) {
     for (const CoinParams *params : coin ? QList<const CoinParams *>{coin} : vault->mainSeedCoins()) {
         // Bitcoin and Litecoin: native SegWit (BIP84). Ethereum: as MetaMask.
         pathText << (params->ethereum ? QString("Ethereum m/44'/60'/0'/0/0")
+                     : params->solana ? QString("Solana m/44'/501'/0'/0'")
                                       : QString("%1 m/84'/%2'/0' (BIP84)").arg(params->name).arg(params->bip44CoinType));
     }
     auto *paths = new QLabel(pathText.join(" · "), &dialog);

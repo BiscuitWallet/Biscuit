@@ -113,24 +113,29 @@ void CoinPicker::paintEvent(QPaintEvent *event) {
     QStylePainter(this).drawPrimitive(QStyle::PE_FrameTabBarBase, base);
 }
 
-void addWalletCoins(CoinPicker *picker, bool ethereum, bool tokens) {
+void addWalletCoins(CoinPicker *picker, bool accounts, bool tokens) {
     picker->addCoin(PixelIcons::icon("monero"), "Monero", "XMR");
     picker->addCoin(icons()->icon("bitcoin.png"), "Bitcoin", bitcoin().ticker);
     picker->addCoin(icons()->icon("litecoin.png"), "Litecoin", litecoin().ticker);
-    if (ethereum) {
+    if (accounts) {
         // The tokens get their own tab: they are what people send.
         picker->addCoin(PixelIcons::icon("ethereum"), "Ethereum", coins::ethereum().ticker);
         if (tokens) {
             picker->addCoin(PixelIcons::icon("tether"), "USDT", "USDT");
             picker->addCoin(PixelIcons::icon("usdc"), "USDC", "USDC");
         }
+        picker->addCoin(PixelIcons::icon("solana"), "Solana", coins::solana().ticker);
     }
 }
 
 QStringList addableTickers() {
     QStringList list;
-    for (const CoinParams *params : walletCoins()) list << params->ticker;
-    for (const eth::Token &token : eth::arbitrumOne().tokens) list << token.symbol;
+    for (const CoinParams *params : walletCoins()) {
+        list << params->ticker;
+        if (params->ethereum) {
+            for (const eth::Token &token : eth::arbitrumOne().tokens) list << token.symbol;
+        }
+    }
     return list;
 }
 

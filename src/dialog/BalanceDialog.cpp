@@ -159,6 +159,25 @@ void BalanceDialog::updateBalance() {
                 }
             }
         }
+        // Solana: SOL (no unconfirmed amount either).
+        const auto solEntries = m_vault->wallets(biscuit::coins::solana());
+        for (const auto &entry : solEntries) {
+            const QString text = QString("%1 SOL").arg(biscuit::coins::sol::formatAmount(entry.sol->balance()));
+            const QString name = solEntries.size() > 1 ? QString("Solana · %1").arg(entry.name) : QString("Solana");
+            ++row;
+            cell(row, ColCoin, name);
+            cell(row, ColSpendable, text);
+            cell(row, ColUnconfirmed, "–");
+            cell(row, ColTotal, text);
+            if (showFiat && prices.canConvert("SOL", fiat)) {
+                const double value = prices.convert("SOL", fiat, biscuit::coins::sol::formatAmount(entry.sol->balance()).toDouble());
+                totalValue += value;
+                cell(row, ColValue, Utils::amountToCurrencyString(value, fiat));
+            } else if (showFiat) {
+                cell(row, ColValue, "price unknown");
+                if (entry.sol->balance() > 0) valueKnown = false;
+            }
+        }
     } else if (m_vault && m_vault->exists()) {
         notes << QString("Unlock %1 to see their balances.").arg(m_vault->mainSeedCoinsText());
     }

@@ -44,6 +44,10 @@ namespace {
             const auto account = eth::Account::fromSeed(seed);
             return account ? eth::checksumAddress(account->address(0)) : QString();
         }
+        if (params.solana) {
+            const auto account = sol::Account::fromSeed(seed);
+            return account ? sol::addressText(account->publicKey()) : QString();
+        }
         const auto account = HdAccount::fromSeed(seed, params);
         return account ? account->address(HdAccount::Receive, 0) : QString();
     }
@@ -66,7 +70,7 @@ namespace {
 }
 
 const QList<const CoinParams *> &walletCoins() {
-    static const QList<const CoinParams *> list{&coins::bitcoin(), &coins::litecoin(), &coins::ethereum()};
+    static const QList<const CoinParams *> list{&coins::bitcoin(), &coins::litecoin(), &coins::ethereum(), &coins::solana()};
     return list;
 }
 
@@ -309,6 +313,21 @@ bool CoinVault::addEntry(const QString &id, const QString &name, bool mainSeed, 
         m_entries.append({id, name, mainSeed, &params, nullptr, w, l1});
         return true;
     }
+    if (params.solana) {
+        auto account = sol::Account::fromSeed(seed);
+        if (!account) {
+            if (error) *error = "Unable to derive keys";
+            return false;
+        }
+        auto *w = new SolWallet(std::move(*account), cache, this);
+        connect(w, &SolWallet::cacheChanged, this, &CoinVault::scheduleSave);
+        connect(w, &SolWallet::updated, this, &CoinVault::walletUpdated);
+        connect(w, &SolWallet::statusChanged, this, &CoinVault::walletUpdated);
+        Entry entry{id, name, mainSeed, &params};
+        entry.sol = w;
+        m_entries.append(entry);
+        return true;
+    }
     auto account = HdAccount::fromSeed(seed, params);
     if (!account) {
         if (error) *error = "Unable to derive keys";
@@ -327,6 +346,7 @@ void CoinVault::clearWallets() {
         delete e.wallet;
         delete e.eth;
         delete e.l1;
+        delete e.sol;
     }
     m_entries.clear();
     m_mainCoins.clear();
@@ -529,6 +549,14 @@ EthWallet *CoinVault::ethereum() const {
     return nullptr;
 }
 
+SolWallet *CoinVault::solana() const {
+    const QString id = selectedId(coins::solana());
+    for (const Entry &e : m_entries) {
+        if (e.id == id) return e.sol;
+    }
+    return nullptr;
+}
+
 EthWallet *CoinVault::evmWallet(const QString &assetId) const {
     const eth::Asset *asset = eth::findAsset(assetId);
     const QString id = selectedId(coins::ethereum());
@@ -548,7 +576,7 @@ eth::u128 CoinVault::ethereumBalance(const QString &assetId) const {
 }
 
 QString CoinVault::Entry::firstAddress() const {
-    return eth ? eth->addressText() : wallet ? wallet->firstAddress() : QString();
+    return eth ? eth->addressText() : sol ? sol->addressText() : wallet ? wallet->firstAddress() : QString();
 }
 
 QString CoinVault::selectedId(const CoinParams &params) const {
@@ -871,6 +899,13 @@ void CoinVault::applyNetworkSettings() {
             w->isRunning() ? w->refresh() : w->start();
         }
     }
+    // Solana likewise, with the user's own node if set.
+    for (const Entry &e : m_entries) {
+        if (e.sol) {
+            e.sol->setCustomNode(conf()->get(Config::solanaNode).toString());
+            e.sol->isRunning() ? e.sol->refresh() : e.sol->start();
+        }
+    }
 }
 
 void CoinVault::scheduleSave() {
@@ -888,7 +923,7 @@ void CoinVault::save() {
         QJsonObject caches;
         QHash<QString, QJsonObject> extraCaches;
         for (const Entry &e : m_entries) {
-            QJsonObject cache = e.l1 ? e.l1->cache() : e.wallet->cache();
+            QJsonObject cache = e.l1 ? e.l1->cache() : e.sol ? e.sol->cache() : e.wallet->cache();
             if (e.eth) cache["arbitrum"] = e.eth->cache();
             if (e.mainSeed) {
                 caches[e.params->ticker] = cache;

@@ -46,10 +46,15 @@ namespace {
         return QString("%1 %2").arg(eth::formatAmount(eth->balance(asset), eth->decimals(asset)), asset);
     }
 
+    QString solanaText(const SolWallet *sol) {
+        return QString("%1 SOL").arg(sol::formatAmount(sol->balance()));
+    }
+
     // An Ethereum wallet: the asset of the tab ("ETH", "USDT"…).
     QString entryText(const CoinVault::Entry &entry, const CoinParams &params, const QString &asset = "ETH") {
         return entry.eth ? ethereumText(entry.eth, asset)
-                         : QString("%1 %2").arg(swap::amount::fromAtomic(entry.wallet->balance().total(), params.decimals), params.ticker);
+               : entry.sol ? solanaText(entry.sol)
+                           : QString("%1 %2").arg(swap::amount::fromAtomic(entry.wallet->balance().total(), params.decimals), params.ticker);
     }
 }
 
@@ -85,6 +90,15 @@ void CoinWalletBar::updateBalances() {
                 }
             }
             if (!held.isEmpty()) text += "<br>" + held.join(" · ");
+        }
+        m_balance->setText(text);
+        return;
+    }
+    if (m_params.solana) {
+        const SolWallet *sol = m_vault->solana();
+        QString text = sol ? QString("Balance: <b>%1</b>").arg(solanaText(sol)) : QString();
+        if (sol && sol->status() != SolWallet::Status::Synchronized) {
+            text += " · <span style=\"color: gray;\">Synchronizing…</span>";
         }
         m_balance->setText(text);
         return;
@@ -170,7 +184,7 @@ void CoinWalletBar::rebuild() {
             menu.addAction("Copy address", [this, id] {
                 for (const auto &e : m_vault->wallets(m_params)) {
                     if (e.id != id) continue;
-                    const QString address = e.eth ? e.eth->addressText() : e.wallet->receiveAddress();
+                    const QString address = e.eth ? e.eth->addressText() : e.sol ? e.sol->addressText() : e.wallet->receiveAddress();
                     if (!address.isEmpty()) Utils::copyToClipboard(address);
                 }
             });
@@ -270,6 +284,8 @@ void CoinWalletBar::confirmRemove(const QString &id, const QString &name, bool m
                 }
                 holdsCoins = !held.isEmpty();
                 balance = held.join(", ");
+            } else if (entry.sol) {
+                holdsCoins = entry.sol->balance() > 0;
             } else {
                 holdsCoins = entry.wallet->balance().total() > 0;
             }

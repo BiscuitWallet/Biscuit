@@ -42,11 +42,13 @@ namespace {
         if (ticker == QLatin1String("BTC")) return QString("https://mempool.space/tx/%1").arg(txid);
         if (ticker == QLatin1String("LTC")) return QString("https://litecoinspace.org/tx/%1").arg(txid);
         if (const eth::Asset *asset = eth::findAsset(ticker)) return QString("%1/tx/%2").arg(asset->network->blockscout, txid);
+        if (ticker == QLatin1String("SOL")) return QString("%1/tx/%2").arg(sol::explorer, txid);
         return QString("https://xmrchain.net/tx/%1").arg(txid);
     }
 
     QIcon assetIcon(const QString &ticker) {
         if (ticker == QLatin1String("ETH")) return PixelIcons::icon("ethereum");
+        if (ticker == QLatin1String("SOL")) return PixelIcons::icon("solana");
         if (ticker == QLatin1String("USDT")) return PixelIcons::icon("tether");
         if (ticker == QLatin1String("USDC")) return PixelIcons::icon("usdc");
         return {};
@@ -108,6 +110,16 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
         bar->setAsset(asset);
         pageLayout->addWidget(bar);
         pageLayout->addWidget(tree);
+        m_pages->addWidget(page);
+    }
+    // Solana, after Ethereum's tabs.
+    m_sol = makeTree(false);
+    {
+        auto *page = new QWidget(m_pages);
+        auto *pageLayout = new QVBoxLayout(page);
+        pageLayout->setContentsMargins(0, 0, 0, 0);
+        pageLayout->addWidget(new CoinWalletBar(m_vault, solana(), page));
+        pageLayout->addWidget(m_sol);
         m_pages->addWidget(page);
     }
     layout->addWidget(m_pages);
@@ -265,8 +277,45 @@ void CoinHistorySwitcher::fillEthereumTrees() {
     }
 }
 
+void CoinHistorySwitcher::fillSolanaTree() {
+    if (!m_vault->isUnlocked()) {
+        return;
+    }
+    const QString selectedId = m_vault->selectedId(solana());
+    for (const auto &entry : m_vault->wallets(solana())) {
+        for (const sol::HistoryEntry &e : entry.sol->history()) {
+            const QString amount = QString("%1%2 SOL").arg(e.incoming ? "+" : "-", sol::formatAmount(e.amount));
+            const QString status = e.failed ? QString("Failed") : e.slot == 0 ? QString("Pending") : QString("Confirmed");
+            for (QTreeWidget *t : {m_sol, m_all}) {
+                if (t == m_sol && entry.id != selectedId) {
+                    continue;
+                }
+                auto *item = new DateItem(t);
+                item->setText(ColDate, e.time.isValid() ? e.time.toLocalTime().toString("yyyy-MM-dd HH:mm") : QString());
+                item->setData(ColDate, SortRole, e.time.isValid() ? e.time.toSecsSinceEpoch() : std::numeric_limits<qint64>::max());
+                item->setData(ColDate, TickerRole, "SOL");
+                item->setIcon(ColCoin, assetIcon("SOL"));
+                item->setText(ColCoin, "SOL");
+                item->setText(ColWallet, entry.name);
+                item->setText(ColAmount, amount);
+                item->setTextAlignment(ColAmount, Qt::AlignRight | Qt::AlignVCenter);
+                if (!e.incoming && e.fee > 0) {
+                    const QString fee = sol::formatAmount(e.fee);
+                    item->setToolTip(ColAmount, QString("Network fee: %1 SOL%2").arg(fee, fiatValue("SOL", fee)));
+                }
+                if (!e.counterparty.isEmpty()) {
+                    item->setToolTip(ColTx, QString("%1 %2").arg(e.incoming ? "From" : "To", sol::addressText(e.counterparty)));
+                }
+                item->setText(ColStatus, status);
+                item->setText(ColTx, e.signature);
+                item->setData(ColDate, WalletIdRole, entry.id);
+            }
+        }
+    }
+}
+
 void CoinHistorySwitcher::refresh() {
-    QList<QTreeWidget *> trees{m_all, m_btc, m_ltc};
+    QList<QTreeWidget *> trees{m_all, m_btc, m_ltc, m_sol};
     trees << m_ethTrees.values();
     for (QTreeWidget *t : trees) {
         t->setSortingEnabled(false);
@@ -292,9 +341,10 @@ void CoinHistorySwitcher::refresh() {
     fillCoinTree(m_btc, bitcoin());
     fillCoinTree(m_ltc, litecoin());
     fillEthereumTrees();
+    fillSolanaTree();
     m_all->setColumnHidden(ColWallet, !(m_vault->isUnlocked()
                                         && (m_vault->wallets(bitcoin()).size() > 1 || m_vault->wallets(litecoin()).size() > 1
-                                            || m_vault->wallets(ethereum()).size() > 1)));
+                                            || m_vault->wallets(ethereum()).size() > 1 || m_vault->wallets(solana()).size() > 1)));
 
     for (QTreeWidget *t : trees) {
         t->setSortingEnabled(true);

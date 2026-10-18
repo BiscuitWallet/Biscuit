@@ -41,8 +41,9 @@ CoinReceiveSwitcher::CoinReceiveSwitcher(Wallet *wallet, QWidget *moneroPage, QW
     m_pages->addWidget(coinPage(bitcoin()));
     m_pages->addWidget(coinPage(litecoin()));
     for (const eth::Asset &asset : eth::allAssets()) {
-        m_pages->addWidget(ethereumPage(asset.id));   // same order as the tabs
+        m_pages->addWidget(accountPage(ethereum(), asset.id));   // same order as the tabs
     }
+    m_pages->addWidget(accountPage(solana(), solana().ticker));
     layout->addWidget(m_pages);
 
     connect(m_coin, &CoinPicker::currentIndexChanged, m_pages, &QStackedWidget::setCurrentIndex);
@@ -141,8 +142,9 @@ QWidget *CoinReceiveSwitcher::coinPage(const CoinParams &params) {
     return w.state;
 }
 
-QWidget *CoinReceiveSwitcher::ethereumPage(const QString &asset) {
+QWidget *CoinReceiveSwitcher::accountPage(const CoinParams &params, const QString &asset) {
     EthWidgets w;
+    w.params = &params;
     w.asset = asset;
     w.state = new QStackedWidget(this);
 
@@ -158,7 +160,7 @@ QWidget *CoinReceiveSwitcher::ethereumPage(const QString &asset) {
     buttons->addStretch();
     setupLayout->addLayout(buttons);
     setupLayout->addStretch();
-    connect(w.setupButton, &QPushButton::clicked, this, [this] { addCoinToWallet(m_vault, ethereum(), this); });
+    connect(w.setupButton, &QPushButton::clicked, this, [this, &params] { addCoinToWallet(m_vault, params, this); });
     w.state->addWidget(setup);
 
     // One address for ETH and its tokens, like the other receive pages.
@@ -175,7 +177,10 @@ QWidget *CoinReceiveSwitcher::ethereumPage(const QString &asset) {
     addressRow->addWidget(copy);
     form->addRow("Address", addressRow);
     // Arbitrum only: the network exchanges ask for when withdrawing.
-    auto *hint = new QLabel(asset == "ETH"
+    auto *hint = new QLabel(params.solana
+        ? QString("Receive SOL on the Solana network. The first payment to a new address must be at least %1 SOL "
+                  "(Solana's minimum for an address that is not empty).").arg(sol::formatAmount(sol::rentExemptMinimum))
+        : asset == "ETH"
         ? QString("Receive ETH on the Arbitrum One network: when withdrawing from an exchange, choose Arbitrum. "
                   "The same address also receives USDT and USDC on Arbitrum.")
         : QString("Receive %1 on the Arbitrum One network only: when withdrawing from an exchange, choose Arbitrum. "
@@ -198,7 +203,7 @@ QWidget *CoinReceiveSwitcher::ethereumPage(const QString &asset) {
     auto *withBarLayout = new QVBoxLayout(withBar);
     withBarLayout->setContentsMargins(0, 0, 0, 0);
     withBarLayout->setSpacing(16);
-    auto *bar = new CoinWalletBar(m_vault, ethereum(), withBar);
+    auto *bar = new CoinWalletBar(m_vault, params, withBar);
     bar->setAsset(asset);
     withBarLayout->addWidget(bar);
     withBarLayout->addWidget(page);
@@ -209,18 +214,21 @@ QWidget *CoinReceiveSwitcher::ethereumPage(const QString &asset) {
     return w.state;
 }
 
-void CoinReceiveSwitcher::refreshEthereum() {
-    EthWallet *eth = m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
-    const bool locked = m_vault->coinState(ethereum()) == CoinVault::CoinState::Locked;
+void CoinReceiveSwitcher::refreshAccounts() {
+    const bool unlocked = m_vault->isUnlocked();
+    const EthWallet *eth = unlocked ? m_vault->ethereum() : nullptr;
+    const SolWallet *sol = unlocked ? m_vault->solana() : nullptr;
     for (EthWidgets &w : m_eth) {
-        w.state->setCurrentIndex(eth ? 1 : 0);
-        if (!eth) {
-            w.setupText->setText(locked ? QString("Enter the password of this wallet to open Ethereum.")
-                                        : QString("Ethereum is not in this wallet."));
-            w.setupButton->setText(locked ? QString("Unlock…") : QString("Add Ethereum…"));
+        const QString address = w.params->solana ? (sol ? sol->addressText() : QString())
+                                                  : (eth ? eth->addressText() : QString());
+        w.state->setCurrentIndex(address.isEmpty() ? 0 : 1);
+        if (address.isEmpty()) {
+            const bool locked = m_vault->coinState(*w.params) == CoinVault::CoinState::Locked;
+            w.setupText->setText(locked ? QString("Enter the password of this wallet to open %1.").arg(w.params->name)
+                                        : QString("%1 is not in this wallet.").arg(w.params->name));
+            w.setupButton->setText(locked ? QString("Unlock…") : QString("Add %1…").arg(w.params->name));
             continue;
         }
-        const QString address = eth->addressText();
         if (w.address->text() == address) {
             continue;
         }
@@ -238,7 +246,7 @@ CoinWallet *CoinReceiveSwitcher::coin(const CoinParams &params) const {
 }
 
 void CoinReceiveSwitcher::refresh() {
-    refreshEthereum();
+    refreshAccounts();
     for (CoinWidgets &w : m_coinWidgets) {
         CoinWallet *coin = this->coin(*w.params);
         w.state->setCurrentIndex(coin ? 1 : 0);

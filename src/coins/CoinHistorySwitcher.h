@@ -33,6 +33,7 @@ private:
     void refresh();
     void fillCoinTree(QTreeWidget *tree, const CoinParams &params);
     void fillEthereumTrees();
+    void fillSolanaTree();
 
     QPointer<Wallet> m_wallet;
     QPointer<CoinVault> m_vault;
@@ -42,6 +43,7 @@ private:
     QTreeWidget *m_btc;
     QTreeWidget *m_ltc;
     QHash<QString, QTreeWidget *> m_ethTrees;   // "ETH", "USDT", "USDC"
+    QTreeWidget *m_sol;
 };
 
 }

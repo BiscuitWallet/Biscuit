@@ -363,6 +363,17 @@ icon("usdc", {"o": (39, 117, 202), "w": WHITE}, overlay(disc(7.0), [
     ".wwwwww.",
     "...ww...",
 ], 4, 3))
+# Solana: its three slanted bars, on its purple.
+icon("solana", {"o": (153, 69, 255), "w": WHITE}, overlay(disc(7.0), [
+    ".wwwwwww",
+    "wwwwwww.",
+    "........",
+    "wwwwwww.",
+    ".wwwwwww",
+    "........",
+    ".wwwwwww",
+    "wwwwwww.",
+], 4, 4))
 
 # --- Settings pages -------------------------------------------------------------
 

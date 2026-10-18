@@ -32,9 +32,11 @@ public:
 
 private:
     QWidget *coinPage(const CoinParams &params);
-    QWidget *ethereumPage(const QString &asset);
+    // Ethereum's assets ("ETH", "USDT", "USDC") or Solana ("SOL"): one
+    // address, whatever the asset.
+    QWidget *accountPage(const CoinParams &params, const QString &asset);
     void refresh();
-    void refreshEthereum();
+    void refreshAccounts();
     CoinWallet *coin(const CoinParams &params) const;
 
     QPointer<CoinVault> m_vault;
@@ -54,7 +56,8 @@ private:
     QList<CoinWidgets> m_coinWidgets;
 
     struct EthWidgets {
-        QString asset;                     // "ETH", "USDT", "USDC": one tab each
+        const CoinParams *params = nullptr;   // Ethereum or Solana
+        QString asset;                     // "ETH", "USDT", "USDC", "SOL": one tab each
         QStackedWidget *state = nullptr;   // 0 = not added or locked, 1 = address
         QLabel *setupText = nullptr;
         QPushButton *setupButton = nullptr;

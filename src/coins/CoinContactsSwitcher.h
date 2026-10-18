@@ -47,6 +47,8 @@ private:
     QLabel *m_btcStatus;
     QLabel *m_ltcStatus;
     QLabel *m_ethStatus;
+    QTreeWidget *m_sol;
+    QLabel *m_solStatus;
 };
 
 }

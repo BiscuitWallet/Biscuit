@@ -283,6 +283,43 @@ void Settings::setupNetworkTab() {
     ethLayout->addStretch();
     ui->tabWidget_network->addTab(ethServers, "Ethereum");
 
+    // Biscuit: the user's own Solana node.
+    auto *solServers = new QWidget(this);
+    auto *solLayout = new QVBoxLayout(solServers);
+    auto *solIntro = new QLabel("By default Biscuit uses public Solana nodes, for the balance, the history and sending. "
+                                "Set your own node and Biscuit uses only it.", solServers);
+    solIntro->setWordWrap(true);
+    solLayout->addWidget(solIntro);
+    auto *solForm = new QFormLayout;
+    auto *solNode = new QLineEdit(conf()->get(Config::solanaNode).toString(), solServers);
+    solNode->setPlaceholderText("Public nodes (e.g. http://umbrel.local:8899)");
+    solNode->setClearButtonEnabled(true);
+    solForm->addRow("Solana node:", solNode);
+    connect(solNode, &QLineEdit::editingFinished, this, [this, solNode] {
+        const QString text = solNode->text().trimmed();
+        const QUrl url(text);
+        // Encrypted, except for an .onion address or the local network.
+        const bool plainOk = url.host().endsWith(".onion") || Utils::isLocalUrl(url);
+        if (!text.isEmpty() && (!url.isValid() || url.host().isEmpty()
+                                || !(url.scheme() == "https" || (url.scheme() == "http" && plainOk)))) {
+            Utils::showError(this, "Invalid address",
+                             "Use https://… (http:// only for an .onion address or a machine on your local network).");
+            return;
+        }
+        if (conf()->get(Config::solanaNode).toString() != text) {
+            conf()->set(Config::solanaNode, text);
+            emit coinServersChanged();
+        }
+    });
+    solLayout->addLayout(solForm);
+    auto *solHelp = new QLabel("Your node's JSON-RPC address, usually port 8899. In Tor mode with \"onion services "
+                               "only\", Solana works only with an .onion address here.", solServers);
+    solHelp->setWordWrap(true);
+    solHelp->setStyleSheet("color: gray;");
+    solLayout->addWidget(solHelp);
+    solLayout->addStretch();
+    ui->tabWidget_network->addTab(solServers, "Solana");
+
     // Websocket
     // [Obtain third-party data]
     // Biscuit: Enabled, Tor only (through Tor even outside Tor mode, like

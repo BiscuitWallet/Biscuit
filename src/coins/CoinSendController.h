@@ -69,6 +69,9 @@ public:
     // A watched asset on Ethereum ("USDT.L1": sent there by mistake, or kept
     // from Biscuit 1.1.1): asks where to, then sends all of it from there.
     void moveFromEthereum(QWidget *parent, const QString &asset);
+    // Solana: SOL from the selected Solana wallet. Asks the node for a recent
+    // block and the recipient's balance, shows everything, sends once confirmed.
+    void sendSolana(QWidget *parent, const QString &address, const QString &amountText);
     // Network fee of a typical send of `asset` now, in ETH: about / at most.
     std::optional<QPair<QString, QString>> ethereumFee(const QString &asset) const;
     // Speed up a pending Ethereum send of `eth`: shows the higher fee, sends

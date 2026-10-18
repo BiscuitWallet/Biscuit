@@ -26,6 +26,7 @@ namespace {
         {"usdt", "Arbitrum", "Tether (Arbitrum One)", 0.004, "5"},
         {"usdt", "ERC20", "Tether (ERC20)", 0.004, "10"},
         {"usdt", "TRC20", "Tether (TRC20)", 0.004, "10"},
+        {"sol", "Mainnet", "Solana", 0.6, "0.05"},
     };
 
     struct DemoExchange {

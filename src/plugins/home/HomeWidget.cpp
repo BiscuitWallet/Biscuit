@@ -51,6 +51,7 @@ namespace {
     QIcon coinIcon(const QString &ticker) {
         if (ticker == "XMR") return PixelIcons::icon("monero");
         if (ticker == "ETH") return PixelIcons::icon("ethereum");
+        if (ticker == "SOL") return PixelIcons::icon("solana");
         if (ticker == "USDT") return PixelIcons::icon("tether");
         if (ticker == "USDC") return PixelIcons::icon("usdc");
         return icons()->icon(ticker == "BTC" ? "bitcoin.png" : "litecoin.png");
@@ -160,6 +161,13 @@ void HomeWidget::updateRecent() {
                                                        biscuit::coins::eth::formatAmount(e.amount, wallet->decimals(e.asset)), name),
                                 e.failed ? QString("Failed") : e.block == 0 ? QString("Pending") : QString("Confirmed")});
                 }
+            }
+        }
+        for (const auto &entry : vault->wallets(biscuit::coins::solana())) {
+            for (const auto &e : entry.sol->history()) {
+                all.append({e.time, "SOL",
+                            QString("%1%2 SOL").arg(e.incoming ? "+" : "-", biscuit::coins::sol::formatAmount(e.amount)),
+                            e.failed ? QString("Failed") : e.slot == 0 ? QString("Pending") : QString("Confirmed")});
             }
         }
     }

@@ -63,16 +63,16 @@ QJsonObject request(int id, const QString &method, const QJsonArray &params) {
 std::optional<QJsonValue> result(const QJsonValue &reply, int id, QString *error) {
     const QJsonObject obj = reply.toObject();
     if (obj.value("id").toInt(-1) != id) {
-        fail(error, "Unexpected reply from the Ethereum node");
+        fail(error, "Unexpected reply from the node");
         return std::nullopt;
     }
     if (obj.contains("error")) {
         const QString message = obj.value("error").toObject().value("message").toString();
-        fail(error, message.isEmpty() ? QString("Error from the Ethereum node") : message);
+        fail(error, message.isEmpty() ? QString("Error from the node") : message);
         return std::nullopt;
     }
     if (!obj.contains("result")) {
-        fail(error, "Unexpected reply from the Ethereum node");
+        fail(error, "Unexpected reply from the node");
         return std::nullopt;
     }
     return obj.value("result");
@@ -84,7 +84,7 @@ std::optional<QJsonValue> batchResult(const QJsonArray &replies, int id, QString
             return result(reply, id, error);
         }
     }
-    fail(error, "Incomplete reply from the Ethereum node");
+    fail(error, "Incomplete reply from the node");
     return std::nullopt;
 }
 

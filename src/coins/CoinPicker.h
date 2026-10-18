@@ -50,11 +50,12 @@ private:
 
 class CoinVault;
 
-// What "+" can add: BTC, LTC, ETH, USDT, USDC.
+// What "+" can add: BTC, LTC, ETH, USDT, USDC, SOL.
 QStringList addableTickers();
-// Monero, Bitcoin, Litecoin and, where the page handles it, Ethereum and its
-// tokens (`tokens` false: Ethereum alone, e.g. for addresses, the same for all).
-void addWalletCoins(CoinPicker *picker, bool ethereum = false, bool tokens = true);
+// Monero, Bitcoin, Litecoin and, where the page handles them, the account
+// coins: Ethereum and its tokens (`tokens` false: Ethereum alone, e.g. for
+// addresses, the same for all), then Solana.
+void addWalletCoins(CoinPicker *picker, bool accounts = false, bool tokens = true);
 // Shows only the coins in this wallet (Monero always), and "All coins" only
 // with two coins or more. With `addButton`, a "+" offers to add the coins
 // this picker has a page for. Without it, a picker left with a single coin

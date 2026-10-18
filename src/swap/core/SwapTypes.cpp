@@ -265,7 +265,7 @@ QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets) {
     // ETH, USDT and USDC on Arbitrum One. Trocador's "usdc" there is Circle's
     // native USDC, the one Biscuit holds ("usdce" is the bridged USDC.e).
     const QList<Asset> held{{"xmr", "Mainnet"}, {"btc", "Mainnet"}, {"ltc", "Mainnet"},
-                            {"eth", "Arbitrum"}, {"usdt", "Arbitrum"}, {"usdc", "Arbitrum"}};
+                            {"eth", "Arbitrum"}, {"usdt", "Arbitrum"}, {"usdc", "Arbitrum"}, {"sol", "Mainnet"}};
     for (const Asset &wanted : held) {
         for (const AssetInfo &info : partnerAssets) {
             if (info.asset == wanted) {

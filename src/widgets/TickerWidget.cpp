@@ -99,6 +99,10 @@ void BalanceTickerWidget::updateDisplay() {
                 balanceFiatAmount += appData()->prices.convert(asset.symbol, fiatCurrency, amount.toDouble());
             }
         }
+        for (const auto &entry : vault->wallets(biscuit::coins::solana())) {
+            balanceFiatAmount += appData()->prices.convert("SOL", fiatCurrency,
+                                                           biscuit::coins::sol::formatAmount(entry.sol->balance()).toDouble());
+        }
     }
     this->setFiatText(balanceFiatAmount, fiatCurrency);
 }

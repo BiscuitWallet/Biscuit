@@ -170,7 +170,8 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         auto *row = new QWidget(this);
         auto *layout = new QHBoxLayout(row);
         layout->setContentsMargins(0, 0, 0, 0);
-        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum()}) {
+        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum(),
+                                   &biscuit::coins::solana()}) {
             auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, row);
             bar->setTitle({});
             bar->setAddVisible(false);   // added from Receive
@@ -504,6 +505,10 @@ void SwapWidget::onGetOffers() {
     }
     // ETH has 18 decimals, USDT and USDC 6: more could not be sent.
     const QString typedTicker = walletTicker(fixedRate() ? to : from);
+    if (typedTicker == biscuit::coins::solana().ticker && !biscuit::coins::sol::parseAmount(amountText)) {
+        Utils::showError(this, "Invalid amount", "SOL amounts have at most 9 decimals.");
+        return;
+    }
     if (biscuit::coins::coinOfTicker(typedTicker) == &biscuit::coins::ethereum()
         && !biscuit::coins::eth::parseAmount(amountText, biscuit::coins::eth::findAsset(typedTicker)->decimals)) {
         Utils::showError(this, "Invalid amount", QString("%1 amounts have at most %2 decimals.")
@@ -660,6 +665,22 @@ void SwapWidget::onMax() {
         clearOffers();
         return;
     }
+    if (params->solana) {
+        // The balance less the network fee: the wallet is left empty.
+        const SolWallet *sol = vault->solana();
+        if (!sol || sol->status() != SolWallet::Status::Synchronized) {
+            Utils::showInfo(this, "Not synchronized", "Wait until your Solana wallet is synchronized.");
+            return;
+        }
+        if (sol->sendable() == 0) {
+            Utils::showInfo(this, "Nothing to send", QString("Your Solana wallet \"%1\" has no SOL to send.")
+                                                     .arg(vault->selectedName(*params)));
+            return;
+        }
+        ui->line_amount->setText(sol::formatAmount(sol->sendable()));
+        clearOffers();
+        return;
+    }
     CoinWallet *coin = vault->wallet(*params);
     if (coin->status() != CoinWallet::Status::Synchronized) {
         Utils::showInfo(this, "Not synchronized", QString("Wait until your %1 wallet is synchronized.").arg(params->name));
@@ -712,7 +733,7 @@ void SwapWidget::updateWalletRows() {
     auto activate = [](const QList<biscuit::coins::CoinWalletBar *> &bars, const QString &ticker) {
         const auto *params = biscuit::coins::coinOfTicker(ticker);
         const QList<const biscuit::coins::CoinParams *> order{&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(),
-                                                              &biscuit::coins::ethereum()};
+                                                              &biscuit::coins::ethereum(), &biscuit::coins::solana()};
         for (int i = 0; i < bars.size(); ++i) {
             bars.at(i)->setActive(params == order.value(i));
             if (params && params->ethereum) bars.at(i)->setAsset(ticker);
@@ -751,6 +772,17 @@ void SwapWidget::sendCoinDeposit(const Trade &trade) {
         m_coins->sendEthereum(this, ticker, trade.depositAddress, trade.amountFrom);
         return;
     }
+    if (params->solana) {
+        // A swap of the whole balance (Max), floating rate: everything, if the
+        // fee went up since.
+        const SolWallet *sol = vault->solana();
+        const auto lamports = sol::parseAmount(trade.amountFrom);
+        const bool all = trade.rateType != RateType::Fixed && sol && lamports && *lamports >= sol->sendable();
+        m_pendingDepositProvider = trade.providerId;
+        m_pendingDepositTrade = trade.tradeId;
+        m_coins->sendSolana(this, trade.depositAddress, all ? QString("all") : trade.amountFrom);
+        return;
+    }
     const auto atomic = amount::toAtomic(trade.amountFrom, params->decimals);
     if (!atomic || *atomic == 0) {
         Utils::showError(this, "Invalid amount", "The swap amount cannot be sent from this wallet.");
@@ -777,6 +809,7 @@ QString SwapWidget::walletTicker(const Asset &asset) {
     if (asset.network == QLatin1String("Mainnet")) {
         if (asset.ticker == QLatin1String("btc")) return "BTC";
         if (asset.ticker == QLatin1String("ltc")) return "LTC";
+        if (asset.ticker == QLatin1String("sol")) return "SOL";
     } else if (asset.network == QLatin1String("Arbitrum")) {
         if (asset.ticker == QLatin1String("eth")) return "ETH";
         if (asset.ticker == QLatin1String("usdt")) return "USDT";
@@ -813,7 +846,7 @@ QString SwapWidget::coinWalletLabel(const Asset &asset) const {
     using namespace biscuit::coins;
     const CoinParams *params = coinOfTicker(walletTicker(asset));
     CoinVault *vault = CoinVault::forWallet(m_wallet);
-    const QString kind = params && params->ethereum ? QString("Ethereum") : asset.ticker.toUpper();
+    const QString kind = params && (params->ethereum || params->solana) ? params->name : asset.ticker.toUpper();
     if (params && vault && vault->wallets(*params).size() > 1) {
         return QString("your %1 wallet \"%2\" in Biscuit").arg(kind, vault->selectedName(*params));
     }
@@ -839,6 +872,7 @@ QString SwapWidget::coinWalletAddress(const Asset &asset) {
         return {};
     }
     const QString address = params->ethereum ? (vault->ethereum() ? vault->ethereum()->addressText() : QString())
+                            : params->solana ? (vault->solana() ? vault->solana()->addressText() : QString())
                                              : vault->wallet(*params)->receiveAddress();
     if (address.isEmpty()) {
         Utils::showError(this, "Address not ready", QString("Your %1 wallet is not ready yet. Try again in a moment.").arg(params->name));
@@ -906,6 +940,13 @@ void SwapWidget::createTrade(const Quote &quote) {
         if (asset.network == QLatin1String("ERC20") || asset.network == QLatin1String("Arbitrum")) {
             QString error;
             if (!biscuit::coins::eth::parseAddress(address, &error)) {
+                Utils::showError(this, "Invalid address", error);
+                return;
+            }
+        }
+        if (asset == Asset{"sol", "Mainnet"}) {
+            QString error;
+            if (!biscuit::coins::sol::parseAddress(address, &error)) {
                 Utils::showError(this, "Invalid address", error);
                 return;
             }

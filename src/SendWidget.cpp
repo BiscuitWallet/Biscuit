@@ -95,7 +95,8 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     biscuit::coins::addWalletCoins(m_coinPicker, true);
     ui->formLayout->insertRow(0, m_coinPicker);
     auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-    for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum()}) {
+    for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum(),
+                               &biscuit::coins::solana()}) {
         auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, this);
         ui->formLayout->insertRow(1 + m_walletBars.size(), bar);
         m_walletBars << bar;
@@ -205,10 +206,11 @@ void SendWidget::updateCoinMode() {
     m_coin = biscuit::coins::coinOfTicker(ticker);
     const bool coinMode = m_coin != nullptr;
     const bool ethereum = coinMode && m_coin->ethereum;
+    const bool solana = coinMode && m_coin->solana;
     m_asset = ethereum ? ticker : QString();
 
     const QList<const biscuit::coins::CoinParams *> barCoins{&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(),
-                                                             &biscuit::coins::ethereum()};
+                                                             &biscuit::coins::ethereum(), &biscuit::coins::solana()};
     for (int i = 0; i < m_walletBars.size(); ++i) {
         // A bar also hides itself while the coin is locked or not added.
         auto *bar = static_cast<biscuit::coins::CoinWalletBar *>(m_walletBars.at(i));
@@ -217,15 +219,16 @@ void SendWidget::updateCoinMode() {
     }
     ui->lineAddress->setPlaceholderText(!m_coin   ? QString("Monero address (4… or 8…)")
                                         : ethereum ? QString("Ethereum address (0x…)")
+                                        : solana ? QString("Solana address")
                                         : QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1" : "ltc1"));
     ui->formLayout->setRowVisible(m_xmrBalanceRow, !coinMode);
 
     ui->formLayout->setRowVisible(m_coinHint, coinMode);
-    const QStringList chosen = coinMode && !ethereum ? biscuit::coins::CoinVault::forWallet(m_wallet)->coinSelection(*m_coin) : QStringList();
+    const QStringList chosen = coinMode && !ethereum && !solana ? biscuit::coins::CoinVault::forWallet(m_wallet)->coinSelection(*m_coin) : QStringList();
     m_coinSelection->setText(QString("Coin control: only the %1 coin(s) selected in the Coins tab").arg(chosen.size()));
     ui->formLayout->setRowVisible(m_coinSelectionRow, !chosen.isEmpty());
     ui->formLayout->setRowVisible(m_coinFeeTitle, coinMode);
-    m_coinFee->setVisible(coinMode && !ethereum);   // Ethereum: one fee, from the node
+    m_coinFee->setVisible(coinMode && !ethereum && !solana);   // Ethereum, Solana: one fee, from the node
     m_coinUnit->setVisible(coinMode);
     ui->comboCurrencySelection->setVisible(!coinMode);
 
@@ -239,7 +242,7 @@ void SendWidget::updateCoinMode() {
         const auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
         const auto state = vault->coinState(*m_coin);
         QString hint = state == biscuit::coins::CoinVault::CoinState::Ready
-                                ? QString("Sent from your %1 wallet \"%2\"").arg(ethereum ? QString("Ethereum") : m_coin->ticker,
+                                ? QString("Sent from your %1 wallet \"%2\"").arg(ethereum ? QString("Ethereum") : solana ? QString("Solana") : m_coin->ticker,
                                                                                    vault->selectedName(*m_coin))
                             : state == biscuit::coins::CoinVault::CoinState::Locked
                                 ? QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name)
@@ -301,6 +304,19 @@ void SendWidget::updateCoinFeeLabel() {
                     .arg(biscuit::coins::eth::formatAmount(eth->balance("ETH"), biscuit::coins::eth::etherDecimals));
         }
         m_coinFeeRate->setText(text);
+        return;
+    }
+    if (m_coin->solana) {
+        // A fraction of a cent: the money first, the exact SOL in the tooltip.
+        const auto *sol = biscuit::coins::CoinVault::forWallet(m_wallet)->solana();
+        const auto fee = sol ? sol->transferFee() : std::nullopt;
+        const QString value = fee ? biscuit::coins::sol::formatAmount(*fee) : QString();
+        const QString money = fee ? biscuit::coins::fiatAmount("SOL", value) : QString();
+        m_coinFeeRate->setText(!fee ? QString() : !money.isEmpty() ? QString("≈ %1 (%2 SOL)").arg(money, value)
+                                                                    : QString("%1 SOL").arg(value));
+        m_coinFeeRate->setToolTip(fee ? QString("%1 SOL: Solana's fee per signature, and a small priority fee "
+                                                "so that it goes through when the network is busy.").arg(value)
+                                      : QString());
         return;
     }
     const auto rate = m_coinSend->feeRate(*m_coin, m_coinFee->currentData().toInt());
@@ -392,6 +408,10 @@ void SendWidget::sendClicked() {
         const QString address = destination ? destination->address : ui->lineAddress->text().trimmed();
         if (m_coin->ethereum) {
             m_coinSend->sendEthereum(this, m_asset, address, ui->lineAmount->text());
+            return;
+        }
+        if (m_coin->solana) {
+            m_coinSend->sendSolana(this, address, ui->lineAmount->text());
             return;
         }
         m_coinSend->send(this, *m_coin, address, ui->lineAmount->text(), m_coinFee->currentData().toInt());

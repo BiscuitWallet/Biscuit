@@ -15,6 +15,7 @@
 
 #include "CoinWallet.h"
 #include "EthWallet.h"
+#include "SolWallet.h"
 #include "WalletFile.h"
 
 class Wallet;
@@ -103,6 +104,7 @@ public:
         CoinWallet *wallet = nullptr;   // Bitcoin or Litecoin
         EthWallet *eth = nullptr;       // Ethereum's coins, on Arbitrum
         EthWallet *l1 = nullptr;        // the same keys on Ethereum, only watched
+        SolWallet *sol = nullptr;       // Solana
         // Its wallet on `network` (Ethereum entries only).
         EthWallet *on(const eth::Network &network) const { return &network == &eth::mainnet() ? l1 : eth; }
         // First address: tells two wallets of the same seed apart.
@@ -114,6 +116,8 @@ public:
     CoinWallet *litecoin() const { return wallet(coins::litecoin()); }
     // The selected Ethereum wallet, on Arbitrum (nullptr while locked or not added).
     EthWallet *ethereum() const;
+    // The selected Solana wallet (nullptr while locked or not added).
+    SolWallet *solana() const;
     // The selected Ethereum wallet on the network of an asset ("USDT.L1": the
     // watched one on Ethereum). nullptr while locked, not added, or unknown.
     EthWallet *evmWallet(const QString &assetId) const;

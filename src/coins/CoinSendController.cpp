@@ -61,6 +61,17 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
     if (eth::parseAddress(trimmed)) {
         return CoinDestination{&ethereum(), trimmed, {}};
     }
+    // Solana Pay: solana:<address>?amount=<decimal>. A token request
+    // ("spl-token") is not for SOL: not taken.
+    if (trimmed.startsWith("solana:", Qt::CaseInsensitive)) {
+        const QUrl url(trimmed);
+        const QUrlQuery query(url);
+        if (!sol::parseAddress(url.path()) || query.hasQueryItem("spl-token")) {
+            return std::nullopt;
+        }
+        const QString amount = query.queryItemValue("amount");
+        return CoinDestination{&solana(), url.path(), sol::parseAmount(amount) ? amount : QString()};
+    }
     for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
         // BIP21 URI: bitcoin:<address>?amount=<decimal>
         const QString scheme = params->name.toLower() + ':';
@@ -76,6 +87,10 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
         if (isValidSendDestination(trimmed, *params)) {
             return CoinDestination{params, trimmed, {}};
         }
+    }
+    // Solana: 32 bytes in base58, after Bitcoin's legacy addresses (25 bytes).
+    if (sol::parseAddress(trimmed)) {
+        return CoinDestination{&solana(), trimmed, {}};
     }
     return std::nullopt;
 }
@@ -385,6 +400,70 @@ void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, con
             }
             Utils::showInfo(guard, "Transaction sent", QString("Transaction hash: %1").arg(hash));
             emit sent(hash);
+        });
+    });
+}
+
+void CoinSendController::sendSolana(QWidget *parent, const QString &address, const QString &amountText) {
+    if (!ensureReady(parent, solana())) {
+        return;
+    }
+    SolWallet *sol = m_vault->solana();
+    if (!sol || sol->status() != SolWallet::Status::Synchronized) {
+        Utils::showError(parent, "Not synchronized", "Wait until Solana is synchronized, then try again.");
+        return;
+    }
+    QString text = amountText.trimmed();
+    text.replace(',', '.');
+
+    // A recent block and the recipient's balance come from the node: a moment.
+    QPointer<QWidget> guard(parent);
+    QPointer<SolWallet> wallet(sol);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    sol->planSend(address, text, [this, guard, wallet](std::optional<SolWallet::Plan> plan, const QString &error) {
+        QApplication::restoreOverrideCursor();
+        if (!guard || !wallet) {
+            return;
+        }
+        if (!plan) {
+            Utils::showError(guard, "Unable to send", error);
+            return;
+        }
+        const QString amountValue = sol::formatAmount(plan->amount);
+        const QString feeValue = sol::formatAmount(plan->fee);
+
+        // Explicit confirmation: nothing is signed or sent before this.
+        QMessageBox box(guard);
+        box.setWindowTitle("Send SOL");
+        box.setIcon(QMessageBox::Question);
+        box.setText(QString("Send %1 SOL?").arg(amountValue + fiatValue("SOL", amountValue)));
+        box.setTextInteractionFlags(Qt::TextSelectableByMouse);
+        QString details = m_vault->wallets(solana()).size() > 1
+                          ? QString("From: Solana wallet \"%1\"\n").arg(m_vault->selectedName(solana())) : QString();
+        details += QString("To: %1\n").arg(sol::addressText(plan->recipient));
+        details += "Network: Solana\n";
+        details += QString("Network fee: %1 SOL%2\n").arg(feeValue, fiatValue("SOL", feeValue));
+        const QString total = sol::formatAmount(plan->amount + plan->fee);
+        details += QString("Total: %1 SOL%2").arg(total, fiatValue("SOL", total));
+        if (plan->emptyRecipient) {
+            // No checksum in Solana addresses: a typo is another valid address.
+            box.setIcon(QMessageBox::Warning);
+            details = QString("This address holds no SOL: it was never used, or was emptied. Solana addresses have "
+                              "no checksum, so a typo is not detected: check it character by character.\n\n") + details;
+        }
+        box.setInformativeText(details);
+        box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        box.setDefaultButton(QMessageBox::Cancel);
+        if (box.exec() != QMessageBox::Yes || !wallet) {
+            return;
+        }
+        wallet->broadcast(*plan, [this, guard](const QString &signature, const QString &error) {
+            if (!error.isEmpty()) {
+                Utils::showError(guard, "Transaction not sent", error);
+                return;
+            }
+            Utils::showInfo(guard, "Transaction sent", QString("Transaction ID: %1").arg(signature));
+            emit sent(signature);
         });
     });
 }

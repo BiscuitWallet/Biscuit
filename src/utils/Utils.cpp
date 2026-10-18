@@ -293,7 +293,7 @@ QString addressFromPaymentText(const QString &text) {
     const QString t = text.trimmed();
     const qsizetype colon = t.indexOf(':');
     const QString scheme = colon > 0 ? t.left(colon).toLower() : QString();
-    if (!QStringList{"monero", "bitcoin", "litecoin", "ethereum"}.contains(scheme)) {
+    if (!QStringList{"monero", "bitcoin", "litecoin", "ethereum", "solana"}.contains(scheme)) {
         return t;
     }
     QString rest = t.mid(colon + 1);

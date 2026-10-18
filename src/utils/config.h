@@ -98,6 +98,7 @@ public:
         ethereumBlockscout,  // Biscuit 1.1.1: own Blockscout for the Ethereum history (now only watched)
         arbitrumNode,        // Biscuit: own Arbitrum One node (JSON-RPC URL), empty = public nodes
         arbitrumBlockscout,  // Biscuit: own Blockscout for the history, empty = arbitrum.blockscout.com
+        solanaNode,          // Biscuit: own Solana node (JSON-RPC URL), empty = public nodes
 
         // Network -> Offline
         offlineMode,
