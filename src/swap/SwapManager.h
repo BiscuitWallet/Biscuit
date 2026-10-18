@@ -36,9 +36,7 @@ public:
     // Queries every provider in parallel, then ranks all offers together.
     void requestQuotes(const QuoteRequest &request, QuotesCallback callback);
 
-    // Checked by the provider of the chosen offer: another one may not list the coin.
-    void validateAddress(const QString &providerId, const Asset &asset, const QString &address,
-                         SwapProvider::ValidationCallback callback);
+    void validateAddress(const Asset &asset, const QString &address, SwapProvider::ValidationCallback callback);
     void createTrade(const TradeRequest &request, SwapProvider::TradeCallback callback);
 
     QList<Trade> trades() const;
