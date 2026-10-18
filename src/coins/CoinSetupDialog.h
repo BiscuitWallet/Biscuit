@@ -80,7 +80,7 @@ bool addCoinToWallet(CoinVault *vault, const CoinParams &params, QWidget *parent
 // Same for any ticker of the coin buttons. A token (USDT, USDC) runs on
 // Ethereum, whose ETH pays its fees: Ethereum is added first if needed.
 bool addAssetToWallet(CoinVault *vault, const QString &ticker, QWidget *parent);
-// Name in menus: "Bitcoin", "USDT (on Ethereum)", "USDT (on Arbitrum)"…
+// Name in menus: "Bitcoin", "USDT (on Ethereum)"…
 QString assetLabel(const QString &ticker);
 
 // Shows a Bitcoin/Litecoin seed after asking the wallet password again: the

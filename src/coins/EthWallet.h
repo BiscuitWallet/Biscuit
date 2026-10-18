@@ -17,7 +17,7 @@
 
 namespace biscuit::coins {
 
-// An Ethereum wallet on one network (Ethereum or Arbitrum): ETH, USDT and
+// An Ethereum wallet on one network (Arbitrum or Ethereum): ETH, USDT and
 // USDC on one address, from the BIP39 seed (m/44'/60'/0'/0/0), the same
 // address on every network. Balance, nonce and fees come from public nodes
 // (one at a time, the next one if it fails); the history from Blockscout,
@@ -40,7 +40,7 @@ public:
     QString nodeName() const;
 
     // "ETH", "USDT", "USDC": the assets of this wallet, and their decimals.
-    // The app names them with eth::assetId (".ARB" on Arbitrum).
+    // The app names them with eth::assetId (".L1" on Ethereum).
     QStringList assets() const;
     int decimals(const QString &asset) const;
     eth::u128 balance(const QString &asset) const { return m_balances.value(asset); }
@@ -61,6 +61,11 @@ public:
     // Empty = the built-in nodes / explorer.
     void setCustomNode(const QString &url);
     void setCustomBlockscout(const QString &url);
+    // Only watched (Ethereum next to Arbitrum): every few minutes while not
+    // active, the history only once the address was used there.
+    void setWatchOnly(bool watchOnly) { m_watchOnly = watchOnly; }
+    // Holds something here, or a send of ours is waiting.
+    bool active() const;
     void start();
     void stop();
     bool isRunning() const { return m_running; }
@@ -126,6 +131,7 @@ private:
     quint64 m_transferGas = eth::transferGas;   // Arbitrum: from the node's estimate
     int m_failures = 0;           // nodes tried in a row without success
     bool m_running = false;
+    bool m_watchOnly = false;
     Status m_status = Status::Disconnected;
     QTimer m_timer;
     quint64 m_generation = 0;     // replies of an older refresh are dropped

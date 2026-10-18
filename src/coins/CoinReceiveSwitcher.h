@@ -54,7 +54,7 @@ private:
     QList<CoinWidgets> m_coinWidgets;
 
     struct EthWidgets {
-        QString asset;                     // "ETH", "USDT", "USDC.ARB"…: one tab each
+        QString asset;                     // "ETH", "USDT", "USDC": one tab each
         QStackedWidget *state = nullptr;   // 0 = not added or locked, 1 = address
         QLabel *setupText = nullptr;
         QPushButton *setupButton = nullptr;

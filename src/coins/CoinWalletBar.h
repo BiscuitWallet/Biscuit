@@ -33,7 +33,7 @@ public:
     void setTitle(const QString &title);
     // "Add wallet" button (shown by default; compact screens leave it to Receive).
     void setAddVisible(bool visible);
-    // Ethereum: the asset whose balance is shown ("ETH", "USDT", "USDC.ARB"…).
+    // Ethereum: the asset whose balance is shown ("ETH", "USDT", "USDC").
     void setAsset(const QString &asset);
 
 private:

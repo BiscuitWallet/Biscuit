@@ -503,10 +503,11 @@ void SwapWidget::onGetOffers() {
         return;
     }
     // ETH has 18 decimals, USDT and USDC 6: more could not be sent.
-    const auto *typedAsset = biscuit::coins::eth::findAsset(walletTicker(fixedRate() ? to : from));
-    if (typedAsset && !biscuit::coins::eth::parseAmount(amountText, typedAsset->decimals)) {
+    const QString typedTicker = walletTicker(fixedRate() ? to : from);
+    if (biscuit::coins::coinOfTicker(typedTicker) == &biscuit::coins::ethereum()
+        && !biscuit::coins::eth::parseAmount(amountText, biscuit::coins::eth::findAsset(typedTicker)->decimals)) {
         Utils::showError(this, "Invalid amount", QString("%1 amounts have at most %2 decimals.")
-                                                 .arg(typedAsset->symbol).arg(typedAsset->decimals));
+                                                 .arg(typedTicker).arg(biscuit::coins::eth::findAsset(typedTicker)->decimals));
         return;
     }
 
@@ -643,22 +644,19 @@ void SwapWidget::onMax() {
     }
     if (params->ethereum) {
         // ETH: the balance less the most a transfer can cost; a token: all of it.
-        // "USDT.ARB": USDT, from the wallet on Arbitrum.
-        const eth::Asset *asset = eth::findAsset(ticker);
-        const EthWallet *eth = vault->evmWallet(ticker);
-        if (!asset || !eth || eth->status() != EthWallet::Status::Synchronized) {
-            Utils::showInfo(this, "Not synchronized", QString("Wait until your Ethereum wallet is synchronized on %1.")
-                                                      .arg(asset ? asset->network->name : QString("Ethereum")));
+        const EthWallet *eth = vault->ethereum();
+        if (!eth || eth->status() != EthWallet::Status::Synchronized) {
+            Utils::showInfo(this, "Not synchronized", "Wait until your Ethereum wallet is synchronized.");
             return;
         }
         // ETH: as Max in Send, with the narrow fee reserve (almost nothing left).
-        const eth::u128 available = asset->symbol == "ETH" ? eth->sendableEther() : eth->balance(asset->symbol);
+        const eth::u128 available = ticker == "ETH" ? eth->sendableEther() : eth->balance(ticker);
         if (available == 0) {
             Utils::showInfo(this, "Nothing to send", QString("Your Ethereum wallet \"%1\" has no %2 to send.")
-                                                     .arg(vault->selectedName(*params), eth::assetName(ticker)));
+                                                     .arg(vault->selectedName(*params), ticker));
             return;
         }
-        ui->line_amount->setText(eth::formatAmount(available, asset->decimals));
+        ui->line_amount->setText(eth::formatAmount(available, eth->decimals(ticker)));
         clearOffers();
         return;
     }
@@ -779,14 +777,10 @@ QString SwapWidget::walletTicker(const Asset &asset) {
     if (asset.network == QLatin1String("Mainnet")) {
         if (asset.ticker == QLatin1String("btc")) return "BTC";
         if (asset.ticker == QLatin1String("ltc")) return "LTC";
-    } else if (asset.network == QLatin1String("ERC20")) {
+    } else if (asset.network == QLatin1String("Arbitrum")) {
         if (asset.ticker == QLatin1String("eth")) return "ETH";
         if (asset.ticker == QLatin1String("usdt")) return "USDT";
         if (asset.ticker == QLatin1String("usdc")) return "USDC";
-    } else if (asset.network == QLatin1String("Arbitrum")) {
-        if (asset.ticker == QLatin1String("eth")) return "ETH.ARB";
-        if (asset.ticker == QLatin1String("usdt")) return "USDT.ARB";
-        if (asset.ticker == QLatin1String("usdc")) return "USDC.ARB";
     }
     return {};
 }

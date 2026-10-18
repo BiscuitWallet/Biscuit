@@ -218,15 +218,6 @@ std::optional<QPair<QString, QString>> CoinSendController::ethereumFee(const QSt
                      eth::formatAmount(gas * fees->maxFeePerGas, eth::etherDecimals));
 }
 
-std::optional<double> CoinSendController::ethereumGwei(const QString &asset) const {
-    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->evmWallet(asset) : nullptr;
-    const auto fees = eth ? eth->fees() : std::nullopt;
-    if (!fees) {
-        return std::nullopt;
-    }
-    return double(fees->baseFee + fees->priorityFee) / 1e9;
-}
-
 void CoinSendController::speedUpEthereum(QWidget *parent, EthWallet *eth, const QByteArray &hash) {
     if (!eth) {
         return;
@@ -274,12 +265,34 @@ void CoinSendController::speedUpEthereum(QWidget *parent, EthWallet *eth, const 
     });
 }
 
+void CoinSendController::moveFromEthereum(QWidget *parent, const QString &asset) {
+    const eth::Asset *info = eth::findAsset(asset);
+    const EthWallet *l1 = m_vault && m_vault->isUnlocked() ? m_vault->evmWallet(asset) : nullptr;
+    if (!info || !l1 || info->network != &eth::mainnet()) {
+        return;
+    }
+    const QString amount = QString("%1 %2").arg(eth::formatAmount(l1->balance(info->symbol), info->decimals), info->symbol);
+    QString text = QString("This address holds %1 on the Ethereum network, where Biscuit no longer sends from "
+                           "(network fees are dollars there, cents on Arbitrum). Move it to an address that "
+                           "receives %2 on Ethereum, such as an exchange's deposit address for the Ethereum "
+                           "(ERC-20) network.").arg(amount, info->symbol);
+    if (info->symbol != "ETH") {
+        text += QString(" The network fee is paid in ETH on Ethereum: this address needs a little of it there.");
+    }
+    bool ok = false;
+    const QString address = QInputDialog::getText(parent, QString("Move %1 from Ethereum").arg(info->symbol),
+                                                  text + "\n\nSend all of it to:", QLineEdit::Normal, {}, &ok).trimmed();
+    if (ok && !address.isEmpty()) {
+        sendEthereum(parent, asset, address, "all");
+    }
+}
+
 void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, const QString &address,
                                       const QString &amountText) {
     if (!ensureReady(parent, ethereum())) {
         return;
     }
-    // "USDT.ARB": USDT, from the wallet on Arbitrum.
+    // "USDT.L1": USDT, from the watched wallet on Ethereum.
     const eth::Asset *info = eth::findAsset(asset);
     EthWallet *eth = m_vault->evmWallet(asset);
     if (!info || !eth) {
@@ -324,10 +337,11 @@ void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, con
         QString details = entries.size() > 1
                           ? QString("From: Ethereum wallet \"%1\"\n").arg(m_vault->selectedName(ethereum())) : QString();
         details += QString("To: %1\n").arg(eth::checksumAddress(plan->recipient));
-        details += arbitrum ? QString("Network: Arbitrum One\n")
-                   : plan->asset == "ETH" ? QString("Network: Ethereum\n") : QString("Network: Ethereum (ERC-20)\n");
+        details += arbitrum ? QString("Network: Arbitrum One (the recipient must accept it)\n")
+                            : QString("Network: Ethereum, not Arbitrum\n");
         details += QString("Network fee: at most %1, usually less").arg(maxFee);
-        if (const auto fees = wallet->fees()) {
+        // Gas prices only mean something on Ethereum, busy some days.
+        if (const auto fees = arbitrum ? std::nullopt : wallet->fees()) {
             const double gwei = double(fees->baseFee + fees->priorityFee) / 1e9;
             details += QString(" (%1 gwei%2)").arg(QString::number(gwei, 'f', gwei < 10 ? 2 : 1),
                                                    gwei >= 6 ? QString(", very busy right now") : QString());

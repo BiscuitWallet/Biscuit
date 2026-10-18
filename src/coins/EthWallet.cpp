@@ -23,6 +23,7 @@ using namespace eth;
 
 namespace {
     constexpr int refreshIntervalMs = 30 * 1000;
+    constexpr int watchIntervalMs = 5 * 60 * 1000;   // an unused address, only watched
     // First sync of a wallet: up to 10 pages of 50 per source (ETH, USDT, USDC).
     constexpr int deepSyncPages = 10;
     // A node asking for more than this per gas is wrong or lying: refused
@@ -178,6 +179,11 @@ void EthWallet::setCustomBlockscout(const QString &url) {
     m_customBlockscout = url.trimmed();
 }
 
+bool EthWallet::active() const {
+    return !m_sent.isEmpty() || !m_pending.isEmpty()
+           || std::any_of(m_balances.begin(), m_balances.end(), [](u128 v) { return v > 0; });
+}
+
 QStringList EthWallet::nodes() const {
     return m_customNode.isEmpty() ? m_network.nodes : QStringList{m_customNode};
 }
@@ -231,8 +237,13 @@ void EthWallet::refresh() {
         setStatus(Status::Connecting);
     }
     ++m_generation;
+    m_timer.setInterval(m_watchOnly && !active() ? watchIntervalMs : refreshIntervalMs);
     refreshNode();
-    refreshHistory();
+    // Watched: the history once the address was used there (sends of ours,
+    // once mined, show from it), at the pace of the balances.
+    if (!m_watchOnly || active() || !m_history.isEmpty()) {
+        refreshHistory();
+    }
 }
 
 // ------------------------------------------------------------------ network
@@ -598,7 +609,8 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
                     return;
                 }
                 if (plan.maxFee > eth) {
-                    const QString on = m_network.chainId == mainnetChainId ? QString() : QString(" on %1").arg(m_network.name);
+                    // Watched Ethereum: its own ETH, not the one Biscuit shows.
+                    const QString on = m_network.chainId == mainnetChainId ? QString(" on %1").arg(m_network.name) : QString();
                     done(std::nullopt, QString("Sending %1 costs a network fee paid in ETH%4: up to %2 ETH. "
                                                "This wallet has %3 ETH%4. Receive a little ETH%4 first.")
                                        .arg(plan.asset, maxFeeText, formatAmount(eth, etherDecimals), on));

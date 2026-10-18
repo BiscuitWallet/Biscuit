@@ -285,21 +285,27 @@ private slots:
     }
 
     void assetIds() {
+        // Shown: on Arbitrum. Ethereum's, only watched, have their own ids.
         QStringList ids;
         for (const Asset &a : allAssets()) ids << a.id;
-        QCOMPARE(ids, (QStringList{"ETH", "USDT", "USDC", "ETH.ARB", "USDT.ARB", "USDC.ARB"}));
-        const Asset *usdtArb = findAsset("USDT.ARB");
-        QVERIFY(usdtArb);
-        QCOMPARE(usdtArb->network, &arbitrumOne());
-        QCOMPARE(usdtArb->symbol, QString("USDT"));
-        QCOMPARE(usdtArb->decimals, 6);
-        QCOMPARE(findAsset("ETH")->network, &mainnet());
-        QCOMPARE(findAsset("ETH.ARB")->decimals, etherDecimals);
-        QVERIFY(!findAsset("BTC") && !findAsset("USDT.TRX") && !findAsset("usdt"));
-        QCOMPARE(assetId(arbitrumOne(), "USDC"), QString("USDC.ARB"));
+        QCOMPARE(ids, (QStringList{"ETH", "USDT", "USDC"}));
+        ids.clear();
+        for (const Asset &a : mainnetAssets()) ids << a.id;
+        QCOMPARE(ids, (QStringList{"ETH.L1", "USDT.L1", "USDC.L1"}));
+        const Asset *usdt = findAsset("USDT");
+        QVERIFY(usdt);
+        QCOMPARE(usdt->network, &arbitrumOne());
+        QCOMPARE(usdt->symbol, QString("USDT"));
+        QCOMPARE(usdt->decimals, 6);
+        QCOMPARE(findAsset("ETH")->network, &arbitrumOne());
+        QCOMPARE(findAsset("USDC.L1")->network, &mainnet());
+        QCOMPARE(findAsset("ETH.L1")->decimals, etherDecimals);
+        QVERIFY(!findAsset("BTC") && !findAsset("USDT.ARB") && !findAsset("usdt"));
+        QCOMPARE(assetId(arbitrumOne(), "USDC"), QString("USDC"));
+        QCOMPARE(assetId(mainnet(), "USDC"), QString("USDC.L1"));
         QCOMPARE(assetName("USDT"), QString("USDT"));
-        QCOMPARE(assetName("USDT.ARB"), QString("USDT (Arbitrum)"));
-        QCOMPARE(assetName("ETH.ARB"), QString("ETH (Arbitrum)"));
+        QCOMPARE(assetName("USDT.L1"), QString("USDT on Ethereum"));
+        QCOMPARE(networks().first(), &arbitrumOne());
     }
 
     void arbitrumTransaction() {

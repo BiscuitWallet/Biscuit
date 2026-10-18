@@ -131,12 +131,12 @@ struct Token {
     QByteArray contract;   // 20 bytes
     int decimals;
 };
-// A network the Ethereum wallets use: the same keys and address on each,
+// A network of the Ethereum wallets: the same keys and address on each,
 // separate balances, nonces and fees. Fixed lists: networks and tokens
 // cannot be added, which rules out fake copies of USDT or USDC.
 struct Network {
-    QString name;            // "Ethereum", "Arbitrum"
-    QString suffix;          // of its asset ids: "" on Ethereum, ".ARB" on Arbitrum
+    QString name;            // "Arbitrum", "Ethereum"
+    QString suffix;          // of its asset ids: "" on Arbitrum, ".L1" on Ethereum
     quint64 chainId;
     QStringList nodes;       // public JSON-RPC nodes that answer without an account
     QString blockscout;      // explorer, for the history only
@@ -145,25 +145,31 @@ struct Network {
     // than 21000, and every gas limit comes from the node's estimate.
     bool l1CostInGas = false;
 };
-const Network &mainnet();
+// Biscuit's ETH, USDT and USDC live on Arbitrum One: fees of a few cents.
+// Ethereum itself is only watched, for what reaches the same address there
+// (sent by mistake, or kept from Biscuit 1.1.1), so that it can be moved.
 const Network &arbitrumOne();
-const QList<const Network *> &networks();
+const Network &mainnet();
+const QList<const Network *> &networks();   // Arbitrum, then Ethereum
 const Token *tokenByContract(const Network &network, const QByteArray &contract);
 // A token contract on any of the networks: never a recipient.
 bool isTokenContract(const QByteArray &contract);
 
 // The assets of the Ethereum wallets as the app names them: "ETH", "USDT",
-// "USDC" on Ethereum, "ETH.ARB", "USDT.ARB", "USDC.ARB" on Arbitrum.
+// "USDC" on Arbitrum; "ETH.L1", "USDT.L1", "USDC.L1" on Ethereum.
 struct Asset {
     QString id;
     const Network *network;
     QString symbol;          // "ETH", "USDT": its unit and price
     int decimals;
 };
+// The ones the app shows: ETH, USDT and USDC on Arbitrum.
 const QList<Asset> &allAssets();
-const Asset *findAsset(const QString &id);
+// The same on Ethereum, only watched.
+const QList<Asset> &mainnetAssets();
+const Asset *findAsset(const QString &id);   // either kind
 QString assetId(const Network &network, const QString &symbol);
-// "USDT" on Ethereum, "USDT (Arbitrum)" elsewhere.
+// "USDT"; "USDT on Ethereum" for the watched ones.
 QString assetName(const QString &id);
 
 QByteArray erc20TransferData(const QByteArray &to, u128 amount);

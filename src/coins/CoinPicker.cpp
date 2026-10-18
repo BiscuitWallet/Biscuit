@@ -118,28 +118,19 @@ void addWalletCoins(CoinPicker *picker, bool ethereum, bool tokens) {
     picker->addCoin(icons()->icon("bitcoin.png"), "Bitcoin", bitcoin().ticker);
     picker->addCoin(icons()->icon("litecoin.png"), "Litecoin", litecoin().ticker);
     if (ethereum) {
-        // The tokens and Arbitrum get their own tabs: they are what people send.
+        // The tokens get their own tab: they are what people send.
         picker->addCoin(PixelIcons::icon("ethereum"), "Ethereum", coins::ethereum().ticker);
-        for (const eth::Asset &asset : eth::allAssets()) {
-            if (tokens && asset.id != coins::ethereum().ticker) {
-                picker->addCoin(ethereumAssetIcon(asset.id), eth::assetName(asset.id), asset.id);
-            }
+        if (tokens) {
+            picker->addCoin(PixelIcons::icon("tether"), "USDT", "USDT");
+            picker->addCoin(PixelIcons::icon("usdc"), "USDC", "USDC");
         }
     }
-}
-
-QIcon ethereumAssetIcon(const QString &assetId) {
-    const eth::Asset *asset = eth::findAsset(assetId);
-    const QString symbol = asset ? asset->symbol : assetId;
-    return PixelIcons::icon(symbol == "USDT" ? "tether" : symbol == "USDC" ? "usdc" : "ethereum");
 }
 
 QStringList addableTickers() {
     QStringList list;
     for (const CoinParams *params : walletCoins()) list << params->ticker;
-    for (const eth::Asset &asset : eth::allAssets()) {
-        if (asset.id != coins::ethereum().ticker) list << asset.id;
-    }
+    for (const eth::Token &token : eth::arbitrumOne().tokens) list << token.symbol;
     return list;
 }
 

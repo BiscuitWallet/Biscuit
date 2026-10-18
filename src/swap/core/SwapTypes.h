@@ -168,8 +168,7 @@ QString tradeStatusText(const Trade &trade);
 bool applyStatus(Trade &trade, TradeStatus status, const QDateTime &now);
 
 // The coins Biscuit holds, on their own network, in display order (XMR, BTC,
-// LTC, then ETH, USDT and USDC on Ethereum, then on Arbitrum). Swaps only
-// offer these: partners
+// LTC, then ETH, USDT and USDC on Arbitrum). Swaps only offer these: partners
 // list thousands of tokens and variants (BTC on BSC, USDT on Tron...) that
 // Biscuit cannot receive.
 QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets);

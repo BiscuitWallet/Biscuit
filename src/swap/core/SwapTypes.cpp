@@ -11,8 +11,11 @@ namespace biscuit::swap {
 
 QString Asset::displayName() const {
     const QString upper = ticker.toUpper();
-    // ETH is the Ethereum coin itself: "ETH (ERC20)" would only confuse.
-    if (network.isEmpty() || network.compare(QLatin1String("Mainnet"), Qt::CaseInsensitive) == 0
+    // ETH is the Ethereum coin itself: "ETH (ERC20)" would only confuse. On
+    // Arbitrum, ETH, USDT and USDC are simply Biscuit's.
+    const bool biscuits = network == QLatin1String("Arbitrum")
+                          && (ticker == QLatin1String("eth") || ticker == QLatin1String("usdt") || ticker == QLatin1String("usdc"));
+    if (network.isEmpty() || network.compare(QLatin1String("Mainnet"), Qt::CaseInsensitive) == 0 || biscuits
         || (ticker == QLatin1String("eth") && network == QLatin1String("ERC20"))) {
         return upper;
     }
@@ -259,10 +262,9 @@ std::optional<Trade> Trade::fromJson(const QJsonObject &obj) {
 
 QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets) {
     QList<AssetInfo> result;
-    // On Arbitrum, Trocador's "usdc" is Circle's native USDC, the one Biscuit
-    // holds ("usdce" is the bridged USDC.e).
+    // ETH, USDT and USDC on Arbitrum One. Trocador's "usdc" there is Circle's
+    // native USDC, the one Biscuit holds ("usdce" is the bridged USDC.e).
     const QList<Asset> held{{"xmr", "Mainnet"}, {"btc", "Mainnet"}, {"ltc", "Mainnet"},
-                            {"eth", "ERC20"}, {"usdt", "ERC20"}, {"usdc", "ERC20"},
                             {"eth", "Arbitrum"}, {"usdt", "Arbitrum"}, {"usdc", "Arbitrum"}};
     for (const Asset &wanted : held) {
         for (const AssetInfo &info : partnerAssets) {
