@@ -52,20 +52,6 @@ namespace {
     }
 }
 
-const QStringList &defaultNodes() {
-    static const QStringList list{
-        "https://ethereum-rpc.publicnode.com",
-        "https://eth.drpc.org",
-        "https://rpc.mevblocker.io",
-        "https://rpc.flashbots.net",
-    };
-    return list;
-}
-
-QString defaultBlockscout() {
-    return "https://eth.blockscout.com";
-}
-
 // ---------------------------------------------------------------- JSON-RPC
 
 namespace rpc {
@@ -161,8 +147,8 @@ QString withQuery(const QString &path, const QString &query) {
     return query.isEmpty() ? path : path + (path.contains('?') ? "&" : "?") + query;
 }
 
-std::optional<QList<HistoryEntry>> parseTransactions(const QJsonValue &reply, const QByteArray &address,
-                                                     QHash<QByteArray, u128> *fees) {
+std::optional<QList<HistoryEntry>> parseTransactions(const Network &network, const QJsonValue &reply,
+                                                     const QByteArray &address, QHash<QByteArray, u128> *fees) {
     if (!reply.toObject().value("items").isArray()) {
         return std::nullopt;
     }
@@ -192,7 +178,7 @@ std::optional<QList<HistoryEntry>> parseTransactions(const QJsonValue &reply, co
         }
         // A call to USDT/USDC: the transfer comes from /token-transfers, which
         // only lists the ones that went through. A failed one is shown here.
-        const Token *token = tokenByContract(to);
+        const Token *token = tokenByContract(network, to);
         if (!e.incoming && e.amount == 0 && token) {
             if (fees) fees->insert(e.hash, e.fee);
             const auto transfer = decodeErc20Transfer(hexBytes(item.value("raw_input"), 68));

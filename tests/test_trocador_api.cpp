@@ -259,19 +259,28 @@ private slots:
             {"name": "Litecoin (Mainnet - not MW)", "ticker": "ltc", "network": "Mainnet", "memo": false, "minimum": 0.08, "maximum": 100},
             {"name": "Bitcoin (Lightning)", "ticker": "btc", "network": "Lightning", "memo": false, "minimum": 0.0001, "maximum": 1},
             {"name": "Bitcoin", "ticker": "btc", "network": "Mainnet", "memo": false, "minimum": 0.0001, "maximum": 20},
-            {"name": "Monero", "ticker": "xmr", "network": "Mainnet", "memo": false, "minimum": 0.01, "maximum": 3000}
+            {"name": "Monero", "ticker": "xmr", "network": "Mainnet", "memo": false, "minimum": 0.01, "maximum": 3000},
+            {"name": "USDC.e (Arbitrum One)", "ticker": "usdce", "network": "Arbitrum", "memo": false, "minimum": 5.2118, "maximum": 1628687.35},
+            {"name": "Tether (Arbitrum One)", "ticker": "usdt", "network": "Arbitrum", "memo": false, "minimum": 5.216441, "maximum": 1630137.7},
+            {"name": "MAGIC (ARBITRUM)", "ticker": "MAGIC", "network": "ARBITRUM", "memo": false, "minimum": 10, "maximum": 1000},
+            {"name": "Ethereum (Arbitrum One)", "ticker": "eth", "network": "Arbitrum", "memo": false, "minimum": 0.002131, "maximum": 665.9}
         ])json";
         const auto parsed = trocador::parseCoins(coins, nullptr);
         QVERIFY(parsed.has_value());
         const QList<AssetInfo> offered = walletAssets(*parsed);
-        // USDT on Ethereum is offered (Biscuit holds it), never LTC on BSC
-        // or Lightning BTC.
-        QCOMPARE(offered.size(), 4);
+        // USDT on Ethereum and ETH and USDT on Arbitrum are offered (Biscuit
+        // holds them), never LTC on BSC, Lightning BTC, nor the bridged
+        // USDC.e or other tokens on Arbitrum.
+        QCOMPARE(offered.size(), 6);
         QCOMPARE(offered.at(0).asset, Asset({"xmr", "Mainnet"}));
         QCOMPARE(offered.at(1).asset, Asset({"btc", "Mainnet"}));
         QCOMPARE(offered.at(2).asset, Asset({"ltc", "Mainnet"}));
         QCOMPARE(offered.at(3).asset, Asset({"usdt", "ERC20"}));
         QCOMPARE(offered.at(3).asset.displayName(), QString("USDT (ERC20)"));
+        QCOMPARE(offered.at(4).asset, Asset({"eth", "Arbitrum"}));
+        QCOMPARE(offered.at(4).asset.displayName(), QString("ETH (Arbitrum)"));
+        QCOMPARE(offered.at(5).asset, Asset({"usdt", "Arbitrum"}));
+        QCOMPARE(offered.at(5).asset.displayName(), QString("USDT (Arbitrum)"));
         QCOMPARE(Asset({"eth", "ERC20"}).displayName(), QString("ETH"));
     }
 

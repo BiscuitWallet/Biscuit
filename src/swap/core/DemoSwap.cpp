@@ -25,6 +25,8 @@ namespace {
         {"eth", "ERC20", "Ethereum", 11.0, "0.005"},
         {"usdt", "ERC20", "Tether (ERC20)", 0.004, "10"},
         {"usdt", "TRC20", "Tether (TRC20)", 0.004, "10"},
+        {"eth", "Arbitrum", "Ethereum (Arbitrum One)", 11.0, "0.002"},
+        {"usdt", "Arbitrum", "Tether (Arbitrum One)", 0.004, "5"},
     };
 
     struct DemoExchange {

@@ -74,7 +74,7 @@ private:
     QWidget *m_coinSelectionRow = nullptr;
     QLabel *m_coinSelection = nullptr;
     QLabel *m_coinUnit = nullptr;
-    QString m_asset;                                      // Ethereum: "ETH", "USDT" or "USDC" (the tab)
+    QString m_asset;                                      // Ethereum: "ETH", "USDT", "USDC.ARB"… (the tab)
     QLabel *m_coinFeeTitle = nullptr;
     QComboBox *m_coinFee = nullptr;
     QLabel *m_coinFeeRate = nullptr;

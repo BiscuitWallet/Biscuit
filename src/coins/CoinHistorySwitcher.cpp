@@ -3,6 +3,9 @@
 
 #include "CoinHistorySwitcher.h"
 
+#include <utility>
+#include <vector>
+
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -38,15 +41,8 @@ namespace {
     QString explorerUrl(const QString &ticker, const QString &txid) {
         if (ticker == QLatin1String("BTC")) return QString("https://mempool.space/tx/%1").arg(txid);
         if (ticker == QLatin1String("LTC")) return QString("https://litecoinspace.org/tx/%1").arg(txid);
-        if (coinOfTicker(ticker) == &ethereum()) return QString("https://eth.blockscout.com/tx/%1").arg(txid);
+        if (const eth::Asset *asset = eth::findAsset(ticker)) return QString("%1/tx/%2").arg(asset->network->blockscout, txid);
         return QString("https://xmrchain.net/tx/%1").arg(txid);
-    }
-
-    QIcon assetIcon(const QString &ticker) {
-        if (ticker == QLatin1String("ETH")) return PixelIcons::icon("ethereum");
-        if (ticker == QLatin1String("USDT")) return PixelIcons::icon("tether");
-        if (ticker == QLatin1String("USDC")) return PixelIcons::icon("usdc");
-        return {};
     }
 
     QString statusText(bool pending, bool failed, quint64 confirmations, quint64 required) {
@@ -93,15 +89,15 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
         pageLayout->addWidget(tree);
         m_pages->addWidget(page);
     }
-    // Ethereum, then its tokens: one page each, same order as the tabs.
-    for (const QString &asset : EthWallet::assets()) {
+    // Ethereum, its tokens, then Arbitrum: one page each, same order as the tabs.
+    for (const eth::Asset &asset : eth::allAssets()) {
         auto *tree = makeTree(false);
-        m_ethTrees.insert(asset, tree);
+        m_ethTrees.insert(asset.id, tree);
         auto *page = new QWidget(m_pages);
         auto *pageLayout = new QVBoxLayout(page);
         pageLayout->setContentsMargins(0, 0, 0, 0);
         auto *bar = new CoinWalletBar(m_vault, ethereum(), page);
-        bar->setAsset(asset);
+        bar->setAsset(asset.id);
         pageLayout->addWidget(bar);
         pageLayout->addWidget(tree);
         m_pages->addWidget(page);
@@ -143,10 +139,11 @@ QTreeWidget *CoinHistorySwitcher::makeTree(bool withCoinColumn) {
             // Ethereum: same nonce, higher fee.
             const QString walletId = item->data(ColDate, WalletIdRole).toString();
             const QByteArray hash = QByteArray::fromHex(txid.mid(2).toLatin1());
-            menu.addAction("Speed up (raise the fee)…", [this, walletId, hash] {
+            const eth::Network *network = eth::findAsset(ticker)->network;
+            menu.addAction("Speed up (raise the fee)…", [this, walletId, hash, network] {
                 for (const auto &entry : m_vault->wallets(ethereum())) {
                     if (entry.id == walletId) {
-                        CoinSendController(m_wallet).speedUpEthereum(this, entry.eth, hash);
+                        CoinSendController(m_wallet).speedUpEthereum(this, entry.on(*network), hash);
                     }
                 }
             });
@@ -215,15 +212,22 @@ void CoinHistorySwitcher::fillEthereumTrees() {
     }
     // Like the other coins: "All coins" lists every wallet, a page the selected one.
     const QString selectedId = m_vault->selectedId(ethereum());
+    // Each wallet on each network (Ethereum, Arbitrum): the same address.
+    std::vector<std::pair<CoinVault::Entry, const eth::Network *>> wallets;
     for (const auto &entry : m_vault->wallets(ethereum())) {
-        for (const eth::HistoryEntry &e : entry.eth->history()) {
-            QTreeWidget *page = m_ethTrees.value(e.asset);
-            const bool shown = m_vault->assetState(e.asset) == CoinVault::CoinState::Ready
+        for (const eth::Network *network : eth::networks()) wallets.emplace_back(entry, network);
+    }
+    for (const auto &[entry, network] : wallets) {
+        const EthWallet *wallet = entry.on(*network);
+        for (const eth::HistoryEntry &e : wallet->history()) {
+            const QString id = eth::assetId(*network, e.asset);   // "USDT.ARB"…
+            QTreeWidget *page = m_ethTrees.value(id);
+            const bool shown = m_vault->assetState(id) == CoinVault::CoinState::Ready
                                || e.amount > 0;   // a token not added, but received: still money
             if (!page || !shown) {
                 continue;
             }
-            const int decimals = EthWallet::decimals(e.asset);
+            const int decimals = wallet->decimals(e.asset);
             const QString amount = QString("%1%2 %3").arg(e.incoming ? "+" : "-", eth::formatAmount(e.amount, decimals), e.asset);
             const QString status = e.failed ? QString("Failed") : e.block == 0 ? QString("Pending") : QString("Confirmed");
             const QString hash = "0x" + QString::fromLatin1(e.hash.toHex());
@@ -234,9 +238,9 @@ void CoinHistorySwitcher::fillEthereumTrees() {
                 auto *item = new DateItem(t);
                 item->setText(ColDate, e.time.isValid() ? e.time.toLocalTime().toString("yyyy-MM-dd HH:mm") : QString());
                 item->setData(ColDate, SortRole, e.time.isValid() ? e.time.toSecsSinceEpoch() : std::numeric_limits<qint64>::max());
-                item->setData(ColDate, TickerRole, e.asset);
-                item->setIcon(ColCoin, assetIcon(e.asset));
-                item->setText(ColCoin, e.asset);
+                item->setData(ColDate, TickerRole, id);
+                item->setIcon(ColCoin, ethereumAssetIcon(id));
+                item->setText(ColCoin, eth::assetName(id));
                 item->setText(ColWallet, entry.name);
                 item->setText(ColAmount, amount);
                 item->setTextAlignment(ColAmount, Qt::AlignRight | Qt::AlignVCenter);
@@ -247,7 +251,7 @@ void CoinHistorySwitcher::fillEthereumTrees() {
                 item->setText(ColStatus, status);
                 item->setText(ColTx, hash);
                 item->setData(ColDate, WalletIdRole, entry.id);
-                item->setData(ColDate, BumpableRole, e.block == 0 && entry.eth->canSpeedUp(e.hash));
+                item->setData(ColDate, BumpableRole, e.block == 0 && wallet->canSpeedUp(e.hash));
             }
         }
     }

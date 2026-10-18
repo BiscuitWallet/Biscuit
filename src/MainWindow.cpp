@@ -772,12 +772,12 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
                 addValue(params->ticker, double(total) / 1e8);
             }
         }
-        for (const QString &asset : biscuit::coins::EthWallet::assets()) {
-            const auto amount = vault->ethereumBalance(asset);
+        for (const auto &asset : biscuit::coins::eth::allAssets()) {
+            const auto amount = vault->ethereumBalance(asset.id);
             if (amount > 0) {
-                const QString text = biscuit::coins::eth::formatAmount(amount, biscuit::coins::EthWallet::decimals(asset));
-                parts << QString("%1 %2").arg(text, asset);
-                addValue(asset, text.toDouble());
+                const QString text = biscuit::coins::eth::formatAmount(amount, asset.decimals);
+                parts << QString("%1 %2").arg(text, biscuit::coins::eth::assetName(asset.id));
+                addValue(asset.symbol, text.toDouble());
             }
         }
     }
@@ -963,6 +963,13 @@ void MainWindow::updateCoinsSyncStatus() {
             } else if (disconnected) {
                 offline << params->name;
             }
+        }
+        // Arbitrum, while an asset on it is shown (otherwise never contacted).
+        const EthWallet *arbitrum = vault->arbitrumEnabled() ? vault->evmWallet("ETH.ARB") : nullptr;
+        if (arbitrum && arbitrum->status() == EthWallet::Status::Connecting) {
+            pending << arbitrum->network().name;
+        } else if (arbitrum && arbitrum->status() == EthWallet::Status::Disconnected) {
+            offline << arbitrum->network().name;
         }
     }
     QString text = pending.isEmpty() ? QString("Synchronized") : QString("Synchronizing %1…").arg(pending.join(", "));

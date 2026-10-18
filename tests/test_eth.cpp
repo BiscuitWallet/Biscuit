@@ -208,7 +208,7 @@ private slots:
 
     void eip1559Usdt() {
         // 1.234567 USDT, nonce 300, 2 / 45 gwei, 65000 gas, as ethers.js signs it.
-        const Token *usdt = tokenByContract(hex("dac17f958d2ee523a2206206994597c13d831ec7"));
+        const Token *usdt = tokenByContract(mainnet(), hex("dac17f958d2ee523a2206206994597c13d831ec7"));
         QVERIFY(usdt);
         QCOMPARE(usdt->symbol, QString("USDT"));
         QCOMPARE(usdt->decimals, 6);
@@ -248,10 +248,11 @@ private slots:
     // -------------------------------------------------------------- ERC-20
 
     void erc20() {
-        QCOMPARE(tokens().size(), 2);
-        QCOMPARE(checksumAddress(tokens().at(0).contract), QString("0xdAC17F958D2ee523a2206206994597C13D831ec7"));
-        QCOMPARE(checksumAddress(tokens().at(1).contract), QString("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"));
-        QVERIFY(!tokenByContract(to35));
+        QCOMPARE(mainnet().tokens.size(), 2);
+        QCOMPARE(checksumAddress(mainnet().tokens.at(0).contract), QString("0xdAC17F958D2ee523a2206206994597C13D831ec7"));
+        QCOMPARE(checksumAddress(mainnet().tokens.at(1).contract), QString("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"));
+        QVERIFY(!tokenByContract(mainnet(), to35));
+        QVERIFY(!isTokenContract(to35));
         QCOMPARE(erc20BalanceOfData(to35).toHex(), QByteArray("70a082310000000000000000000000003535353535353535353535353535353535353535"));
         // Anything else than a plain transfer is not read as one.
         QVERIFY(!decodeErc20Transfer(erc20BalanceOfData(to35)).has_value());
@@ -259,6 +260,62 @@ private slots:
         QByteArray dirty = erc20TransferData(to35, 1);
         dirty[5] = '\x01';   // garbage in the address padding
         QVERIFY(!decodeErc20Transfer(dirty).has_value());
+    }
+
+    // ------------------------------------------------------------ networks
+
+    void arbitrum() {
+        const Network &arb = arbitrumOne();
+        QCOMPARE(arb.chainId, quint64(42161));
+        QVERIFY(arb.l1CostInGas);
+        QVERIFY(!mainnet().l1CostInGas);
+        QCOMPARE(arb.blockscout, QString("https://arbitrum.blockscout.com"));
+        // Tether's USD₮0 and Circle's native USDC, not the bridged USDC.e.
+        QCOMPARE(arb.tokens.size(), 2);
+        QCOMPARE(arb.tokens.at(0).symbol, QString("USDT"));
+        QCOMPARE(checksumAddress(arb.tokens.at(0).contract), QString("0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"));
+        QCOMPARE(arb.tokens.at(1).symbol, QString("USDC"));
+        QCOMPARE(checksumAddress(arb.tokens.at(1).contract), QString("0xaf88d065e77c8cC2239327C5EDb3A432268e5831"));
+        QVERIFY(!tokenByContract(arb, hex("ff970a61a04b1ca14834a43f5de4533ebddb5cc8")));   // USDC.e
+        for (const Token &t : arb.tokens) QCOMPARE(t.decimals, 6);
+        // A contract belongs to its own network only, but is never a recipient anywhere.
+        QVERIFY(!tokenByContract(mainnet(), arb.tokens.at(0).contract));
+        QVERIFY(!tokenByContract(arb, mainnet().tokens.at(0).contract));
+        QVERIFY(isTokenContract(arb.tokens.at(0).contract) && isTokenContract(mainnet().tokens.at(1).contract));
+    }
+
+    void assetIds() {
+        QStringList ids;
+        for (const Asset &a : allAssets()) ids << a.id;
+        QCOMPARE(ids, (QStringList{"ETH", "USDT", "USDC", "ETH.ARB", "USDT.ARB", "USDC.ARB"}));
+        const Asset *usdtArb = findAsset("USDT.ARB");
+        QVERIFY(usdtArb);
+        QCOMPARE(usdtArb->network, &arbitrumOne());
+        QCOMPARE(usdtArb->symbol, QString("USDT"));
+        QCOMPARE(usdtArb->decimals, 6);
+        QCOMPARE(findAsset("ETH")->network, &mainnet());
+        QCOMPARE(findAsset("ETH.ARB")->decimals, etherDecimals);
+        QVERIFY(!findAsset("BTC") && !findAsset("USDT.TRX") && !findAsset("usdt"));
+        QCOMPARE(assetId(arbitrumOne(), "USDC"), QString("USDC.ARB"));
+        QCOMPARE(assetName("USDT"), QString("USDT"));
+        QCOMPARE(assetName("USDT.ARB"), QString("USDT (Arbitrum)"));
+        QCOMPARE(assetName("ETH.ARB"), QString("ETH (Arbitrum)"));
+    }
+
+    void arbitrumTransaction() {
+        // Chain 42161 is signed into the transaction (RLP 0x82a4b1) and read
+        // back: a signature for Arbitrum is not valid on Ethereum.
+        const Transaction tx{arbitrumChainId, 7, 0, 20000000, 25616, to35, 1000, {}};
+        QVERIFY(tx.unsignedSerialized().toHex().startsWith("02e782a4b107"));
+        const auto raw = sign(tx, key46);
+        QVERIFY(raw.has_value());
+        const auto decoded = decode(*raw);
+        QVERIFY(decoded.has_value());
+        QCOMPARE(decoded->tx.chainId, arbitrumChainId);
+        QVERIFY(decoded->tx == tx);
+        Transaction onMainnet = tx;
+        onMainnet.chainId = mainnetChainId;
+        QVERIFY(onMainnet.signingHash() != tx.signingHash());
     }
 };
 

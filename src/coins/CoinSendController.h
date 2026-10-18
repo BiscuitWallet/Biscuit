@@ -62,13 +62,14 @@ public:
     void send(QWidget *parent, const CoinParams &params, const QString &address, const QString &amountText,
               int targetBlocks);
 
-    // Ethereum: ETH, USDT or USDC from the selected Ethereum wallet. Asks the
-    // node for the nonce and gas, shows everything, sends once confirmed.
+    // Ethereum: an asset ("ETH", "USDT", "USDC.ARB"…) from the selected
+    // Ethereum wallet, on the asset's network. Asks the node for the nonce
+    // and gas, shows everything, sends once confirmed.
     void sendEthereum(QWidget *parent, const QString &asset, const QString &address, const QString &amountText);
     // Network fee of a typical send of `asset` now, in ETH: about / at most.
     std::optional<QPair<QString, QString>> ethereumFee(const QString &asset) const;
-    // Gas price now (base fee + tip), in gwei.
-    std::optional<double> ethereumGwei() const;
+    // Gas price now (base fee + tip) on the network of `asset`, in gwei.
+    std::optional<double> ethereumGwei(const QString &asset) const;
     // Speed up a pending Ethereum send of `eth`: shows the higher fee, sends
     // the replacement once confirmed.
     void speedUpEthereum(QWidget *parent, EthWallet *eth, const QByteArray &hash);

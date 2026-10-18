@@ -17,8 +17,9 @@
 
 namespace biscuit::coins {
 
-// The Ethereum wallet: ETH, USDT and USDC on one address, from the BIP39
-// seed (m/44'/60'/0'/0/0). Balance, nonce and fees come from public nodes
+// An Ethereum wallet on one network (Ethereum or Arbitrum): ETH, USDT and
+// USDC on one address, from the BIP39 seed (m/44'/60'/0'/0/0), the same
+// address on every network. Balance, nonce and fees come from public nodes
 // (one at a time, the next one if it fails); the history from Blockscout,
 // which never decides anything about money. Keeps a cache (balances,
 // history) that the owner stores in the encrypted wallet file.
@@ -29,7 +30,9 @@ public:
     enum class Status { Disconnected, Connecting, Synchronized };
     Q_ENUM(Status)
 
-    EthWallet(eth::Account account, const QJsonObject &cache, QObject *parent = nullptr);
+    EthWallet(const eth::Network &network, eth::Account account, const QJsonObject &cache, QObject *parent = nullptr);
+
+    const eth::Network &network() const { return m_network; }
 
     QByteArray address() const { return m_address; }
     QString addressText() const;   // 0x… with its checksum
@@ -37,8 +40,9 @@ public:
     QString nodeName() const;
 
     // "ETH", "USDT", "USDC": the assets of this wallet, and their decimals.
-    static QStringList assets();
-    static int decimals(const QString &asset);
+    // The app names them with eth::assetId (".ARB" on Arbitrum).
+    QStringList assets() const;
+    int decimals(const QString &asset) const;
     eth::u128 balance(const QString &asset) const { return m_balances.value(asset); }
     // Newest first, pending ones on top.
     QList<eth::HistoryEntry> history() const;
@@ -48,6 +52,11 @@ public:
     eth::u128 narrowFeePerGas() const;
     // ETH that a plain transfer of "everything" sends, that ceiling kept apart.
     eth::u128 sendableEther() const;
+    // Gas limits of a plain ETH transfer and of a token transfer, for fee
+    // previews: 21000 and 65000 on Ethereum; more on Arbitrum, where the
+    // node's estimate includes the L1 data cost.
+    quint64 transferGasLimit() const { return m_transferGas; }
+    quint64 tokenGasLimit() const { return 65000 + (m_transferGas - eth::transferGas); }
 
     // Empty = the built-in nodes / explorer.
     void setCustomNode(const QString &url);
@@ -108,11 +117,13 @@ private:
                     std::function<void(const QJsonValue &)> page, std::function<void(bool)> done);
     void mergeHistory(const QList<eth::HistoryEntry> &entries, const QHash<QByteArray, eth::u128> &fees);
 
+    const eth::Network &m_network;
     eth::Account m_account;
     QByteArray m_address;
     QString m_customNode;
     QString m_customBlockscout;
     int m_node = 0;               // index in nodes() currently used
+    quint64 m_transferGas = eth::transferGas;   // Arbitrum: from the node's estimate
     int m_failures = 0;           // nodes tried in a row without success
     bool m_running = false;
     Status m_status = Status::Disconnected;

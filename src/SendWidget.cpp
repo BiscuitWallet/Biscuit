@@ -244,11 +244,14 @@ void SendWidget::updateCoinMode() {
                             : state == biscuit::coins::CoinVault::CoinState::Locked
                                 ? QString("Sent from the %1 wallet of Biscuit").arg(m_coin->name)
                                 : QString("%1 is not in this wallet yet: add it with + above.").arg(m_coin->name);
-        if (ethereum && m_asset != "ETH") {
+        const auto *asset = ethereum ? biscuit::coins::eth::findAsset(m_asset) : nullptr;
+        if (asset && asset->network != &biscuit::coins::eth::mainnet()) {
+            hint += QString(" · on %1; the network fee is paid in ETH on %1").arg(asset->network->name);
+        } else if (ethereum && m_asset != "ETH") {
             hint += QString(" · on Ethereum (ERC-20); the network fee is paid in ETH");
         }
         m_coinHint->setText(hint);
-        m_coinUnit->setText(ethereum ? m_asset : m_coin->ticker);
+        m_coinUnit->setText(asset ? asset->symbol : m_coin->ticker);
         // Times follow the coin's blocks.
         const auto levels = biscuit::coins::feeLevels(*m_coin);
         for (int i = 0; i < levels.size() && i < m_coinFee->count(); ++i) {
@@ -290,8 +293,11 @@ void SendWidget::updateCoinFeeLabel() {
             tip = QString("About %1 ETH, at most %2 ETH.\nYou usually pay about the first; the second is the most it can "
                           "cost if fees rise before the transaction is in a block.").arg(fee->first, fee->second);
         }
-        // How busy Ethereum is: most days of 2026 stay under 1 gwei.
-        if (const auto gwei = m_coinSend->ethereumGwei()) {
+        // How busy Ethereum is: most days of 2026 stay under 1 gwei. Arbitrum:
+        // a fraction of a cent whatever its gas price, nothing to watch.
+        const auto *asset = biscuit::coins::eth::findAsset(m_asset);
+        const bool mainnet = asset && asset->network == &biscuit::coins::eth::mainnet();
+        if (const auto gwei = mainnet ? m_coinSend->ethereumGwei(m_asset) : std::nullopt) {
             const QString value = QString::number(*gwei, 'f', *gwei < 10 ? 2 : 1);
             text += "<br>" + (*gwei >= 6 ? QString("<span style=\"color: #c0392b;\"><b>%1 gwei · very busy</b> · waiting is often cheaper</span>").arg(value)
                               : *gwei >= 2 ? QString("<span style=\"color: #d35400;\">%1 gwei · busy</span>").arg(value)
@@ -301,12 +307,13 @@ void SendWidget::updateCoinFeeLabel() {
         }
         m_coinFeeRate->setToolTip(tip);
         // A token with no ETH to pay its fee: said plainly, before trying.
-        const auto *eth = biscuit::coins::CoinVault::forWallet(m_wallet)->ethereum();
-        if (fee && eth && m_asset != "ETH"
+        const auto *eth = biscuit::coins::CoinVault::forWallet(m_wallet)->evmWallet(m_asset);
+        if (fee && eth && asset && asset->symbol != "ETH"
             && eth->balance("ETH") < biscuit::coins::eth::parseAmount(fee->second, biscuit::coins::eth::etherDecimals).value_or(0)) {
-            text += QString("<br><span style=\"color: #c0392b;\">This wallet has %1 ETH: not enough for the network fee. "
-                            "Receive a little ETH on this address first.</span>")
-                    .arg(biscuit::coins::eth::formatAmount(eth->balance("ETH"), biscuit::coins::eth::etherDecimals));
+            const QString on = mainnet ? QString() : QString(" on %1").arg(asset->network->name);
+            text += QString("<br><span style=\"color: #c0392b;\">This wallet has %1 ETH%2: not enough for the network fee. "
+                            "Receive a little ETH%2 on this address first.</span>")
+                    .arg(biscuit::coins::eth::formatAmount(eth->balance("ETH"), biscuit::coins::eth::etherDecimals), on);
         }
         m_coinFeeRate->setText(text);
         return;
@@ -551,7 +558,8 @@ void SendWidget::updateConversionLabel() {
         // Display only: fiat value of the Bitcoin/Litecoin/Ethereum amount.
         const double coinAmount = ui->lineAmount->text().replace(',', '.').toDouble();
         const QString fiat = conf()->get(Config::preferredFiatCurrency).toString();
-        const QString unit = m_coin->ethereum ? m_asset : m_coin->ticker;
+        const auto *asset = m_coin->ethereum ? biscuit::coins::eth::findAsset(m_asset) : nullptr;
+        const QString unit = asset ? asset->symbol : m_coin->ticker;   // "USDT.ARB": priced as USDT
         if (coinAmount > 0 && appData()->prices.canConvert(unit, fiat)) {
             ui->label_conversionAmount->setText(QString("~%1 %2").arg(
                     QString::number(appData()->prices.convert(unit, fiat, coinAmount), 'f', 2), fiat));
@@ -724,22 +732,43 @@ void SendWidget::fillFromPaymentLink(const QString &data) {
         ui->lineAddress->setText(text);
         return;
     }
-    // Ethereum: a USDT or USDC payment request opens that tab, if it is added;
-    // otherwise say so, rather than letting ETH go to someone expecting a token.
+    // Ethereum: a USDT or USDC payment request, or one on Arbitrum ("@42161"),
+    // opens that tab, if it is added; otherwise say so, rather than letting ETH
+    // go to someone expecting a token or another network.
+    namespace eth = biscuit::coins::eth;
     const QString address = Utils::addressFromPaymentText(text);
     const QString path = text.mid(scheme.size() + 1).section('?', 0, 0);
+    const QString target = path.section('/', 0, 0);   // "pay-0x…@42161" or "0x…"
+    bool knownChain = true;
+    const quint64 chainId = target.contains('@') ? target.section('@', 1).toULongLong(&knownChain) : eth::mainnetChainId;
+    const eth::Network *network = nullptr;
+    for (const eth::Network *n : eth::networks()) {
+        if (knownChain && n->chainId == chainId) network = n;
+    }
+    if (!network) {
+        Utils::showError(this, "Unknown network", "This QR code asks for a payment on a network Biscuit doesn't use. "
+                                                  "Only Ethereum and Arbitrum One can be paid from here.");
+        return;
+    }
+    QString assetId;
     if (path.contains("/transfer")) {
-        const QString contract = path.section('/', 0, 0).section('@', 0, 0).remove("pay-");
-        const auto bytes = biscuit::coins::eth::parseAddress(contract);
-        const auto *token = bytes ? biscuit::coins::eth::tokenByContract(*bytes) : nullptr;
+        const auto bytes = eth::parseAddress(target.section('@', 0, 0).remove("pay-"));
+        const auto *token = bytes ? eth::tokenByContract(*network, *bytes) : nullptr;
         if (!token) {
-            Utils::showError(this, "Unknown token", "This QR code asks for a token Biscuit doesn't hold. Only USDT and USDC on Ethereum can be sent.");
+            Utils::showError(this, "Unknown token", "This QR code asks for a token Biscuit doesn't hold. Only USDT and USDC "
+                                                    "on Ethereum or Arbitrum can be sent.");
             return;
         }
-        const int index = m_coinPicker->indexOf(token->symbol);
+        assetId = eth::assetId(*network, token->symbol);
+    } else if (network != &eth::mainnet()) {
+        assetId = eth::assetId(*network, "ETH");
+    }
+    if (!assetId.isEmpty()) {
+        const int index = m_coinPicker->indexOf(assetId);
         if (index < 0 || !m_coinPicker->isCoinVisible(index)) {
-            Utils::showError(this, QString("%1 isn't in this wallet").arg(token->symbol),
-                             QString("This QR code asks for %1. Add %1 with + first, then scan it again.").arg(token->symbol));
+            const QString name = eth::assetName(assetId);
+            Utils::showError(this, QString("%1 isn't in this wallet").arg(name),
+                             QString("This QR code asks for %1. Add %1 with + first, then scan it again.").arg(name));
             return;
         }
         m_coinPicker->setCurrentIndex(index);   // before the address: it then stays on this tab

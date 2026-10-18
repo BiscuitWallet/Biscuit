@@ -25,8 +25,9 @@ namespace biscuit::coins {
 const QList<const CoinParams *> &walletCoins();
 // "Bitcoin", "Bitcoin and Litecoin"…
 QString coinNames(const QList<const CoinParams *> &coins);
-// The coin of a ticker: "BTC" -> Bitcoin; "USDT" or "USDC" -> Ethereum, whose
-// wallet holds them. nullptr for Monero or anything else.
+// The coin of a ticker: "BTC" -> Bitcoin; "USDT", "USDC" and the assets on
+// Arbitrum ("ETH.ARB", "USDT.ARB"…) -> Ethereum, whose wallets hold them.
+// nullptr for Monero or anything else.
 const CoinParams *coinOfTicker(const QString &ticker);
 
 // The BTC/LTC side of a Monero wallet: a companion file "<wallet>.btcltc"
@@ -82,10 +83,13 @@ public:
     // user's paper backup already covers it.
     bool addCoin(const CoinParams &params, QString *error);
     // The same for any ticker of the coin buttons: BTC, LTC, ETH, and the
-    // tokens USDT and USDC, which are added one by one on top of Ethereum.
+    // other Ethereum assets (eth::allAssets: USDT, USDC, ETH.ARB, USDT.ARB…),
+    // which are added one by one on top of Ethereum.
     CoinState assetState(const QString &ticker) const;
-    // Shows a token in this wallet (vault unlocked, Ethereum added), or hides
-    // it. Its coins stay on the Ethereum address either way.
+    // Shows an Ethereum asset in this wallet (vault unlocked, Ethereum
+    // added), or hides it. Its coins stay on the address either way. A token
+    // on Arbitrum brings ETH on Arbitrum, which pays its fees; hiding ETH on
+    // Arbitrum hides them too. Arbitrum is only contacted while shown.
     bool setTokenEnabled(const QString &symbol, bool enabled, QString *error);
     QStringList enabledTokens() const { return m_tokens; }
 
@@ -100,6 +104,9 @@ public:
         const CoinParams *params = nullptr;
         CoinWallet *wallet = nullptr;   // Bitcoin or Litecoin
         EthWallet *eth = nullptr;       // Ethereum
+        EthWallet *arb = nullptr;       // the same keys on Arbitrum
+        // Its wallet on `network` (Ethereum entries only).
+        EthWallet *on(const eth::Network &network) const { return &network == &eth::mainnet() ? eth : arb; }
         // First address: tells two wallets of the same seed apart.
         QString firstAddress() const;
     };
@@ -109,8 +116,13 @@ public:
     CoinWallet *litecoin() const { return wallet(coins::litecoin()); }
     // The selected Ethereum wallet (nullptr while locked or not added).
     EthWallet *ethereum() const;
-    // ETH or a token, all the Ethereum wallets together.
-    eth::u128 ethereumBalance(const QString &asset) const;
+    // The selected Ethereum wallet on the network of an asset ("USDT.ARB":
+    // Arbitrum). nullptr while locked, not added, or an unknown asset.
+    EthWallet *evmWallet(const QString &assetId) const;
+    // An asset ("ETH", "USDT.ARB"…), all the Ethereum wallets together.
+    eth::u128 ethereumBalance(const QString &assetId) const;
+    // An Arbitrum asset is shown: the Arbitrum wallets run.
+    bool arbitrumEnabled() const;
     CoinWallet *wallet(const CoinParams &params) const;
     QString selectedId(const CoinParams &params) const;
     QString selectedName(const CoinParams &params) const;
@@ -177,7 +189,7 @@ private:
     std::optional<walletfile::Session> m_session;
     QList<Entry> m_entries;
     QStringList m_mainCoins;              // tickers on the main seed
-    QStringList m_tokens;                 // tokens shown: "USDT", "USDC"
+    QStringList m_tokens;                 // Ethereum assets shown: "USDT", "ETH.ARB"…
     QHash<QString, QString> m_selected;   // ticker -> entry id
     struct CoinSelection { QString walletId; QStringList coinKeys; };
     QHash<QString, CoinSelection> m_coinSelection;   // ticker -> chosen coins

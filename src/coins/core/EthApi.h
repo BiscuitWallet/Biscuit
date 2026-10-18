@@ -21,12 +21,9 @@
 // requests; this code builds them and checks every field of the replies.
 namespace biscuit::coins::eth {
 
-// Public nodes that answer without an account. MEV Blocker and Flashbots
-// also broadcast without going through the public mempool.
-const QStringList &defaultNodes();
-// Open source explorer used for the history only (never for the balance,
-// the nonce or the fees). Anyone can run their own instance.
-QString defaultBlockscout();
+// The nodes and the explorer of each network are in its Network (Eth.h).
+// Blockscout, the open source explorer, is used for the history only (never
+// for the balance, the nonce or the fees). Anyone can run their own instance.
 
 // ---------------------------------------------------------------- JSON-RPC
 
@@ -69,8 +66,8 @@ namespace blockscout {
     // ETH sent or received by `address` (/transactions). A transaction that
     // only calls a token contract carries no ETH: its fee is kept in `fees`
     // (hash -> fee) for the matching token transfer.
-    std::optional<QList<HistoryEntry>> parseTransactions(const QJsonValue &reply, const QByteArray &address,
-                                                         QHash<QByteArray, u128> *fees = nullptr);
+    std::optional<QList<HistoryEntry>> parseTransactions(const Network &network, const QJsonValue &reply,
+                                                         const QByteArray &address, QHash<QByteArray, u128> *fees = nullptr);
     // The query of the next, older page ("block_number=…&index=…"), from the
     // reply's next_page_params; empty on the last page.
     QString nextPageQuery(const QJsonValue &reply);

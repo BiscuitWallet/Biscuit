@@ -259,8 +259,11 @@ std::optional<Trade> Trade::fromJson(const QJsonObject &obj) {
 
 QList<AssetInfo> walletAssets(const QList<AssetInfo> &partnerAssets) {
     QList<AssetInfo> result;
+    // On Arbitrum, Trocador's "usdc" is Circle's native USDC, the one Biscuit
+    // holds ("usdce" is the bridged USDC.e).
     const QList<Asset> held{{"xmr", "Mainnet"}, {"btc", "Mainnet"}, {"ltc", "Mainnet"},
-                            {"eth", "ERC20"}, {"usdt", "ERC20"}, {"usdc", "ERC20"}};
+                            {"eth", "ERC20"}, {"usdt", "ERC20"}, {"usdc", "ERC20"},
+                            {"eth", "Arbitrum"}, {"usdt", "Arbitrum"}, {"usdc", "Arbitrum"}};
     for (const Asset &wanted : held) {
         for (const AssetInfo &info : partnerAssets) {
             if (info.asset == wanted) {

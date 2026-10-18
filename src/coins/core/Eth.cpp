@@ -3,6 +3,8 @@
 
 #include "Eth.h"
 
+#include <algorithm>
+
 #include <wally_bip32.h>
 #include <wally_core.h>
 #include <wally_crypto.h>
@@ -458,19 +460,75 @@ std::optional<SignedTransaction> decode(const QByteArray &raw, QString *error) {
 
 // ------------------------------------------------------------------ ERC-20
 
-const QList<Token> &tokens() {
-    static const QList<Token> list{
-        {"USDT", "Tether USD", QByteArray::fromHex("dac17f958d2ee523a2206206994597c13d831ec7"), 6},
-        {"USDC", "USD Coin", QByteArray::fromHex("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), 6},
-    };
+const Network &mainnet() {
+    // MEV Blocker and Flashbots also broadcast without going through the
+    // public mempool.
+    static const Network n{"Ethereum", {}, mainnetChainId,
+        {"https://ethereum-rpc.publicnode.com", "https://eth.drpc.org", "https://rpc.mevblocker.io", "https://rpc.flashbots.net"},
+        "https://eth.blockscout.com",
+        {{"USDT", "Tether USD", QByteArray::fromHex("dac17f958d2ee523a2206206994597c13d831ec7"), 6},
+         {"USDC", "USD Coin", QByteArray::fromHex("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), 6}}};
+    return n;
+}
+
+const Network &arbitrumOne() {
+    // Tether's own USDT (USD₮0) and Circle's native USDC, checked on chain
+    // (symbol, name, decimals) on 2026-10-18. Not the older bridged USDC.e.
+    static const Network n{"Arbitrum", ".ARB", arbitrumChainId,
+        {"https://arbitrum-one-rpc.publicnode.com", "https://arbitrum.drpc.org", "https://arb1.arbitrum.io/rpc"},
+        "https://arbitrum.blockscout.com",
+        {{"USDT", "USD₮0", QByteArray::fromHex("fd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"), 6},
+         {"USDC", "USD Coin", QByteArray::fromHex("af88d065e77c8cc2239327c5edb3a432268e5831"), 6}},
+        true};
+    return n;
+}
+
+const QList<const Network *> &networks() {
+    static const QList<const Network *> list{&mainnet(), &arbitrumOne()};
     return list;
 }
 
-const Token *tokenByContract(const QByteArray &contract) {
-    for (const Token &t : tokens()) {
+const Token *tokenByContract(const Network &network, const QByteArray &contract) {
+    for (const Token &t : network.tokens) {
         if (t.contract == contract) return &t;
     }
     return nullptr;
+}
+
+bool isTokenContract(const QByteArray &contract) {
+    return std::any_of(networks().begin(), networks().end(),
+                       [&contract](const Network *n) { return tokenByContract(*n, contract); });
+}
+
+QString assetId(const Network &network, const QString &symbol) {
+    return symbol + network.suffix;
+}
+
+const QList<Asset> &allAssets() {
+    static const QList<Asset> list = [] {
+        QList<Asset> assets;
+        for (const Network *n : networks()) {
+            assets.append({assetId(*n, "ETH"), n, "ETH", etherDecimals});
+            for (const Token &t : n->tokens) assets.append({assetId(*n, t.symbol), n, t.symbol, t.decimals});
+        }
+        return assets;
+    }();
+    return list;
+}
+
+const Asset *findAsset(const QString &id) {
+    for (const Asset &a : allAssets()) {
+        if (a.id == id) return &a;
+    }
+    return nullptr;
+}
+
+QString assetName(const QString &id) {
+    const Asset *a = findAsset(id);
+    if (!a) {
+        return id;
+    }
+    return a->network == &mainnet() ? a->symbol : QString("%1 (%2)").arg(a->symbol, a->network->name);
 }
 
 QByteArray erc20TransferData(const QByteArray &to, u128 amount) {

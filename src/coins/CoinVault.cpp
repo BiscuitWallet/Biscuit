@@ -74,10 +74,7 @@ const CoinParams *coinOfTicker(const QString &ticker) {
     for (const CoinParams *params : walletCoins()) {
         if (params->ticker == ticker) return params;
     }
-    for (const eth::Token &token : eth::tokens()) {
-        if (token.symbol == ticker) return &coins::ethereum();
-    }
-    return nullptr;
+    return eth::findAsset(ticker) ? &coins::ethereum() : nullptr;
 }
 
 QString coinNames(const QList<const CoinParams *> &coins) {
@@ -221,10 +218,10 @@ bool CoinVault::load(const QByteArray &content, QString *error) {
             m_mainCoins << params->ticker;
         }
     }
-    // Tokens shown ("tokens": ["USDT", ...]), each added by the user.
+    // Ethereum assets shown ("tokens": ["USDT", "ETH.ARB", ...]), each added by the user.
     m_tokens.clear();
-    for (const eth::Token &token : eth::tokens()) {
-        if (obj.value("tokens").toArray().contains(token.symbol)) m_tokens << token.symbol;
+    for (const eth::Asset &asset : eth::allAssets()) {
+        if (asset.id != coins::ethereum().ticker && obj.value("tokens").toArray().contains(asset.id)) m_tokens << asset.id;
     }
     // The main wallets' names, if renamed ("mainNames": {"BTC": ..., "LTC": ...}).
     const QJsonObject mainNames = obj.value("mainNames").toObject();
@@ -288,11 +285,20 @@ bool CoinVault::addEntry(const QString &id, const QString &name, bool mainSeed, 
             if (error) *error = "Unable to derive keys";
             return false;
         }
-        auto *w = new EthWallet(std::move(*account), cache, this);
-        connect(w, &EthWallet::cacheChanged, this, &CoinVault::scheduleSave);
-        connect(w, &EthWallet::updated, this, &CoinVault::walletUpdated);
-        connect(w, &EthWallet::statusChanged, this, &CoinVault::walletUpdated);
-        m_entries.append({id, name, mainSeed, &params, nullptr, w});
+        auto arbAccount = eth::Account::fromSeed(seed);   // the same keys, for the other wallet
+        if (!arbAccount) {
+            if (error) *error = "Unable to derive keys";
+            return false;
+        }
+        // Arbitrum's cache inside Ethereum's: an older Biscuit keeps the file readable.
+        auto *w = new EthWallet(eth::mainnet(), std::move(*account), cache, this);
+        auto *arb = new EthWallet(eth::arbitrumOne(), std::move(*arbAccount), cache.value("arbitrum").toObject(), this);
+        for (EthWallet *each : {w, arb}) {
+            connect(each, &EthWallet::cacheChanged, this, &CoinVault::scheduleSave);
+            connect(each, &EthWallet::updated, this, &CoinVault::walletUpdated);
+            connect(each, &EthWallet::statusChanged, this, &CoinVault::walletUpdated);
+        }
+        m_entries.append({id, name, mainSeed, &params, nullptr, w, arb});
         return true;
     }
     auto account = HdAccount::fromSeed(seed, params);
@@ -312,6 +318,7 @@ void CoinVault::clearWallets() {
     for (const Entry &e : m_entries) {
         delete e.wallet;
         delete e.eth;
+        delete e.arb;
     }
     m_entries.clear();
     m_mainCoins.clear();
@@ -435,10 +442,21 @@ bool CoinVault::setTokenEnabled(const QString &symbol, bool enabled, QString *er
         if (error) *error = "Add Ethereum first";
         return false;
     }
+    const eth::Asset *changed = eth::findAsset(symbol);
+    if (!changed || changed->id == coins::ethereum().ticker) {
+        if (error) *error = QString("Unknown asset: %1").arg(symbol);
+        return false;
+    }
+    const bool arbitrum = changed->network == &eth::arbitrumOne();
     QStringList tokens;
-    for (const eth::Token &token : eth::tokens()) {
-        const bool on = token.symbol == symbol ? enabled : m_tokens.contains(token.symbol);
-        if (on) tokens << token.symbol;
+    for (const eth::Asset &asset : eth::allAssets()) {
+        bool on = asset.id == symbol ? enabled : m_tokens.contains(asset.id);
+        if (arbitrum && asset.network == changed->network) {
+            // ETH on Arbitrum comes with its tokens, and goes with them.
+            if (enabled && asset.symbol == "ETH") on = true;
+            if (!enabled && changed->symbol == "ETH") on = false;
+        }
+        if (on && asset.id != coins::ethereum().ticker) tokens << asset.id;
     }
     if (tokens == m_tokens) {
         return true;
@@ -447,6 +465,7 @@ bool CoinVault::setTokenEnabled(const QString &symbol, bool enabled, QString *er
         return false;
     }
     m_tokens = tokens;
+    applyNetworkSettings();   // starts or stops the Arbitrum wallets
     emit walletsChanged();
     return true;
 }
@@ -514,12 +533,29 @@ EthWallet *CoinVault::ethereum() const {
     return nullptr;
 }
 
-eth::u128 CoinVault::ethereumBalance(const QString &asset) const {
+EthWallet *CoinVault::evmWallet(const QString &assetId) const {
+    const eth::Asset *asset = eth::findAsset(assetId);
+    const QString id = selectedId(coins::ethereum());
+    for (const Entry &e : m_entries) {
+        if (asset && e.id == id && e.eth) return e.on(*asset->network);
+    }
+    return nullptr;
+}
+
+eth::u128 CoinVault::ethereumBalance(const QString &assetId) const {
+    const eth::Asset *asset = eth::findAsset(assetId);
     eth::u128 total = 0;
     for (const Entry &e : m_entries) {
-        if (e.eth) total += e.eth->balance(asset);
+        if (asset && e.eth) total += e.on(*asset->network)->balance(asset->symbol);
     }
     return total;
+}
+
+bool CoinVault::arbitrumEnabled() const {
+    return std::any_of(m_tokens.begin(), m_tokens.end(), [](const QString &id) {
+        const eth::Asset *asset = eth::findAsset(id);
+        return asset && asset->network == &eth::arbitrumOne();
+    });
 }
 
 QString CoinVault::Entry::firstAddress() const {
@@ -832,7 +868,8 @@ void CoinVault::applyNetworkSettings() {
         if (!w->isRunning()) w->start();
     }
     // Ethereum follows the same settings by itself (Tor, offline mode), with
-    // the user's own node and Blockscout if set.
+    // the user's own node and Blockscout if set. Arbitrum: the public nodes,
+    // and only while an asset on it is shown.
     for (const Entry &e : m_entries) {
         if (!e.eth) {
             continue;
@@ -840,6 +877,11 @@ void CoinVault::applyNetworkSettings() {
         e.eth->setCustomNode(conf()->get(Config::ethereumNode).toString());
         e.eth->setCustomBlockscout(conf()->get(Config::ethereumBlockscout).toString());
         e.eth->isRunning() ? e.eth->refresh() : e.eth->start();
+        if (!arbitrumEnabled()) {
+            e.arb->stop();
+        } else {
+            e.arb->isRunning() ? e.arb->refresh() : e.arb->start();
+        }
     }
 }
 
@@ -858,7 +900,8 @@ void CoinVault::save() {
         QJsonObject caches;
         QHash<QString, QJsonObject> extraCaches;
         for (const Entry &e : m_entries) {
-            const QJsonObject cache = e.eth ? e.eth->cache() : e.wallet->cache();
+            QJsonObject cache = e.eth ? e.eth->cache() : e.wallet->cache();
+            if (e.arb) cache["arbitrum"] = e.arb->cache();
             if (e.mainSeed) {
                 caches[e.params->ticker] = cache;
             } else {

@@ -206,19 +206,20 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
 }
 
 std::optional<QPair<QString, QString>> CoinSendController::ethereumFee(const QString &asset) const {
-    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
+    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->evmWallet(asset) : nullptr;
     const auto fees = eth ? eth->fees() : std::nullopt;
     if (!fees) {
         return std::nullopt;
     }
-    // A plain transfer uses 21000 gas; a USDT or USDC transfer about 65000.
-    const eth::u128 gas = asset == "ETH" ? eth::transferGas : 65000;
+    // On Ethereum, a plain transfer uses 21000 gas; a USDT or USDC transfer
+    // about 65000. Arbitrum adds its L1 data cost to both.
+    const eth::u128 gas = eth::findAsset(asset)->symbol == "ETH" ? eth->transferGasLimit() : eth->tokenGasLimit();
     return qMakePair(eth::formatAmount(gas * (fees->baseFee + fees->priorityFee), eth::etherDecimals),
                      eth::formatAmount(gas * fees->maxFeePerGas, eth::etherDecimals));
 }
 
-std::optional<double> CoinSendController::ethereumGwei() const {
-    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->ethereum() : nullptr;
+std::optional<double> CoinSendController::ethereumGwei(const QString &asset) const {
+    const EthWallet *eth = m_vault && m_vault->isUnlocked() ? m_vault->evmWallet(asset) : nullptr;
     const auto fees = eth ? eth->fees() : std::nullopt;
     if (!fees) {
         return std::nullopt;
@@ -249,7 +250,7 @@ void CoinSendController::speedUpEthereum(QWidget *parent, EthWallet *eth, const 
         box.setWindowTitle("Speed up");
         box.setIcon(QMessageBox::Question);
         box.setText(QString("Send %1 %2 again with a higher fee?")
-                    .arg(eth::formatAmount(plan->amount, EthWallet::decimals(plan->asset)), plan->asset));
+                    .arg(eth::formatAmount(plan->amount, wallet->decimals(plan->asset)), plan->asset));
         box.setTextInteractionFlags(Qt::TextSelectableByMouse);
         QString details = QString("To: %1\nNetwork fee: at most %2 ETH%3, usually less")
                           .arg(eth::checksumAddress(plan->recipient), newFee, fiatValue("ETH", newFee));
@@ -278,9 +279,15 @@ void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, con
     if (!ensureReady(parent, ethereum())) {
         return;
     }
-    EthWallet *eth = m_vault->ethereum();
+    // "USDT.ARB": USDT, from the wallet on Arbitrum.
+    const eth::Asset *info = eth::findAsset(asset);
+    EthWallet *eth = m_vault->evmWallet(asset);
+    if (!info || !eth) {
+        Utils::showError(parent, "Unable to send", QString("Unknown asset: %1").arg(asset));
+        return;
+    }
     if (eth->status() != EthWallet::Status::Synchronized) {
-        Utils::showError(parent, "Not synchronized", "Wait until Ethereum is synchronized, then try again.");
+        Utils::showError(parent, "Not synchronized", QString("Wait until %1 is synchronized, then try again.").arg(info->network->name));
         return;
     }
     QString text = amountText.trimmed();
@@ -290,7 +297,8 @@ void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, con
     QPointer<QWidget> guard(parent);
     QPointer<EthWallet> wallet(eth);
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    eth->planSend(asset, address, text, [this, guard, wallet](std::optional<EthWallet::Plan> plan, const QString &error) {
+    const bool arbitrum = info->network == &eth::arbitrumOne();
+    eth->planSend(info->symbol, address, text, [this, guard, wallet, arbitrum](std::optional<EthWallet::Plan> plan, const QString &error) {
         QApplication::restoreOverrideCursor();
         if (!guard || !wallet) {
             return;
@@ -299,7 +307,7 @@ void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, con
             Utils::showError(guard, "Unable to send", error);
             return;
         }
-        const int decimals = EthWallet::decimals(plan->asset);
+        const int decimals = wallet->decimals(plan->asset);
         const QString amountValue = eth::formatAmount(plan->amount, decimals);
         const QString amount = QString("%1 %2").arg(amountValue, plan->asset);
         const QString maxFeeValue = eth::formatAmount(plan->maxFee, eth::etherDecimals);
@@ -316,7 +324,8 @@ void CoinSendController::sendEthereum(QWidget *parent, const QString &asset, con
         QString details = entries.size() > 1
                           ? QString("From: Ethereum wallet \"%1\"\n").arg(m_vault->selectedName(ethereum())) : QString();
         details += QString("To: %1\n").arg(eth::checksumAddress(plan->recipient));
-        details += plan->asset == "ETH" ? QString("Network: Ethereum\n") : QString("Network: Ethereum (ERC-20)\n");
+        details += arbitrum ? QString("Network: Arbitrum One\n")
+                   : plan->asset == "ETH" ? QString("Network: Ethereum\n") : QString("Network: Ethereum (ERC-20)\n");
         details += QString("Network fee: at most %1, usually less").arg(maxFee);
         if (const auto fees = wallet->fees()) {
             const double gwei = double(fees->baseFee + fees->priorityFee) / 1e9;

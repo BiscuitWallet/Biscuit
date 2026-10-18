@@ -82,13 +82,13 @@ private slots:
 
     void paths() {
         QCOMPARE(blockscout::transactionsPath(me), QString("/api/v2/addresses/%1/transactions").arg(meHex));
-        QCOMPARE(blockscout::tokenTransfersPath(me, tokens().at(0)),
+        QCOMPARE(blockscout::tokenTransfersPath(me, mainnet().tokens.at(0)),
                  QString("/api/v2/addresses/%1/token-transfers?type=ERC-20&token=%2").arg(meHex, usdt));
     }
 
     void ethHistory() {
         // Real incoming payment to vitalik.eth (0.000165970070876188 ETH).
-        const auto list = blockscout::parseTransactions(page({
+        const auto list = blockscout::parseTransactions(mainnet(), page({
             tx("0xf40630389e1a043942a175458d14f2d830a32c3d3d6f80200114f8dd304f1f18", other, meHex, "165970070876188"),
             tx(hash('b'), meHex, other, "1000000000000000000"),          // sent 1 ETH
             tx(hash('c'), other, meHex, "0"),                            // incoming call, nothing received
@@ -115,7 +115,7 @@ private slots:
         pending["block_number"] = QJsonValue();
         pending["timestamp"] = QJsonValue();
         pending["status"] = QJsonValue();
-        const auto list = blockscout::parseTransactions(page({pending, tx(hash('b'), meHex, other, "5", "error")}), me);
+        const auto list = blockscout::parseTransactions(mainnet(), page({pending, tx(hash('b'), meHex, other, "5", "error")}), me);
         QVERIFY(list.has_value());
         QCOMPARE(list->at(0).block, quint64(0));
         QVERIFY(!list->at(0).time.isValid());
@@ -129,7 +129,7 @@ private slots:
         const QString data = "0xa9059cbb000000000000000000000000" + other.mid(2).toLower()
                              + "000000000000000000000000000000000000000000000000000000000012d687";
         QHash<QByteArray, u128> fees;
-        const auto list = blockscout::parseTransactions(page({
+        const auto list = blockscout::parseTransactions(mainnet(), page({
             tx(hash('a'), meHex, usdt, "0", "ok", data),
             tx(hash('b'), meHex, usdt, "0", "error", data),
         }), me, &fees);
@@ -143,7 +143,7 @@ private slots:
     }
 
     void tokenTransfers() {
-        const Token &token = tokens().at(0);   // USDT
+        const Token &token = mainnet().tokens.at(0);   // USDT
         const auto list = blockscout::parseTokenTransfers(page({
             transfer(hash('a'), usdt, other, meHex, "1000000"),                                  // received 1 USDT
             transfer(hash('b'), usdt, meHex, other, "2500000"),                                  // sent 2.5 USDT
@@ -175,13 +175,13 @@ private slots:
     void refusesMalformedPages() {
         // Anything that does not look like Blockscout refuses the page, rather
         // than showing a wrong amount.
-        QVERIFY(!blockscout::parseTransactions(json(R"({"message":"Not found"})"), me).has_value());
-        QVERIFY(!blockscout::parseTransactions(page({tx("0x1234", other, meHex, "5")}), me).has_value());       // short hash
-        QVERIFY(!blockscout::parseTransactions(page({tx(hash('a'), other, meHex, "-5")}), me).has_value());     // negative
-        QVERIFY(!blockscout::parseTransactions(page({tx(hash('a'), other, meHex, "1.5")}), me).has_value());    // not wei
-        QVERIFY(!blockscout::parseTransactions(page({tx(hash('a'), "0x1234", meHex, "5")}), me).has_value());   // bad address
+        QVERIFY(!blockscout::parseTransactions(mainnet(), json(R"({"message":"Not found"})"), me).has_value());
+        QVERIFY(!blockscout::parseTransactions(mainnet(), page({tx("0x1234", other, meHex, "5")}), me).has_value());       // short hash
+        QVERIFY(!blockscout::parseTransactions(mainnet(), page({tx(hash('a'), other, meHex, "-5")}), me).has_value());     // negative
+        QVERIFY(!blockscout::parseTransactions(mainnet(), page({tx(hash('a'), other, meHex, "1.5")}), me).has_value());    // not wei
+        QVERIFY(!blockscout::parseTransactions(mainnet(), page({tx(hash('a'), "0x1234", meHex, "5")}), me).has_value());   // bad address
         // Token decimals that are not USDT's: not the real token.
-        QVERIFY(!blockscout::parseTokenTransfers(page({transfer(hash('a'), usdt, other, meHex, "1", "18")}), me, tokens().at(0)).has_value());
+        QVERIFY(!blockscout::parseTokenTransfers(page({transfer(hash('a'), usdt, other, meHex, "1", "18")}), me, mainnet().tokens.at(0)).has_value());
     }
 };
 

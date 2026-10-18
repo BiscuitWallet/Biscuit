@@ -28,6 +28,9 @@ namespace {
     // A node asking for more than this per gas is wrong or lying: refused
     // (1000 gwei, 50 times the busiest days of 2026).
     constexpr u128 maxSaneFeePerGas = u128(1000) * 1000000000;
+    // Arbitrum: the most gas a send may need, its L1 data cost included (a
+    // plain transfer needed about 21350 on 2026-10-18).
+    constexpr u128 maxL1Gas = 5000000;
 
     QString historyKey(const HistoryEntry &e) {
         return QString::fromLatin1(e.hash.toHex()) + e.asset;
@@ -75,7 +78,7 @@ namespace {
                 {"block", QString::number(e.block)}, {"failed", e.failed}};
     }
 
-    std::optional<HistoryEntry> fromJson(const QJsonObject &o) {
+    std::optional<HistoryEntry> fromJson(const QJsonObject &o, const QStringList &assets) {
         HistoryEntry e;
         e.hash = QByteArray::fromHex(o.value("hash").toString().toLatin1());
         e.asset = o.value("asset").toString();
@@ -86,7 +89,7 @@ namespace {
         e.time = QDateTime::fromString(o.value("time").toString(), Qt::ISODate);
         e.block = o.value("block").toString().toULongLong();
         e.failed = o.value("failed").toBool();
-        if (e.hash.size() != 32 || !EthWallet::assets().contains(e.asset) || !amount || !fee) {
+        if (e.hash.size() != 32 || !assets.contains(e.asset) || !amount || !fee) {
             return std::nullopt;
         }
         e.amount = *amount;
@@ -95,13 +98,14 @@ namespace {
     }
 }
 
-EthWallet::EthWallet(Account account, const QJsonObject &cache, QObject *parent)
+EthWallet::EthWallet(const Network &network, Account account, const QJsonObject &cache, QObject *parent)
     : QObject(parent)
+    , m_network(network)
     , m_account(std::move(account))
     , m_address(m_account.address(0))
 {
     // Nodes are tried from a random one: not everybody on the same.
-    m_node = int(QRandomGenerator::global()->bounded(quint32(defaultNodes().size())));
+    m_node = int(QRandomGenerator::global()->bounded(quint32(m_network.nodes.size())));
 
     const QJsonObject balances = cache.value("balances").toObject();
     for (const QString &asset : assets()) {
@@ -110,10 +114,10 @@ EthWallet::EthWallet(Account account, const QJsonObject &cache, QObject *parent)
         }
     }
     for (const QJsonValue &v : cache.value("history").toArray()) {
-        if (const auto e = fromJson(v.toObject())) m_history.insert(historyKey(*e), *e);
+        if (const auto e = fromJson(v.toObject(), assets())) m_history.insert(historyKey(*e), *e);
     }
     for (const QJsonValue &v : cache.value("sent").toArray()) {
-        if (const auto e = fromJson(v.toObject())) m_sent.insert(historyKey(*e), *e);
+        if (const auto e = fromJson(v.toObject(), assets())) m_sent.insert(historyKey(*e), *e);
     }
     m_historyComplete = cache.value("historyComplete").toBool();
     const QJsonObject pending = cache.value("pending").toObject();
@@ -138,14 +142,14 @@ QString EthWallet::nodeName() const {
     return list.isEmpty() ? QString() : QUrl(list.at(m_node % list.size())).host();
 }
 
-QStringList EthWallet::assets() {
+QStringList EthWallet::assets() const {
     QStringList list{"ETH"};
-    for (const Token &t : tokens()) list << t.symbol;
+    for (const Token &t : m_network.tokens) list << t.symbol;
     return list;
 }
 
-int EthWallet::decimals(const QString &asset) {
-    for (const Token &t : tokens()) {
+int EthWallet::decimals(const QString &asset) const {
+    for (const Token &t : m_network.tokens) {
         if (t.symbol == asset) return t.decimals;
     }
     return etherDecimals;
@@ -175,11 +179,11 @@ void EthWallet::setCustomBlockscout(const QString &url) {
 }
 
 QStringList EthWallet::nodes() const {
-    return m_customNode.isEmpty() ? defaultNodes() : QStringList{m_customNode};
+    return m_customNode.isEmpty() ? m_network.nodes : QStringList{m_customNode};
 }
 
 QString EthWallet::blockscout() const {
-    QString url = m_customBlockscout.isEmpty() ? defaultBlockscout() : m_customBlockscout;
+    QString url = m_customBlockscout.isEmpty() ? m_network.blockscout : m_customBlockscout;
     while (url.endsWith('/')) url.chop(1);
     return url;
 }
@@ -236,7 +240,7 @@ void EthWallet::refresh() {
 void EthWallet::call(const QString &method, const QJsonArray &params, RpcDone done, int attempt) {
     const QStringList list = nodes();
     if (list.isEmpty() || !networkAllowed()) {
-        done(std::nullopt, "Ethereum is offline");
+        done(std::nullopt, QString("%1 is offline").arg(m_network.name));
         return;
     }
     const int node = m_node % list.size();
@@ -244,7 +248,7 @@ void EthWallet::call(const QString &method, const QJsonArray &params, RpcDone do
     const int id = int(QRandomGenerator::global()->bounded(1, 1 << 30));
     QNetworkReply *reply = Networking(this).postJson(this, url, rpc::request(id, method, params));
     if (!reply) {
-        done(std::nullopt, "Ethereum is offline");
+        done(std::nullopt, QString("%1 is offline").arg(m_network.name));
         return;
     }
     connect(reply, &QNetworkReply::finished, this, [this, reply, id, method, params, done, attempt, list, node] {
@@ -259,7 +263,7 @@ void EthWallet::call(const QString &method, const QJsonArray &params, RpcDone do
             if (attempt + 1 < list.size()) {
                 call(method, params, done, attempt + 1);
             } else {
-                done(std::nullopt, "No Ethereum node answered. Check your connection.");
+                done(std::nullopt, QString("No %1 node answered. Check your connection.").arg(m_network.name));
             }
             return;
         }
@@ -290,6 +294,7 @@ void EthWallet::refreshNode() {
         bool ok = true;
         QHash<QString, u128> balances;
         std::optional<Fees> fees;
+        std::optional<quint64> transferGas;
     };
     auto state = std::make_shared<Pending>();
     const quint64 generation = m_generation;
@@ -309,12 +314,13 @@ void EthWallet::refreshNode() {
         }
         m_balances = state->balances;
         m_fees = state->fees;
+        if (state->transferGas) m_transferGas = *state->transferGas;
         setStatus(Status::Synchronized);
         emit updated();
         emit cacheChanged();
     };
 
-    state->remaining = 4 + int(tokens().size());
+    state->remaining = 4 + int(m_network.tokens.size()) + (m_network.l1CostInGas ? 1 : 0);
     call("eth_getTransactionCount", {me, "latest"}, [this, state, finish, generation](auto result, auto) {
         const auto mined = result ? parseQuantity(result->toString()) : std::nullopt;
         if (mined && generation == m_generation && *mined <= std::numeric_limits<quint64>::max()) {
@@ -322,8 +328,9 @@ void EthWallet::refreshNode() {
         }
         finish();
     });
-    call("eth_chainId", {}, [state, finish](auto result, auto) {
-        state->ok = state->ok && result && result->toString() == toQuantity(mainnetChainId);   // never another chain
+    const quint64 chainId = m_network.chainId;
+    call("eth_chainId", {}, [state, finish, chainId](auto result, auto) {
+        state->ok = state->ok && result && result->toString() == toQuantity(chainId);   // never another chain
         finish();
     });
     call("eth_getBalance", {me, "latest"}, [state, finish](auto result, auto) {
@@ -337,7 +344,16 @@ void EthWallet::refreshNode() {
         state->fees = result ? parseFeeHistory(*result) : std::nullopt;
         finish();
     });
-    for (const Token &token : tokens()) {
+    if (m_network.l1CostInGas) {
+        // A plain transfer to ourselves: its gas, L1 data cost included, with
+        // 20% of margin as planSend gives it. Only for fee previews and Max.
+        call("eth_estimateGas", {QJsonObject{{"from", me}, {"to", me}, {"value", "0x0"}}}, [state, finish](auto result, auto) {
+            const auto gas = result ? parseQuantity(result->toString()) : std::nullopt;
+            if (gas && *gas >= transferGas && *gas <= maxL1Gas) state->transferGas = quint64(*gas * 6 / 5);
+            finish();
+        });
+    }
+    for (const Token &token : m_network.tokens) {
         const QJsonObject callObject{{"to", checksumAddress(token.contract)},
                                      {"data", "0x" + QString::fromLatin1(erc20BalanceOfData(m_address).toHex())}};
         const QString symbol = token.symbol;
@@ -416,12 +432,12 @@ void EthWallet::startDeepSync() {
             emit cacheChanged();
         }
     };
-    state->remaining = 1 + int(tokens().size());
+    state->remaining = 1 + int(m_network.tokens.size());
     fetchPages(blockscout::transactionsPath(m_address), {}, deepSyncPages, [this, state](const QJsonValue &reply) {
-        const auto list = blockscout::parseTransactions(reply, m_address, &state->fees);
+        const auto list = blockscout::parseTransactions(m_network, reply, m_address, &state->fees);
         if (list) state->entries << *list; else state->ok = false;
     }, finish);
-    for (const Token &token : tokens()) {
+    for (const Token &token : m_network.tokens) {
         fetchPages(blockscout::tokenTransfersPath(m_address, token), {}, deepSyncPages, [this, state, token](const QJsonValue &reply) {
             const auto list = blockscout::parseTokenTransfers(reply, m_address, token);
             if (list) state->entries << *list; else state->ok = false;
@@ -448,14 +464,14 @@ void EthWallet::refreshHistory() {
             mergeHistory(state->entries, state->fees);
         }
     };
-    state->remaining = 1 + int(tokens().size());
+    state->remaining = 1 + int(m_network.tokens.size());
     fetchJson(blockscout() + blockscout::transactionsPath(m_address), [this, state, finish](auto reply) {
         if (reply) {
-            if (const auto list = blockscout::parseTransactions(*reply, m_address, &state->fees)) state->entries << *list;
+            if (const auto list = blockscout::parseTransactions(m_network, *reply, m_address, &state->fees)) state->entries << *list;
         }
         finish();
     });
-    for (const Token &token : tokens()) {
+    for (const Token &token : m_network.tokens) {
         fetchJson(blockscout() + blockscout::tokenTransfersPath(m_address, token), [this, state, finish, token](auto reply) {
             if (reply) {
                 if (const auto list = blockscout::parseTokenTransfers(*reply, m_address, token)) state->entries << *list;
@@ -491,7 +507,7 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
         return;
     }
     if (m_status != Status::Synchronized || !m_fees) {
-        done(std::nullopt, "Wait until Ethereum is synchronized, then try again.");
+        done(std::nullopt, QString("Wait until %1 is synchronized, then try again.").arg(m_network.name));
         return;
     }
     QString error;
@@ -500,12 +516,12 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
         done(std::nullopt, error);
         return;
     }
-    if (tokenByContract(*recipient)) {
+    if (isTokenContract(*recipient)) {
         done(std::nullopt, "This is the address of a token contract, not of a wallet: coins sent there are lost.");
         return;
     }
     const Token *token = nullptr;
-    for (const Token &t : tokens()) {
+    for (const Token &t : m_network.tokens) {
         if (t.symbol == asset) token = &t;
     }
     const int units = decimals(asset);
@@ -517,7 +533,7 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
     }
     const Fees fees = *m_fees;
     if (fees.maxFeePerGas > maxSaneFeePerGas) {
-        done(std::nullopt, "The network fee given by the Ethereum node is abnormally high. Try again later.");
+        done(std::nullopt, QString("The network fee given by the %1 node is abnormally high. Try again later.").arg(m_network.name));
         return;
     }
 
@@ -525,7 +541,7 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
     plan.asset = asset;
     plan.recipient = *recipient;
     plan.amount = *amount;
-    plan.tx.chainId = mainnetChainId;
+    plan.tx.chainId = m_network.chainId;
     plan.tx.maxPriorityFeePerGas = fees.priorityFee;
     plan.tx.maxFeePerGas = fees.maxFeePerGas;
     if (token) {
@@ -542,7 +558,7 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
     call("eth_getTransactionCount", {me, "pending"}, [this, plan, all, token, me, done](auto result, const QString &err) mutable {
         const auto nonce = result ? parseQuantity(result->toString()) : std::nullopt;
         if (!nonce || *nonce > std::numeric_limits<quint64>::max()) {
-            done(std::nullopt, err.isEmpty() ? QString("The Ethereum node gave no nonce.") : err);
+            done(std::nullopt, err.isEmpty() ? QString("The %1 node gave no nonce.").arg(m_network.name) : err);
             return;
         }
         plan.tx.nonce = quint64(*nonce);
@@ -550,8 +566,8 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
         if (!plan.tx.data.isEmpty()) estimate["data"] = "0x" + QString::fromLatin1(plan.tx.data.toHex());
         call("eth_estimateGas", {estimate}, [this, plan, all, token, done](auto result, const QString &err) mutable {
             const auto gas = result ? parseQuantity(result->toString()) : std::nullopt;
-            if (!gas || *gas < transferGas || *gas > 1000000) {
-                done(std::nullopt, err.isEmpty() ? QString("The Ethereum node could not estimate the network fee.")
+            if (!gas || *gas < transferGas || *gas > (m_network.l1CostInGas ? maxL1Gas : 1000000)) {
+                done(std::nullopt, err.isEmpty() ? QString("The %1 node could not estimate the network fee.").arg(m_network.name)
                                                  : QString("This transaction would fail: %1").arg(err));
                 return;
             }
@@ -582,9 +598,10 @@ void EthWallet::planSend(const QString &asset, const QString &address, const QSt
                     return;
                 }
                 if (plan.maxFee > eth) {
-                    done(std::nullopt, QString("Sending %1 costs a network fee paid in ETH: up to %2 ETH. "
-                                               "This wallet has %3 ETH. Receive a little ETH first.")
-                                       .arg(plan.asset, maxFeeText, formatAmount(eth, etherDecimals)));
+                    const QString on = m_network.chainId == mainnetChainId ? QString() : QString(" on %1").arg(m_network.name);
+                    done(std::nullopt, QString("Sending %1 costs a network fee paid in ETH%4: up to %2 ETH. "
+                                               "This wallet has %3 ETH%4. Receive a little ETH%4 first.")
+                                       .arg(plan.asset, maxFeeText, formatAmount(eth, etherDecimals), on));
                     return;
                 }
             } else if (all) {
@@ -615,14 +632,14 @@ void EthWallet::broadcast(const Plan &plan, std::function<void(const QString &, 
     }
 
     // The final check: the signed bytes, read back, say exactly what the user
-    // confirmed, from this wallet, on Ethereum mainnet.
+    // confirmed, from this wallet, on this wallet's network.
     const auto check = decode(*raw);
-    bool matches = check && check->tx == plan.tx && check->from == m_address && check->tx.chainId == mainnetChainId;
+    bool matches = check && check->tx == plan.tx && check->from == m_address && check->tx.chainId == m_network.chainId;
     if (matches && plan.asset == "ETH") {
         matches = check->tx.to == plan.recipient && check->tx.value == plan.amount && check->tx.data.isEmpty();
     } else if (matches) {
         const auto transfer = decodeErc20Transfer(check->tx.data);
-        const Token *token = tokenByContract(check->tx.to);
+        const Token *token = tokenByContract(m_network, check->tx.to);
         matches = token && token->symbol == plan.asset && check->tx.value == 0 && transfer
                   && transfer->first == plan.recipient && transfer->second == plan.amount;
     }
@@ -687,12 +704,12 @@ void EthWallet::broadcast(const Plan &plan, std::function<void(const QString &, 
                 state->firstError = err.isEmpty() ? reply->errorString() : err;
             }
             if (--state->remaining == 0 && !state->answered) {
-                done({}, state->firstError.isEmpty() ? QString("No Ethereum node answered.") : state->firstError);
+                done({}, state->firstError.isEmpty() ? QString("No %1 node answered.").arg(m_network.name) : state->firstError);
             }
         });
     }
     if (state->remaining == 0) {
-        done({}, "Ethereum is offline");
+        done({}, QString("%1 is offline").arg(m_network.name));
     }
 }
 
@@ -718,7 +735,7 @@ u128 EthWallet::narrowFeePerGas() const {
 }
 
 u128 EthWallet::sendableEther() const {
-    const u128 reserve = u128(transferGas) * narrowFeePerGas();
+    const u128 reserve = u128(m_transferGas) * narrowFeePerGas();
     const u128 eth = balance("ETH");
     return m_fees && eth > reserve ? eth - reserve : 0;
 }
@@ -742,7 +759,7 @@ void EthWallet::planSpeedUp(const QByteArray &hash, std::function<void(std::opti
         return;
     }
     if (!m_fees) {
-        done(std::nullopt, "Wait until Ethereum is synchronized, then try again.");
+        done(std::nullopt, QString("Wait until %1 is synchronized, then try again.").arg(m_network.name));
         return;
     }
     const Transaction old = *it;
@@ -751,7 +768,7 @@ void EthWallet::planSpeedUp(const QByteArray &hash, std::function<void(std::opti
     call("eth_getTransactionCount", {addressText(), "latest"}, [this, old, done](auto result, const QString &err) {
         const auto mined = result ? parseQuantity(result->toString()) : std::nullopt;
         if (!mined) {
-            done(std::nullopt, err.isEmpty() ? QString("The Ethereum node did not answer.") : err);
+            done(std::nullopt, err.isEmpty() ? QString("The %1 node did not answer.").arg(m_network.name) : err);
             return;
         }
         if (*mined > old.nonce) {
@@ -765,13 +782,13 @@ void EthWallet::planSpeedUp(const QByteArray &hash, std::function<void(std::opti
         plan.tx.maxPriorityFeePerGas = raised(old.maxPriorityFeePerGas, fees.priorityFee);
         plan.tx.maxFeePerGas = raised(old.maxFeePerGas, 2 * fees.baseFee + plan.tx.maxPriorityFeePerGas);
         if (plan.tx.maxFeePerGas > maxSaneFeePerGas) {
-            done(std::nullopt, "The network fee given by the Ethereum node is abnormally high. Try again later.");
+            done(std::nullopt, QString("The network fee given by the %1 node is abnormally high. Try again later.").arg(m_network.name));
             return;
         }
         plan.maxFee = u128(plan.tx.gasLimit) * plan.tx.maxFeePerGas;
         // What it sends, read from the transaction itself.
-        if (const auto transfer = decodeErc20Transfer(old.data); transfer && tokenByContract(old.to)) {
-            plan.asset = tokenByContract(old.to)->symbol;
+        if (const auto transfer = decodeErc20Transfer(old.data); transfer && tokenByContract(m_network, old.to)) {
+            plan.asset = tokenByContract(m_network, old.to)->symbol;
             plan.recipient = transfer->first;
             plan.amount = transfer->second;
         } else {
