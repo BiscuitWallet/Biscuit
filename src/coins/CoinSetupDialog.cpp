@@ -345,16 +345,37 @@ bool addCoinToWallet(CoinVault *vault, const CoinParams &params, QWidget *parent
     box.setIcon(QMessageBox::Question);
     box.setText(QString("Add %1 to this wallet?").arg(params.name));
     const QString mainCoins = vault->mainSeedCoinsText();
-    box.setInformativeText(mainCoins.isEmpty()
+    box.setInformativeText((mainCoins.isEmpty()
         ? QString("It uses the 12 words written down when the first coin was added to this wallet.")
-        : QString("It uses the same 12 words as your %1, so your paper backup already covers it.").arg(mainCoins));
+        : QString("It uses the same 12 words as your %1, so your paper backup already covers it.").arg(mainCoins))
+        + QString("\n\nOr give %1 its own 12 words: a new seed to write down, or one you already have.").arg(params.name));
     auto *add = box.addButton(QString("Add %1").arg(params.name), QMessageBox::AcceptRole);
     // To check the paper backup before relying on it (asks the password).
     auto *show = box.addButton("Show the 12 words…", QMessageBox::ActionRole);
+    auto *own = box.addButton("Use other words…", QMessageBox::ActionRole);
     box.addButton(QMessageBox::Cancel);
     box.setDefaultButton(add);
     for (box.exec(); box.clickedButton() == show; box.exec()) {
         showCoinSeed(vault, parent);
+    }
+    if (box.clickedButton() == own) {
+        // Its own seed: an extra wallet of the coin, the only one it has.
+        QMessageBox choice(parent);
+        choice.setWindowTitle(QString("Add %1").arg(params.name));
+        choice.setIcon(QMessageBox::Question);
+        choice.setText(QString("Which 12 words for %1?").arg(params.name));
+        choice.setInformativeText("A new seed has its own paper backup, separate from the other coins of this "
+                                  "wallet. Or restore the words of a wallet you already have.");
+        auto *create = choice.addButton("Create new seed", QMessageBox::AcceptRole);
+        auto *restore = choice.addButton("Restore from seed", QMessageBox::AcceptRole);
+        choice.addButton(QMessageBox::Cancel);
+        choice.exec();
+        if (choice.clickedButton() != create && choice.clickedButton() != restore) {
+            return false;
+        }
+        CoinSetupDialog(vault, choice.clickedButton() == create ? CoinSetupDialog::Mode::Create : CoinSetupDialog::Mode::Restore,
+                        params, parent).exec();
+        return vault->hasCoin(params);
     }
     if (box.clickedButton() != add) {
         return false;

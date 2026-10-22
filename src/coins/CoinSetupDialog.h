@@ -74,8 +74,9 @@ private:
 };
 
 // Adds a coin to the wallet, asking only what is needed: a new or restored
-// seed when there is none yet, the password when locked, or a confirmation to
-// use the existing seed. True once the coin is in the wallet.
+// seed when there is none yet, the password when locked, then the existing
+// seed (the default) or the coin's own, new or restored. True once the coin
+// is in the wallet.
 bool addCoinToWallet(CoinVault *vault, const CoinParams &params, QWidget *parent);
 // Same for any ticker of the coin buttons. A token (USDT, USDC) runs on
 // Ethereum, whose ETH pays its fees: Ethereum is added first if needed.
