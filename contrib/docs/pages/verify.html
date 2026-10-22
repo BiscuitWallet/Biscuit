@@ -14,15 +14,15 @@
   <h2>1. Check the signature of the checksums</h2>
   <p>Each release has a list of SHA-256 checksums, <code>hashes-&lt;version&gt;-plain.txt</code>, signed with the key above. With GnuPG installed (on a Mac, from GPG Suite or Homebrew; on Windows, Gpg4win):</p>
   <pre><code>gpg --import biscuit-release-key.asc
-gpg --verify hashes-1.1.1-plain.txt</code></pre>
+gpg --verify hashes-1.2.2-plain.txt</code></pre>
   <p>The output must say <b>Good signature from &ldquo;Biscuit Wallet releases&rdquo;</b>, and the fingerprint must match the one above. GnuPG may add that the key is not certified with a trusted signature: that only means you haven&rsquo;t signed our key yourself.</p>
   <h2>2. Check the file against the list</h2>
   <p>Compute the checksum of the file you downloaded and find the same value, next to the same file name, in the signed list.</p>
   <table border="0" cellspacing="0" cellpadding="5">
     <tbody>
-      <tr><th>macOS</th><td><code>shasum -a 256 biscuit-1.1.1-mac-arm64.zip</code></td></tr>
-      <tr><th>Linux, Tails</th><td><code>sha256sum biscuit-1.1.1.AppImage</code></td></tr>
-      <tr><th>Windows</th><td><code>certutil -hashfile biscuit-1.1.1-win.zip SHA256</code></td></tr>
+      <tr><th>macOS</th><td><code>shasum -a 256 biscuit-1.2.2-mac-arm64.zip</code></td></tr>
+      <tr><th>Linux, Tails</th><td><code>sha256sum biscuit-1.2.2.AppImage</code></td></tr>
+      <tr><th>Windows</th><td><code>certutil -hashfile biscuit-1.2.2-win.zip SHA256</code></td></tr>
     </tbody>
   </table>
   <p>If the values differ, don&rsquo;t open the file: download it again from biscuitwallet.com.</p>
