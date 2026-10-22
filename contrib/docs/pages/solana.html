@@ -1,0 +1,25 @@
+<html><body>
+<h1>Solana in Biscuit</h1>
+<p>Biscuit holds SOL, Solana&rsquo;s own coin. Like the other coins, it is optional: add it when you <a href="create-wallet.html">create your wallet</a>, or later with the <b>+</b> next to the coins on Send and Receive.</p>
+  <h2>Seed and address</h2>
+  <p>Your first Solana wallet comes from the same 12 words as your other coins, unless you gave it its own words when adding it. Biscuit uses the address Phantom and Solflare show for these words, so the seed opens the same SOL there:</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>Coin</th><th>Address</th><th>Path</th></tr></thead>
+    <tbody>
+      <tr><th>Solana</th><td>Base58, 32 to 44 characters</td><td><code>m/44&rsquo;/501&rsquo;/0&rsquo;/0&rsquo;</code></td></tr>
+    </tbody>
+  </table>
+  <p>The address doesn&rsquo;t change after a payment. As with the other coins, you can keep several Solana wallets: <b>Add wallet</b>, above the address.</p>
+  <h2>SOL only</h2>
+  <p>Biscuit doesn&rsquo;t show tokens on Solana, such as USDT or USDC. Biscuit holds those on <a href="ethereum.html">Ethereum and Arbitrum</a>. Tokens sent to your Solana address aren&rsquo;t lost, but Biscuit doesn&rsquo;t show them: restore your 12 words in Phantom or Solflare to reach them.</p>
+  <h2>Sending</h2>
+  <ul>
+    <li><b>Fees</b> cost a fraction of a cent: the network&rsquo;s fee and a small priority fee, both shown before you send.</li>
+    <li><b>A new address</b> must receive at least 0.00089088 SOL in its first payment: Solana refuses smaller ones. The receive page says so too.</li>
+    <li><b>Check the address.</b> Solana addresses have no checksum, so a typo can still look valid. Biscuit warns you when the address you send to holds no SOL: never used, or emptied.</li>
+    <li>A payment that doesn&rsquo;t make it into a block within a minute or two expires. Biscuit then shows it as failed: nothing was sent, and you can send again.</li>
+  </ul>
+  <h2>Nodes</h2>
+  <p>Biscuit reads your balance and history, and sends, through public Solana nodes: the Solana Foundation&rsquo;s and PublicNode. They see your address, as an Electrum server does for Bitcoin. In <a href="tor.html">Tor mode</a> they are reached through Tor. To use your own node, set its address in <b>Settings &rsaquo; Network &rsaquo; Solana</b>.</p>
+
+</body></html>

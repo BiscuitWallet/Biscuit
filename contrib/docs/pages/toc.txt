@@ -43,10 +43,14 @@ Bitcoin and Litecoin
   btc-coin-control|Coin control
   silent-payments|Silent payments
   electrum|Electrum servers
+Dogecoin
+  dogecoin|Dogecoin
 Ethereum, USDT and USDC
   ethereum|Overview
   eth-fees|Fees and speeding up
   eth-nodes|Nodes and history
+Solana
+  solana|Solana
 Swaps
   swaps|Which swap?
   exchange-swaps|Exchange swaps

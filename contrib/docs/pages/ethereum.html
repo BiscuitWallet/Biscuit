@@ -1,31 +1,41 @@
 <html><body>
 <h1>Ethereum, USDT and USDC in Biscuit</h1>
-<p>Ethereum is optional in Biscuit, like Bitcoin and Litecoin. USDT and USDC, the two dollar tokens, are added on top of it: they live on your Ethereum address, on the Ethereum network.</p>
+<p>Ethereum is optional in Biscuit, like Bitcoin and Litecoin. USDT and USDC, the two dollar tokens, are added on top of it. Each of them can be held on two networks: Ethereum itself, and Arbitrum, where fees cost a fraction of a cent.</p>
 <figure>
   <img src="/img/gallery/main-receive-eth.png" width="1002" height="665" loading="lazy" alt="The Receive tab for Ethereum: the address, which also receives USDT and USDC, and its QR code">
-  <figcaption>One Ethereum address receives ETH, USDT and USDC</figcaption>
+  <figcaption>One address receives ETH, USDT and USDC, on Ethereum and on Arbitrum</figcaption>
 </figure>
   <h2>Adding them</h2>
-  <p>Tick them when you <a href="create-wallet.html">create your wallet</a>, or add them later with the <b>+</b> next to the coins on Send and Receive. Each is added on its own: Ethereum alone gives you ETH, and USDT or USDC appear only once you add them. Adding USDT or USDC adds Ethereum too, because their network fees are paid in ETH.</p>
+  <p>Tick them when you <a href="create-wallet.html">create your wallet</a>, or add them later with the <b>+</b> next to the coins on Send and Receive. Each is added on its own and gets its own tab: <b>ETH</b>, <b>USDT</b> and <b>USDC</b> on Ethereum, <b>ETH (Arbitrum)</b>, <b>USDT (Arbitrum)</b> and <b>USDC (Arbitrum)</b> on Arbitrum. Adding a token adds the ETH of its network too, because its network fees are paid in that ETH.</p>
+  <h2>Ethereum or Arbitrum</h2>
+  <p>Arbitrum is a network built on top of Ethereum. The coins are the same, but a send there costs a fraction of a cent instead of a few cents or more. Most exchanges let you withdraw ETH, USDT and USDC on Arbitrum: choose <b>Arbitrum One</b> as the network when you withdraw.</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>Network</th><th>Tabs</th><th>A send costs</th></tr></thead>
+    <tbody>
+      <tr><th>Ethereum</th><td>ETH, USDT, USDC</td><td>A few cents, much more when the network is busy</td></tr>
+      <tr><th>Arbitrum One</th><td>ETH, USDT, USDC (Arbitrum)</td><td>A fraction of a cent</td></tr>
+    </tbody>
+  </table>
+  <p>Your address is the same on both networks, but the balances are separate: ETH sent on Arbitrum shows on the Arbitrum tab, not on the Ethereum one. Each receive page says which network it is for. On Arbitrum, Biscuit holds Tether&rsquo;s USDT and Circle&rsquo;s native USDC, not the older bridged USDC.e.</p>
   <h2>Seed and address</h2>
-  <p>Your first Ethereum wallet comes from the same 12 words as your first Bitcoin and Litecoin wallets. Biscuit uses the address most Ethereum wallets use for these words, so they can be restored elsewhere:</p>
+  <p>Your first Ethereum wallet comes from the same 12 words as your first Bitcoin and Litecoin wallets, unless you gave it its own words when adding it. Biscuit uses the address most Ethereum wallets use for these words, so they can be restored elsewhere:</p>
   <table border="0" cellspacing="0" cellpadding="5">
     <thead><tr><th>Coin</th><th>Address</th><th>Path</th></tr></thead>
     <tbody>
-      <tr><th>Ethereum, USDT, USDC</th><td><code>0x&hellip;</code></td><td><code>m/44&rsquo;/60&rsquo;/0&rsquo;/0/0</code></td></tr>
+      <tr><th>Ethereum, USDT, USDC, on both networks</th><td><code>0x&hellip;</code></td><td><code>m/44&rsquo;/60&rsquo;/0&rsquo;/0/0</code></td></tr>
     </tbody>
   </table>
-  <p>One address receives ETH, USDT and USDC. Unlike Bitcoin, it doesn&rsquo;t change after a payment: anyone who knows it can see what it received on a block explorer.</p>
-  <h2>Ethereum network only</h2>
-  <p>USDT and USDC exist on many networks. Biscuit holds them on Ethereum (ERC-20) only. USDT or USDC sent to your address from another network, such as Tron, BNB Chain or Solana, is lost: always tell the sender to use Ethereum. Biscuit says so on the receive page, and swaps only offer the Ethereum versions.</p>
+  <p>One address receives everything. Unlike Bitcoin, it doesn&rsquo;t change after a payment: anyone who knows it can see what it received on a block explorer.</p>
+  <h2>Other networks</h2>
+  <p>USDT and USDC exist on many more networks. Biscuit holds them on Ethereum and Arbitrum only. USDT or USDC sent to your address from another network, such as Tron or BNB Chain, is lost: always tell the sender which of the two networks to use. Biscuit says so on the receive page, and swaps only offer the versions Biscuit holds.</p>
   <p>Biscuit only handles the real USDT and USDC contracts. Tokens with the same name sent to your address by strangers are ignored.</p>
   <h2>Several wallets</h2>
   <p>As with Bitcoin and Litecoin, you can keep several Ethereum wallets in the same Biscuit wallet: <b>Add wallet</b>, above the address, creates one or restores one from its 12 or 24 words, for example the seed of a wallet you used elsewhere. Switch with the buttons above the address; right-click one to rename it, show its seed or remove it. Back up the seed of each wallet you add.</p>
   <h2>In this section</h2>
   <ul>
     <li><a href="eth-fees.html">Fees and speeding up</a>: why sending USDT costs ETH, what the gas price means, and a payment that waits too long.</li>
-    <li><a href="eth-nodes.html">Nodes and history</a>: where Biscuit reads your balance and history, and using your own node.</li>
+    <li><a href="eth-nodes.html">Nodes and history</a>: where Biscuit reads your balances and history, and using your own nodes.</li>
   </ul>
-  <p>Contacts work for Ethereum too, one address book for ETH, USDT and USDC: see <a href="contacts.html">Contacts</a>.</p>
+  <p>Contacts work for Ethereum too, one address book for every tab: see <a href="contacts.html">Contacts</a>.</p>
 
 </body></html>

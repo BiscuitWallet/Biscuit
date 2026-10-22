@@ -1,6 +1,6 @@
 <html><body>
 <h1>Exchange swaps</h1>
-<p>Biscuit asks Trocador for offers from many exchanges at once, and shows them best first, ranked by one thing: what you actually receive. Only exchanges rated A by Trocador are shown: the ones that don&rsquo;t ask for your identity.</p>
+<p>Biscuit asks Trocador for offers from many exchanges at once, and a few exchanges directly, and shows them best first, ranked by one thing: what you actually receive. Only exchanges that don&rsquo;t ask for your identity are shown: those rated A by Trocador, and Biscuit&rsquo;s own, which never do.</p>
 <p>Who each exchange is, what its terms allow and what users have reported: <a href="exchange-ratings.html">Exchange ratings</a>.</p>
 <figure>
   <picture>
@@ -11,21 +11,21 @@
 </figure>
   <h2>Step by step</h2>
   <ol>
-    <li>On <b>Swap</b>, choose what you send, what you get, and the amount: any two different coins, for example BTC to ETH or XMR to USDT. USDT and USDC are always the Ethereum ones (ERC-20). <b>From wallet</b> picks which of your wallets pays.</li>
+    <li>On <b>Swap</b>, choose what you send, what you get, and the amount: any two different coins, for example BTC to ETH or XMR to USDT. USDT and USDC on Ethereum and on Arbitrum are different coins: pick the one you hold or want. <b>From wallet</b> picks which of your wallets pays.</li>
     <li><b>Fixed</b> or <b>Floating</b>: with a fixed rate you get exactly the amount shown; with a floating rate, you choose what you send and what you get follows the market, a little up or down.</li>
     <li><b>Receive at</b>: a new address in your own Biscuit wallet, or another address you paste. <b>Refund to</b>: where the coins go back if the swap fails, always in the coin you send. A coin you haven&rsquo;t added to Biscuit can only be received or refunded to another address.</li>
     <li><b>Get offers</b>, pick one, and <b>Create swap</b>. Biscuit shows the exact amount to send and the exchange&rsquo;s deposit address.</li>
     <li><b>Send from this wallet&hellip;</b> pays the deposit for you, after you confirm. You can also send it from another wallet.</li>
     <li>Follow it under <b>History</b>. It resumes if you close Biscuit.</li>
   </ol>
-  <p>Exchanges need the deposit confirmed before they send: minutes for Litecoin and Ethereum, longer for Bitcoin, about 20 minutes for Monero. Paying a deposit in USDT or USDC costs a network fee in ETH, from the same address: see <a href="eth-fees.html">Ethereum fees</a>.</p>
+  <p>Exchanges need the deposit confirmed before they send: minutes for Litecoin, Dogecoin, Solana, Ethereum and Arbitrum, longer for Bitcoin, about 20 minutes for Monero. Paying a deposit in USDT or USDC costs a network fee in ETH of the same network, from the same address: see <a href="eth-fees.html">Ethereum fees</a>.</p>
   <h2>If something goes wrong</h2>
   <p>Double-click a swap in History for its details: the <b>Trade ID</b>, the <b>Exchange ID</b>, the deposit transaction and the exchange&rsquo;s support link. Keep these: exchanges delete trades after a while, and they&rsquo;re stored encrypted in your wallet file, not restored from seed. A swap that &ldquo;needs attention&rdquo; usually means the exchange wants to talk to you: contact its support with these identifiers.</p>
   <h2>Fees and privacy</h2>
   <ul>
     <li>Biscuit never adds a fee. It may receive a share of the exchange&rsquo;s fee: you pay the same as on the exchange, and the ranking never depends on it.</li>
-    <li>Exchange swaps go through Biscuit&rsquo;s server, which holds our partner key with Trocador. Our server, Trocador and the exchange see the swap and your IP address: see the <a href="https://biscuitwallet.com/privacy/">privacy policy</a> for what is kept.</li>
-    <li>They&rsquo;re off in Tor mode, and on Tails and Whonix: our swap partner requires us to record the IP address each swap is created from, and a Tor address can&rsquo;t be traced, so our server refuses swaps from Tor. Swaps already running can be followed again once Tor mode is off.</li>
+    <li>Exchange swaps go through Biscuit&rsquo;s server, which holds our partner keys. With Trocador, our server, Trocador and the exchange see the swap and your IP address. With Biscuit&rsquo;s own exchanges, our server keeps no record of you, and the exchange sees the swap, not your IP address. See the <a href="https://biscuitwallet.com/privacy/">privacy policy</a> for what is kept.</li>
+    <li id="tor">In Tor mode, and on Tails and Whonix, only Biscuit&rsquo;s own exchanges are offered: PegasusSwap, ETZ-Swap and Stereoswap, which never ask for identity and accept Tor. Biscuit reaches them through its onion address, so the swap never leaves Tor. Trocador is off there: it requires us to record the IP address each swap is created from, which Tor hides. Trocador swaps already running can be followed again once Tor mode is off.</li>
   </ul>
   <p>Other ways to get Monero without identity checks, and what each one costs you: <a href="https://biscuitwallet.com/journal/get-monero-without-kyc/">How to get Monero without KYC</a>.</p>
 
