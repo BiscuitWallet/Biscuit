@@ -259,7 +259,12 @@ void SolWallet::refreshNode() {
         state->balance = result ? parseBalance(*result) : std::nullopt;
         finish();
     });
-    call("getRecentPrioritizationFees", {QJsonArray{addressText()}}, [state, finish](auto result, auto) {
+    // params is [[address]]. Not {QJsonArray{...}}: passed to call()'s const
+    // QJsonArray &, those braces bind to the inner array, and the node refuses
+    // ["address"] (then Solana never gets a fee, so never Synchronized).
+    QJsonArray feeParams;
+    feeParams.append(QJsonArray{addressText()});
+    call("getRecentPrioritizationFees", feeParams, [state, finish](auto result, auto) {
         state->priorityFee = result ? parsePriorityFee(*result) : std::nullopt;
         finish();
     });
