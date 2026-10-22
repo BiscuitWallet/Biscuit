@@ -194,6 +194,8 @@ void MainWindow::initStatusBar() {
     m_statusLabelBalance->setText("Balance: 0 XMR");
     m_statusLabelBalance->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_statusLabelBalance->setCursor(Qt::PointingHandCursor);
+    // Never wider than the window allows: it must not stop the window from shrinking.
+    m_statusLabelBalance->setMinimumWidth(1);   // in place of the text's width
     this->statusBar()->addPermanentWidget(m_statusLabelBalance);
     connect(m_statusLabelBalance, &ClickableLabel::clicked, this, &MainWindow::showBalanceDialog);
 
@@ -789,13 +791,21 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
         }
     }
 
-    QString balance_str = QString("Balance: %1").arg(parts.isEmpty() ? QString("0") : parts.join(" · "));
-    // Total of all coins in the preferred currency (Settings), once prices are known.
-    if (conf()->get(Config::balanceShowFiat).toBool() && !parts.isEmpty() && pricesKnown) {
-        balance_str += QString(" · Total %1").arg(Utils::amountToCurrencyString(balanceFiatAmount, fiatCurrency));
+    // The total in the preferred currency (Settings), whatever the number of
+    // coins; each coin is in the details. Without prices (third-party data
+    // off): the first coin and how many more.
+    QString balance_str;
+    if (parts.isEmpty()) {
+        balance_str = "Balance: 0";
+    } else if (pricesKnown) {
+        balance_str = QString("Balance: %1").arg(Utils::amountToCurrencyString(balanceFiatAmount, fiatCurrency));
+    } else if (parts.size() == 1) {
+        balance_str = QString("Balance: %1").arg(parts.first());
+    } else {
+        balance_str = QString("Balance: %1 · +%2 more").arg(parts.first()).arg(parts.size() - 1);
     }
 
-    m_statusLabelBalance->setToolTip("Click for details");
+    m_statusLabelBalance->setToolTip(parts.size() > 1 ? parts.join("\n") + "\n\nClick for details" : QString("Click for details"));
     m_statusLabelBalance->setText(balance_str);
 }
 
