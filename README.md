@@ -18,7 +18,7 @@
   <img src="https://biscuitwallet.com/img/gallery/atomic-search.png" width="760" alt="Biscuit looking for atomic swap makers over Tor, with offers to swap Bitcoin for Monero">
 </p>
 
-Biscuit started as a fork of [Feather Wallet](https://featherwallet.org), which is about as good as a Monero wallet gets on a computer. We added everything we love: Bitcoin, Ethereum, Solana, Litecoin, Dogecoin, USDT and USDC next to Monero, each one optional, swaps between any two, atomic swaps with no exchange in the middle, Tor for the whole app, and lots of little details. It runs on Windows, macOS and Linux.
+Biscuit started as a fork of [Feather Wallet](https://featherwallet.org), which is about as good as a Monero wallet gets on a computer. We added everything we love: more cryptos next to Monero, each one optional, swaps between any two, atomic swaps with no exchange in the middle, Tor for the whole app, and lots of little details. It runs on Windows, macOS and Linux.
 
 ## What's inside
 
