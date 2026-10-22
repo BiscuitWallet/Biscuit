@@ -70,7 +70,8 @@ namespace {
 }
 
 const QList<const CoinParams *> &walletCoins() {
-    static const QList<const CoinParams *> list{&coins::bitcoin(), &coins::litecoin(), &coins::ethereum(), &coins::solana()};
+    static const QList<const CoinParams *> list{&coins::bitcoin(), &coins::litecoin(), &coins::dogecoin(), &coins::ethereum(),
+                                                &coins::solana()};
     return list;
 }
 
@@ -884,7 +885,9 @@ void CoinVault::applyNetworkSettings() {
     const bool onionOnly = proxy == Config::Proxy::Tor && conf()->get(Config::torOnlyAllowOnion).toBool();
     for (CoinWallet *w : allWallets()) {
         // The user's own server, if set: then only that one is used.
-        const auto key = w->params() == coins::bitcoin() ? Config::electrumServerBTC : Config::electrumServerLTC;
+        const auto key = w->params() == coins::bitcoin()  ? Config::electrumServerBTC
+                         : w->params() == coins::litecoin() ? Config::electrumServerLTC
+                                                            : Config::electrumServerDOGE;
         const auto server = ElectrumServer::parse(conf()->get(key).toString()).value_or(ElectrumServer{{}, 0, true});
         // No onion Electrum server is built in yet: in onion-only mode the
         // wallets stay offline unless the user's server is an onion one.

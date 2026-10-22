@@ -16,7 +16,9 @@ struct ext_key;
 
 namespace biscuit::coins {
 
-// One BIP84 account (native SegWit, P2WPKH): m/84'/coin'/account'.
+// One BIP84 account (native SegWit, P2WPKH): m/84'/coin'/account', or for a
+// coin without SegWit (params.legacy) one BIP44 account (P2PKH):
+// m/44'/coin'/account'.
 // Holds the account private key in memory; it is wiped on destruction.
 class HdAccount {
 public:
@@ -36,9 +38,9 @@ public:
 
     // Compressed public key (33 bytes) of m/84'/coin'/account'/chain/index.
     QByteArray publicKey(Chain chain, quint32 index) const;
-    // P2WPKH scriptPubKey: OP_0 <hash160(pubkey)>.
+    // P2WPKH scriptPubKey: OP_0 <hash160(pubkey)> (legacy: P2PKH).
     QByteArray scriptPubKey(Chain chain, quint32 index) const;
-    // bc1q… / ltc1q… address.
+    // bc1q… / ltc1q… address (legacy: D…).
     QString address(Chain chain, quint32 index) const;
 
     // Private key (32 bytes) for signing. Callers must wipe it after use.

@@ -32,15 +32,15 @@ namespace biscuit::coins {
 
 namespace {
     enum Column { ColDate = 0, ColCoin, ColWallet, ColAmount, ColStatus, ColTx };
-    enum Page { PageAll = 0, PageMonero, PageBitcoin, PageLitecoin };
     constexpr int TickerRole = Qt::UserRole;
     constexpr int SortRole = Qt::UserRole + 1;
     constexpr int WalletIdRole = Qt::UserRole + 2;   // Bitcoin/Litecoin rows: which wallet
     constexpr int BumpableRole = Qt::UserRole + 3;   // our unconfirmed payment: can be sped up
 
     QString explorerUrl(const QString &ticker, const QString &txid) {
-        if (ticker == QLatin1String("BTC")) return QString("https://mempool.space/tx/%1").arg(txid);
-        if (ticker == QLatin1String("LTC")) return QString("https://litecoinspace.org/tx/%1").arg(txid);
+        for (const CoinParams *params : electrumCoins()) {
+            if (ticker == params->ticker) return explorerTxUrl(*params, txid);
+        }
         if (const eth::Asset *asset = eth::findAsset(ticker)) return QString("%1/tx/%2").arg(asset->network->blockscout, txid);
         if (ticker == QLatin1String("SOL")) return QString("%1/tx/%2").arg(sol::explorer, txid);
         return QString("https://xmrchain.net/tx/%1").arg(txid);
@@ -82,12 +82,12 @@ CoinHistorySwitcher::CoinHistorySwitcher(Wallet *wallet, QWidget *moneroPage, QW
     layout->addWidget(m_filter);
 
     m_all = makeTree(true);
-    m_btc = makeTree(false);
-    m_ltc = makeTree(false);
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(m_all);
     m_pages->addWidget(moneroPage);
-    for (auto [tree, params] : {std::pair{m_btc, &bitcoin()}, std::pair{m_ltc, &litecoin()}}) {
+    for (const CoinParams *params : electrumCoins()) {
+        auto *tree = makeTree(false);
+        m_coinTrees.insert(params->ticker, tree);
         auto *page = new QWidget(m_pages);
         auto *pageLayout = new QVBoxLayout(page);
         pageLayout->setContentsMargins(0, 0, 0, 0);
@@ -166,7 +166,7 @@ QTreeWidget *CoinHistorySwitcher::makeTree(bool withCoinColumn) {
             menu.addSeparator();
         } else if (item->data(ColDate, BumpableRole).toBool()) {
             const QString walletId = item->data(ColDate, WalletIdRole).toString();
-            const CoinParams *params = ticker == bitcoin().ticker ? &bitcoin() : &litecoin();
+            const CoinParams *params = coinOfTicker(ticker);
             menu.addAction("Speed up (raise the fee)…", [this, params, walletId, txid] {
                 for (const auto &entry : m_vault->wallets(*params)) {
                     if (entry.id == walletId) {
@@ -208,7 +208,7 @@ void CoinHistorySwitcher::fillCoinTree(QTreeWidget *tree, const CoinParams &para
                 item->setText(ColDate, time.isValid() ? time.toLocalTime().toString("yyyy-MM-dd HH:mm") : QString());
                 item->setData(ColDate, SortRole, time.isValid() ? time.toSecsSinceEpoch() : std::numeric_limits<qint64>::max());
                 item->setData(ColDate, TickerRole, params.ticker);
-                item->setIcon(ColCoin, icons()->icon(params == bitcoin() ? "bitcoin.png" : "litecoin.png"));
+                item->setIcon(ColCoin, icons()->icon(params.name.toLower() + ".png"));
                 item->setText(ColCoin, params.ticker);
                 item->setText(ColWallet, entry.name);
                 item->setText(ColAmount, amount);
@@ -216,7 +216,7 @@ void CoinHistorySwitcher::fillCoinTree(QTreeWidget *tree, const CoinParams &para
                 item->setText(ColStatus, statusText(e.height <= 0, false, confirmations, 6));
                 item->setText(ColTx, e.txid);
                 item->setData(ColDate, WalletIdRole, entry.id);
-                item->setData(ColDate, BumpableRole, e.height <= 0 && e.fee.has_value() && e.delta < 0);
+                item->setData(ColDate, BumpableRole, !params.legacy && e.height <= 0 && e.fee.has_value() && e.delta < 0);
             }
         }
     }
@@ -311,7 +311,8 @@ void CoinHistorySwitcher::fillSolanaTree() {
 }
 
 void CoinHistorySwitcher::refresh() {
-    QList<QTreeWidget *> trees{m_all, m_btc, m_ltc, m_sol};
+    QList<QTreeWidget *> trees{m_all, m_sol};
+    trees << m_coinTrees.values();
     trees << m_ethTrees.values();
     for (QTreeWidget *t : trees) {
         t->setSortingEnabled(false);
@@ -334,12 +335,15 @@ void CoinHistorySwitcher::refresh() {
             item->setText(ColTx, row.hash);
         }
     }
-    fillCoinTree(m_btc, bitcoin());
-    fillCoinTree(m_ltc, litecoin());
+    bool severalWallets = false;
+    for (const CoinParams *params : electrumCoins()) {
+        fillCoinTree(m_coinTrees.value(params->ticker), *params);
+        severalWallets = severalWallets || m_vault->wallets(*params).size() > 1;
+    }
     fillEthereumTrees();
     fillSolanaTree();
     m_all->setColumnHidden(ColWallet, !(m_vault->isUnlocked()
-                                        && (m_vault->wallets(bitcoin()).size() > 1 || m_vault->wallets(litecoin()).size() > 1
+                                        && (severalWallets
                                             || m_vault->wallets(ethereum()).size() > 1 || m_vault->wallets(solana()).size() > 1)));
 
     for (QTreeWidget *t : trees) {

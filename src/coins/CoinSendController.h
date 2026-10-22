@@ -44,8 +44,12 @@ struct FeeLevel {
     QString label;
     int targetBlocks;
 };
-// Labels follow the coin's block time (Bitcoin 10 min, Litecoin 2.5 min).
+// Labels follow the coin's block time (Bitcoin 10 min, Litecoin 2.5 min,
+// Dogecoin 1 min).
 QList<FeeLevel> feeLevels(const CoinParams &params);
+// A fee rate as people read it: "4.0 sat/vB", or for Dogecoin "0.51 DOGE/kB"
+// (Dogecoin Core's unit; `rate` is in koinu/B).
+QString feeRateText(const CoinParams &params, double rate);
 
 // Sends Bitcoin/Litecoin from the unified Send tab: checks the setup,
 // plans the transaction, asks for explicit confirmation, broadcasts.

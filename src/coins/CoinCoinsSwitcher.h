@@ -42,10 +42,8 @@ private:
     QPointer<CoinVault> m_vault;
     CoinPicker *m_picker;
     QStackedWidget *m_pages;
-    QTreeWidget *m_btc;
-    QTreeWidget *m_ltc;
-    QLabel *m_btcSummary;
-    QLabel *m_ltcSummary;
+    QHash<QString, QTreeWidget *> m_trees;   // "BTC", "LTC", "DOGE"
+    QHash<QString, QLabel *> m_summaries;
 };
 
 }

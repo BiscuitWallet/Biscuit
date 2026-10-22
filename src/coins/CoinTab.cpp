@@ -10,6 +10,7 @@
 
 #include "Addresses.h"
 #include "Amount.h"
+#include "CoinSendController.h"
 #include "CoinSetupDialog.h"
 #include "CoinVault.h"
 #include "CoinWallet.h"
@@ -33,8 +34,7 @@ namespace {
     };
 
     QString explorerUrl(const CoinParams &params, const QString &txid) {
-        return params == litecoin() ? QString("https://litecoinspace.org/tx/%1").arg(txid)
-                                    : QString("https://mempool.space/tx/%1").arg(txid);
+        return explorerTxUrl(params, txid);
     }
 }
 
@@ -53,7 +53,7 @@ CoinTab::CoinTab(Wallet *wallet, const CoinParams &params, QWidget *parent)
     ui->label_unit->setText(params.ticker);
     ui->label_receiveHint->setStyleSheet("color: gray;");
     ui->label_unlockError->setStyleSheet("color: #c0392b;");
-    for (const auto &level : feeLevels) {
+    for (const auto &level : coins::feeLevels(params)) {
         ui->combo_fee->addItem(level.label, level.targetBlocks);
     }
     ui->combo_fee->setCurrentIndex(1);
@@ -197,7 +197,7 @@ void CoinTab::refresh() {
 
 void CoinTab::refreshFees() {
     if (m_coin) {
-        ui->label_feeRate->setText(QString("%1 sat/vB").arg(m_coin->feeRate(ui->combo_fee->currentData().toInt()), 0, 'f', 1));
+        ui->label_feeRate->setText(feeRateText(m_params, m_coin->feeRate(ui->combo_fee->currentData().toInt())));
     }
 }
 
@@ -244,10 +244,9 @@ void CoinTab::send() {
     box.setWindowTitle(QString("Send %1").arg(m_params.name));
     box.setIcon(QMessageBox::Question);
     box.setText(QString("Send %1?").arg(formatAmount(qint64(plan->amount))));
-    box.setInformativeText(QString("To: %1\nNetwork fee: %2 (%3 sat/vB)\nTotal: %4")
-                           .arg(address, formatAmount(qint64(plan->fee)))
-                           .arg(feeRate, 0, 'f', 1)
-                           .arg(formatAmount(qint64(plan->amount + plan->fee))));
+    box.setInformativeText(QString("To: %1\nNetwork fee: %2 (%3)\nTotal: %4")
+                           .arg(address, formatAmount(qint64(plan->fee)), feeRateText(m_params, feeRate),
+                                formatAmount(qint64(plan->amount + plan->fee))));
     box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     box.setDefaultButton(QMessageBox::Cancel);
     if (box.exec() != QMessageBox::Yes) {

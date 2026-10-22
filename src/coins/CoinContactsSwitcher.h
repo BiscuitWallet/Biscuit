@@ -41,11 +41,9 @@ private:
     QPointer<CoinVault> m_vault;
     CoinPicker *m_picker;
     QStackedWidget *m_pages;
-    QTreeWidget *m_btc;
-    QTreeWidget *m_ltc;
+    // Bitcoin, Litecoin, Dogecoin: tree, status line, coin.
+    QList<std::tuple<QTreeWidget *, QLabel *, const CoinParams *>> m_coinPages;
     QTreeWidget *m_eth;   // one book for ETH, USDT and USDC: same addresses
-    QLabel *m_btcStatus;
-    QLabel *m_ltcStatus;
     QLabel *m_ethStatus;
     QTreeWidget *m_sol;
     QLabel *m_solStatus;

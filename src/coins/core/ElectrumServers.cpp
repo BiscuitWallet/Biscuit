@@ -26,6 +26,14 @@ QList<QPair<QString, quint16>> defaultElectrumServers(const CoinParams &params) 
             {"electrum.ltc.xurious.com", 50002},
         };
     }
+    if (params == dogecoin()) {
+        return {
+            {"dogecoin.stackwallet.com", 50022},
+            {"electrum1.cipig.net", 20060},
+            {"electrum2.cipig.net", 20060},
+            {"doge.aftrek.org", 50002},   // self-signed certificate, pinned on first use
+        };
+    }
     return {};
 }
 

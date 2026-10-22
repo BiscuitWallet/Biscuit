@@ -293,7 +293,7 @@ QString addressFromPaymentText(const QString &text) {
     const QString t = text.trimmed();
     const qsizetype colon = t.indexOf(':');
     const QString scheme = colon > 0 ? t.left(colon).toLower() : QString();
-    if (!QStringList{"monero", "bitcoin", "litecoin", "ethereum", "solana"}.contains(scheme)) {
+    if (!QStringList{"monero", "bitcoin", "litecoin", "dogecoin", "ethereum", "solana"}.contains(scheme)) {
         return t;
     }
     QString rest = t.mid(colon + 1);
@@ -303,6 +303,7 @@ QString addressFromPaymentText(const QString &text) {
     const QUrlQuery query(q < 0 ? QString() : rest.mid(q + 1));
     // Bitcoin and Litecoin QR codes are often in capitals (a smaller code):
     // the same address, given in lower case as people and services expect.
+    // Not Dogecoin: its base58 addresses are case-sensitive.
     if ((scheme == "bitcoin" || scheme == "litecoin") && path == path.toUpper()) {
         path = path.toLower();
     }

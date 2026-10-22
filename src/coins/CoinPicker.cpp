@@ -117,6 +117,7 @@ void addWalletCoins(CoinPicker *picker, bool accounts, bool tokens) {
     picker->addCoin(PixelIcons::icon("monero"), "Monero", "XMR");
     picker->addCoin(icons()->icon("bitcoin.png"), "Bitcoin", bitcoin().ticker);
     picker->addCoin(icons()->icon("litecoin.png"), "Litecoin", litecoin().ticker);
+    picker->addCoin(icons()->icon("dogecoin.png"), "Dogecoin", dogecoin().ticker);
     if (accounts) {
         // The tokens and Arbitrum get their own tabs: they are what people send.
         picker->addCoin(PixelIcons::icon("ethereum"), "Ethereum", coins::ethereum().ticker);

@@ -87,6 +87,31 @@ private slots:
         QVERIFY(!isValidAddress(ltcAddress, bitcoin()));
     }
 
+    void dogecoinLegacyAddresses() {
+        const auto seed = bip39::mnemonicToSeed(abandonAbout);
+        // The legacy path and P2PKH code with Bitcoin's values give BIP44's
+        // well-known first address of this seed (m/44'/0'/0'/0/0).
+        CoinParams legacyBitcoin = bitcoin();
+        legacyBitcoin.legacy = true;
+        QCOMPARE(HdAccount::fromSeed(*seed, legacyBitcoin)->address(HdAccount::Receive, 0),
+                 QString("1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA"));
+
+        // Dogecoin: m/44'/3'/0', as Cake Wallet and Trezor.
+        const auto doge = HdAccount::fromSeed(*seed, dogecoin());
+        QVERIFY(doge);
+        const QString address = doge->address(HdAccount::Receive, 0);
+        QCOMPARE(address, QString("DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC"));
+        QCOMPARE(doge->scriptPubKey(HdAccount::Receive, 0).toHex().left(6), QByteArray("76a914"));
+        QCOMPARE(scriptAddress(doge->scriptPubKey(HdAccount::Receive, 0), dogecoin()), address);
+        QVERIFY(doge->address(HdAccount::Change, 0).startsWith('D'));
+
+        QVERIFY(isValidAddress(address, dogecoin()));
+        QVERIFY(!isValidAddress(address, bitcoin()));
+        QVERIFY(!isValidAddress("DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgD", dogecoin()));   // checksum
+        QVERIFY(!isValidAddress("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", dogecoin()));
+        QVERIFY(!isValidAddress("bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu", dogecoin()));
+    }
+
     void passphraseChangesKeys() {
         const auto a = HdAccount::fromSeed(*bip39::mnemonicToSeed(abandonAbout), bitcoin());
         const auto b = HdAccount::fromSeed(*bip39::mnemonicToSeed(abandonAbout, "extra"), bitcoin());

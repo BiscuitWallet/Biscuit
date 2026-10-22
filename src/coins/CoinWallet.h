@@ -18,7 +18,7 @@
 
 namespace biscuit::coins {
 
-// A light BTC or LTC wallet: keys from the BIP39 seed, data from Electrum
+// A light BTC, LTC or DOGE wallet: keys from the BIP39 seed, data from Electrum
 // servers. Keeps a cache (transactions, used addresses, pinned certificates)
 // that the owner stores in the encrypted wallet file.
 class CoinWallet : public QObject {

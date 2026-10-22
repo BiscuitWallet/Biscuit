@@ -287,9 +287,10 @@ void CoinWallet::fetchBlockTimes(std::function<void()> then) {
                 onRequestError(error);
                 return;
             }
-            // 80-byte header; the time is the little-endian uint32 at offset 68.
+            // 80-byte header (followed by the merged-mining proof for DOGE);
+            // the time is the little-endian uint32 at offset 68.
             const QByteArray header = QByteArray::fromHex(result.toString().toLatin1());
-            if (header.size() == 80) {
+            if (header.size() >= 80) {
                 const auto *t = reinterpret_cast<const uchar *>(header.constData() + 68);
                 m_blockTimes.insert(height, qint64(t[0]) | qint64(t[1]) << 8 | qint64(t[2]) << 16 | qint64(t[3]) << 24);
             }
@@ -315,7 +316,7 @@ void CoinWallet::refreshFees() {
     for (int target : feeTargets) {
         m_client->call("blockchain.estimatefee", {target}, [this, target](const QJsonValue &result, const QString &error) {
             if (error.isEmpty()) {
-                m_feeRates[target] = electrum::feeRateFromEstimate(result.toDouble());
+                m_feeRates[target] = electrum::feeRateFromEstimate(result.toDouble(), params().minFeeRate);
             }
         });
     }
@@ -449,7 +450,7 @@ std::optional<TxPlan> CoinWallet::planBump(const QString &txid, double feeRate, 
         if (u.utxo.height > 0 && u.utxo.txid != txid && !isFrozen(u.utxo)) extra.append(u.utxo);
     }
     const QByteArray change = m_account.scriptPubKey(HdAccount::Change, m_scanner.firstUnused(HdAccount::Change));
-    return planFeeBump(inputs, outputs, changeOutput, *fee, feeRate, extra, change, error);
+    return planFeeBump(params(), inputs, outputs, changeOutput, *fee, feeRate, extra, change, error);
 }
 
 void CoinWallet::setFrozen(const QStringList &coinKeys, bool frozen) {
@@ -535,11 +536,12 @@ QList<CoinWallet::AddressInfo> CoinWallet::addresses(HdAccount::Chain chain) con
 }
 
 double CoinWallet::feeRate(int targetBlocks) const {
-    // Closest known target at or above the requested one, else 2 sat/vB.
+    // Closest known target at or above the requested one, else twice the
+    // minimum (2 sat/vB).
     for (auto it = m_feeRates.lowerBound(targetBlocks); it != m_feeRates.constEnd(); ++it) {
         return it.value();
     }
-    return m_feeRates.isEmpty() ? 2.0 : m_feeRates.last();
+    return m_feeRates.isEmpty() ? 2.0 * params().minFeeRate : m_feeRates.last();
 }
 
 std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amount, double feeRate, bool sendAll,
@@ -572,7 +574,7 @@ std::optional<TxPlan> CoinWallet::planSend(const QString &address, quint64 amoun
         return std::nullopt;
     }
     const QByteArray change = m_account.scriptPubKey(HdAccount::Change, m_scanner.firstUnused(HdAccount::Change));
-    auto plan = planTransaction(spendable, *destination, amount, feeRate, change, sendAll, error);
+    auto plan = planTransaction(params(), spendable, *destination, amount, feeRate, change, sendAll, error);
     if (!plan || !silent) {
         return plan;
     }

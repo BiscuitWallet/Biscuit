@@ -109,12 +109,13 @@ void SwapTradeDialog::updateView() {
     setRowVisible(ui->label_supportTitle, ui->line_support, !t->supportUrl.isEmpty());
     ui->line_support->setText(t->supportUrl);
 
-    // Biscuit holds XMR, BTC, LTC, ETH, USDT and USDC on Ethereum and on
+    // Biscuit holds XMR, BTC, LTC, DOGE, ETH, USDT and USDC on Ethereum and on
     // Arbitrum, and SOL: the deposit can be sent from here (or the user is
     // told how, if not added).
     const QString f = t->from.ticker;
     const bool fromThisWallet = f == QLatin1String("xmr")
-                                || ((f == QLatin1String("btc") || f == QLatin1String("ltc")) && t->from.network == QLatin1String("Mainnet"))
+                                || ((f == QLatin1String("btc") || f == QLatin1String("ltc") || f == QLatin1String("doge"))
+                                    && t->from.network == QLatin1String("Mainnet"))
                                 || ((f == QLatin1String("eth") || f == QLatin1String("usdt") || f == QLatin1String("usdc"))
                                     && (t->from.network == QLatin1String("ERC20") || t->from.network == QLatin1String("Arbitrum")))
                                 || (f == QLatin1String("sol") && t->from.network == QLatin1String("Mainnet"));

@@ -40,8 +40,7 @@ private:
     CoinPicker *m_filter;
     QStackedWidget *m_pages;
     QTreeWidget *m_all;
-    QTreeWidget *m_btc;
-    QTreeWidget *m_ltc;
+    QHash<QString, QTreeWidget *> m_coinTrees;   // "BTC", "LTC", "DOGE"
     QHash<QString, QTreeWidget *> m_ethTrees;   // "ETH", "USDT", "USDC.ARB"…
     QTreeWidget *m_sol;
 };

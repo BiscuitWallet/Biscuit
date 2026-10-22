@@ -7,7 +7,7 @@
 #include "plugins/Plugin.h"
 #include "coins/CoinTab.h"
 
-// One tab per coin ("Bitcoin", "Litecoin"), sharing the wallet's CoinVault.
+// One tab per coin ("Bitcoin", "Litecoin", "Dogecoin"), sharing the wallet's CoinVault.
 class CoinPlugin : public Plugin {
     Q_OBJECT
 

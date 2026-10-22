@@ -26,7 +26,7 @@ QIcon Icons::icon(const QString& name)
         {"info2", "info"}, {"info2.svg", "info"},
         {"lock", "lock"}, {"lock.svg", "lock"}, {"unlock.svg", "unlock"},
         {"seed", "seed"}, {"seed.png", "seed"},
-        {"bitcoin.png", "bitcoin"}, {"litecoin.png", "litecoin"},
+        {"bitcoin.png", "bitcoin"}, {"litecoin.png", "litecoin"}, {"dogecoin.png", "dogecoin"},
     };
     if (auto it = pixelIcons.constFind(name); it != pixelIcons.constEnd()) {
         icon = PixelIcons::icon(it.value());

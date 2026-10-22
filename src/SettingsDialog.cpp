@@ -200,17 +200,18 @@ void Settings::setupNetworkTab() {
     // Proxy
     connect(ui->proxyWidget, &NetworkProxyWidget::proxySettingsChanged, this, &Settings::onProxySettingsChanged);
 
-    // Biscuit: the user's own Bitcoin / Litecoin (Electrum) servers.
+    // Biscuit: the user's own Bitcoin / Litecoin / Dogecoin (Electrum) servers.
     auto *coinServers = new QWidget(this);
     auto *coinLayout = new QVBoxLayout(coinServers);
     auto *intro = new QLabel("By default Biscuit uses public Electrum servers. Set your own server "
-                             "(Electrs, Fulcrum, Electrum Personal Server… on Umbrel, Start9 or a node of yours) "
+                             "(Electrs, Fulcrum, ElectrumX, Electrum Personal Server… on Umbrel, Start9 or a node of yours) "
                              "and Biscuit connects only to it: no public server sees your addresses.", coinServers);
     intro->setWordWrap(true);
     coinLayout->addWidget(intro);
     auto *form = new QFormLayout;
     for (auto [key, label, example] : {std::tuple{Config::electrumServerBTC, "Bitcoin server:", "e.g. umbrel.local:50002"},
-                                       std::tuple{Config::electrumServerLTC, "Litecoin server:", "e.g. 192.168.1.20:50001"}}) {
+                                       std::tuple{Config::electrumServerLTC, "Litecoin server:", "e.g. 192.168.1.20:50001"},
+                                       std::tuple{Config::electrumServerDOGE, "Dogecoin server:", "e.g. 192.168.1.20:50002"}}) {
         auto *edit = new QLineEdit(conf()->get(key).toString(), coinServers);
         edit->setPlaceholderText(QString("Public servers (%1)").arg(example));
         edit->setClearButtonEnabled(true);
@@ -237,7 +238,7 @@ void Settings::setupNetworkTab() {
     help->setStyleSheet("color: gray;");
     coinLayout->addWidget(help);
     coinLayout->addStretch();
-    ui->tabWidget_network->addTab(coinServers, "Bitcoin && Litecoin");
+    ui->tabWidget_network->addTab(coinServers, "Bitcoin, Litecoin && Dogecoin");
 
     // Biscuit: the user's own Ethereum and Arbitrum nodes, and Blockscout for
     // the history.

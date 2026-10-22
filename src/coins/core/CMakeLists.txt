@@ -1,4 +1,4 @@
-# Biscuit BTC/LTC wallet core: keys, addresses, transactions (libwally-core + Qt Core).
+# Biscuit BTC/LTC/DOGE wallet core: keys, addresses, transactions (libwally-core + Qt Core).
 # No network, no UI: fully unit tested.
 
 find_package(Qt6 REQUIRED COMPONENTS Core)

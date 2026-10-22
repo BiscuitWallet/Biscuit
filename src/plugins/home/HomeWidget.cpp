@@ -53,7 +53,7 @@ namespace {
         if (ticker == "XMR") return PixelIcons::icon("monero");
         if (ticker == "SOL") return PixelIcons::icon("solana");
         if (biscuit::coins::eth::findAsset(ticker)) return biscuit::coins::ethereumAssetIcon(ticker);
-        return icons()->icon(ticker == "BTC" ? "bitcoin.png" : "litecoin.png");
+        return icons()->icon(ticker == "BTC" ? "bitcoin.png" : ticker == "DOGE" ? "dogecoin.png" : "litecoin.png");
     }
 }
 

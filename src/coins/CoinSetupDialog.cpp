@@ -185,6 +185,8 @@ QWidget *CoinSetupDialog::pageRestore() {
             ? QString("The first address of this seed (m/44'/60'/0'/0/0), as in MetaMask and most Ethereum wallets.")
             : m_addTo->solana
             ? QString("The first address of this seed (m/44'/501'/0'/0'), as in Phantom, Solflare and most Solana wallets.")
+            : m_addTo->legacy
+            ? QString("The addresses of this seed on m/44'/3'/0' (D…), as in Cake Wallet, Trezor and most Dogecoin wallets.")
             : QString("Biscuit uses native SegWit addresses (%1, BIP84), like most recent wallets. "
                       "Coins on older address types of this seed are not shown.")
                   .arg(*m_addTo == coins::bitcoin() ? "bc1q…" : "ltc1q…"), page);

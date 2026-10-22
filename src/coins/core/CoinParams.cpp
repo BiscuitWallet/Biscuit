@@ -26,6 +26,31 @@ const CoinParams &solana() {
     return p;
 }
 
+const CoinParams &dogecoin() {
+    // Dogecoin Core 1.14.6+: 0.01 DOGE/kB recommended minimum fee (1,000
+    // koinu/B) and 0.01 DOGE dust limit.
+    static const CoinParams p = [] {
+        CoinParams c{"DOGE", "Dogecoin", {}, 3, 8, 0x1E, {0x16}};
+        c.legacy = true;
+        c.dustLimit = 1000000;
+        c.minFeeRate = 1000.0;
+        c.maxFeeRate = 1000000.0;   // 10 DOGE/kB
+        return c;
+    }();
+    return p;
+}
+
+const QList<const CoinParams *> &electrumCoins() {
+    static const QList<const CoinParams *> list{&bitcoin(), &litecoin(), &dogecoin()};
+    return list;
+}
+
+QString explorerTxUrl(const CoinParams &params, const QString &txid) {
+    if (params == litecoin()) return QString("https://litecoinspace.org/tx/%1").arg(txid);
+    if (params == dogecoin()) return QString("https://blockchair.com/dogecoin/transaction/%1").arg(txid);
+    return QString("https://mempool.space/tx/%1").arg(txid);
+}
+
 const CoinParams &bitcoinTestnet() {
     static const CoinParams p{"tBTC", "Bitcoin testnet", "tb", 1, 8, 0x6F, {0xC4}};
     return p;

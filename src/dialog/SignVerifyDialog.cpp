@@ -35,13 +35,12 @@ SignVerifyDialog::SignVerifyDialog(Wallet *wallet, QWidget *parent)
     // Biscuit: which coin to sign with; it fills in one of its addresses.
     // Verification follows the address, whatever the coin chosen.
     m_coin = new QComboBox(this);
-    m_coin->addItems({"Monero", "Bitcoin", "Litecoin"});
+    m_coin->addItems({"Monero", "Bitcoin", "Litecoin", "Dogecoin"});
     ui->gridLayout->addWidget(new QLabel("Coin:", this), 2, 0);
     ui->gridLayout->addWidget(m_coin, 2, 1, Qt::AlignLeft);
     connect(m_coin, &QComboBox::currentIndexChanged, this, [this](int index) {
         auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-        const biscuit::coins::CoinParams *params = index == 1 ? &biscuit::coins::bitcoin()
-                                                 : index == 2 ? &biscuit::coins::litecoin() : nullptr;
+        const biscuit::coins::CoinParams *params = index >= 1 ? biscuit::coins::electrumCoins().value(index - 1) : nullptr;
         if (!params) {
             ui->address->setText(m_wallet->address(0, 0));
         } else if (vault->isUnlocked() && vault->wallet(*params)) {
@@ -64,7 +63,7 @@ SignVerifyDialog::SignVerifyDialog(Wallet *wallet, QWidget *parent)
 }
 
 const biscuit::coins::CoinParams *SignVerifyDialog::coinOf(const QString &address) const {
-    for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+    for (const auto *params : biscuit::coins::electrumCoins()) {
         if (biscuit::coins::isValidAddress(address.trimmed(), *params)) {
             return params;
         }

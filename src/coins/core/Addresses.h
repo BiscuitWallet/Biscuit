@@ -18,6 +18,11 @@ namespace biscuit::coins {
     QString p2wpkhAddress(const QByteArray &publicKey, const CoinParams &params);
     // Address of a native SegWit scriptPubKey (v0 or Taproot), empty if not one.
     QString segwitAddress(const QByteArray &script, const CoinParams &params);
+    // OP_DUP OP_HASH160 <hash160(pubkey)> OP_EQUALVERIFY OP_CHECKSIG.
+    QByteArray p2pkhScriptPubKey(const QByteArray &publicKey);
+    // Address of any standard scriptPubKey of the coin: native SegWit, P2PKH
+    // or P2SH. Empty if none.
+    QString scriptAddress(const QByteArray &script, const CoinParams &params);
 
     // Destination check for sending: accepts native SegWit (bech32/bech32m of
     // the coin's prefix) and legacy base58 addresses of the coin. Returns the

@@ -50,12 +50,12 @@ private:
 
 class CoinVault;
 
-// What "+" can add: BTC, LTC, ETH, USDT, USDC, the same on Arbitrum, SOL.
+// What "+" can add: BTC, LTC, DOGE, ETH, USDT, USDC, the same on Arbitrum, SOL.
 QStringList addableTickers();
 // Icon of an Ethereum asset ("ETH", "USDT.ARB"…): that of its coin, whatever
 // the network.
 QIcon ethereumAssetIcon(const QString &assetId);
-// Monero, Bitcoin, Litecoin and, where the page handles them, the account
+// Monero, Bitcoin, Litecoin, Dogecoin and, where the page handles them, the account
 // coins: Ethereum and the other assets of its wallets, in eth::allAssets()
 // order (`tokens` false: Ethereum alone, e.g. for addresses, the same for
 // all), then Solana.

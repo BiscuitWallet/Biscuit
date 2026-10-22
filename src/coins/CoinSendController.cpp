@@ -72,8 +72,8 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
         const QString amount = query.queryItemValue("amount");
         return CoinDestination{&solana(), url.path(), sol::parseAmount(amount) ? amount : QString()};
     }
-    for (const CoinParams *params : {&bitcoin(), &litecoin()}) {
-        // BIP21 URI: bitcoin:<address>?amount=<decimal>
+    for (const CoinParams *params : electrumCoins()) {
+        // BIP21 URI: bitcoin:<address>?amount=<decimal> (litecoin:, dogecoin:)
         const QString scheme = params->name.toLower() + ':';
         if (trimmed.startsWith(scheme, Qt::CaseInsensitive)) {
             const QUrl url(trimmed);
@@ -96,7 +96,7 @@ std::optional<CoinDestination> detectCoinDestination(const QString &text) {
 }
 
 QList<FeeLevel> feeLevels(const CoinParams &params) {
-    const double blockMinutes = params == litecoin() ? 2.5 : 10.0;
+    const double blockMinutes = params == litecoin() ? 2.5 : params == dogecoin() ? 1.0 : 10.0;
     auto duration = [blockMinutes](int blocks) {
         const int minutes = int(blocks * blockMinutes + 0.5);
         return minutes < 60 ? QString("~%1 min").arg(minutes)
@@ -107,6 +107,13 @@ QList<FeeLevel> feeLevels(const CoinParams &params) {
         {QString("Normal (%1)").arg(duration(6)), 6},
         {QString("Slow (%1)").arg(duration(24)), 24},
     };
+}
+
+QString feeRateText(const CoinParams &params, double rate) {
+    if (params.legacy) {
+        return QString("%1 %2/kB").arg(rate * 1000.0 / 1e8, 0, 'f', 2).arg(params.ticker);
+    }
+    return QString("%1 sat/vB").arg(rate, 0, 'f', 1);
 }
 
 CoinSendController::CoinSendController(Wallet *wallet, QObject *parent)
@@ -197,10 +204,9 @@ void CoinSendController::send(QWidget *parent, const CoinParams &params, const Q
     if (!dustLine.isEmpty()) {
         box.setIcon(QMessageBox::Warning);
     }
-    box.setInformativeText(dustLine + coinsLine + QString("%1To: %2\nNetwork fee: %3 (%4 sat/vB)\nTotal: %5")
-                           .arg(from, to, format(plan->fee))
-                           .arg(rate, 0, 'f', 1)
-                           .arg(format(plan->amount + plan->fee)));
+    box.setInformativeText(dustLine + coinsLine + QString("%1To: %2\nNetwork fee: %3 (%4)\nTotal: %5")
+                           .arg(from, to, format(plan->fee), feeRateText(params, rate),
+                                format(plan->amount + plan->fee)));
     box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     box.setDefaultButton(QMessageBox::Cancel);
     if (box.exec() != QMessageBox::Yes) {
@@ -477,7 +483,7 @@ void CoinSendController::consolidate(QWidget *parent, const CoinParams &params, 
         if (!chosen) {
             continue;
         }
-        if (isDust(c.utxo.value, rate)) {   // would cost more than it brings
+        if (isDust(params, c.utxo.value, rate)) {   // would cost more than it brings
             ++dust;
             dustValue += c.utxo.value;
             continue;
@@ -504,9 +510,9 @@ void CoinSendController::consolidate(QWidget *parent, const CoinParams &params, 
     box.setText(QString("Combine %1 coins into one?").arg(plan->inputs.size()));
     box.setTextInteractionFlags(Qt::TextSelectableByMouse);
     QString details = QString("They go to a new address of your %1 wallet \"%2\". You keep %3; the network fee is %4 "
-                              "(%5 sat/vB, the slow speed: a few hours).")
-                      .arg(params.ticker, m_vault->selectedName(params), format(plan->amount), format(plan->fee))
-                      .arg(rate, 0, 'f', 1);
+                              "(%5, the slow speed).")
+                      .arg(params.ticker, m_vault->selectedName(params), format(plan->amount), format(plan->fee),
+                           feeRateText(params, rate));
     if (dust > 0) {
         details += QString("\n\n%1 coin(s) worth less than their fee (%2 in all) are left out.").arg(dust).arg(format(dustValue));
     }

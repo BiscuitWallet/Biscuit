@@ -170,8 +170,7 @@ SwapWidget::SwapWidget(Wallet *wallet, QWidget *parent)
         auto *row = new QWidget(this);
         auto *layout = new QHBoxLayout(row);
         layout->setContentsMargins(0, 0, 0, 0);
-        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum(),
-                                   &biscuit::coins::solana()}) {
+        for (const auto *params : biscuit::coins::walletCoins()) {
             auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, row);
             bar->setTitle({});
             bar->setAddVisible(false);   // added from Receive
@@ -732,11 +731,11 @@ void SwapWidget::updateWalletRows() {
     const Asset from = assetOf(ui->combo_from);
     const Asset to = assetOf(ui->combo_to);
     const bool receiveInWallet = ui->combo_receiveMode->currentIndex() == ModeNewWalletAddress;
-    // Bars: Bitcoin, Litecoin, Ethereum (showing the swapped ETH, USDT or USDC).
+    // Bars: Bitcoin, Litecoin, Dogecoin, Ethereum (showing the swapped ETH,
+    // USDT or USDC), Solana.
     auto activate = [](const QList<biscuit::coins::CoinWalletBar *> &bars, const QString &ticker) {
         const auto *params = biscuit::coins::coinOfTicker(ticker);
-        const QList<const biscuit::coins::CoinParams *> order{&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(),
-                                                              &biscuit::coins::ethereum(), &biscuit::coins::solana()};
+        const auto &order = biscuit::coins::walletCoins();
         for (int i = 0; i < bars.size(); ++i) {
             bars.at(i)->setActive(params == order.value(i));
             if (params && params->ethereum) bars.at(i)->setAsset(ticker);
@@ -812,6 +811,7 @@ QString SwapWidget::walletTicker(const Asset &asset) {
     if (asset.network == QLatin1String("Mainnet")) {
         if (asset.ticker == QLatin1String("btc")) return "BTC";
         if (asset.ticker == QLatin1String("ltc")) return "LTC";
+        if (asset.ticker == QLatin1String("doge")) return "DOGE";
         if (asset.ticker == QLatin1String("sol")) return "SOL";
     } else if (asset.network == QLatin1String("ERC20")) {
         if (asset.ticker == QLatin1String("eth")) return "ETH";

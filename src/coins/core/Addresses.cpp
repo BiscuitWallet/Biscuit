@@ -53,6 +53,50 @@ QString segwitAddress(const QByteArray &script, const CoinParams &params) {
     return result;
 }
 
+QByteArray p2pkhScriptPubKey(const QByteArray &publicKey) {
+    if (publicKey.size() != EC_PUBLIC_KEY_LEN) {
+        return {};
+    }
+    ensureWallyInit();
+    unsigned char script[WALLY_SCRIPTPUBKEY_P2PKH_LEN];
+    size_t written = 0;
+    if (wally_scriptpubkey_p2pkh_from_bytes(bytes(publicKey), publicKey.size(), WALLY_SCRIPT_HASH160,
+                                            script, sizeof(script), &written) != WALLY_OK) {
+        return {};
+    }
+    return QByteArray(reinterpret_cast<const char *>(script), static_cast<qsizetype>(written));
+}
+
+QString scriptAddress(const QByteArray &script, const CoinParams &params) {
+    if (!params.bech32Hrp.isEmpty()) {
+        const QString segwit = segwitAddress(script, params);
+        if (!segwit.isEmpty()) {
+            return segwit;
+        }
+    }
+    ensureWallyInit();
+    size_t type = 0;
+    if (wally_scriptpubkey_get_type(bytes(script), script.size(), &type) != WALLY_OK) {
+        return {};
+    }
+    // P2PKH: 76 a9 14 <20> 88 ac; P2SH: a9 14 <20> 87.
+    QByteArray payload;
+    if (type == WALLY_SCRIPT_TYPE_P2PKH) {
+        payload = QByteArray(1, char(params.p2pkhVersion)) + script.mid(3, HASH160_LEN);
+    } else if (type == WALLY_SCRIPT_TYPE_P2SH && !params.p2shVersions.isEmpty()) {
+        payload = QByteArray(1, char(params.p2shVersions.first())) + script.mid(2, HASH160_LEN);
+    } else {
+        return {};
+    }
+    char *address = nullptr;
+    if (wally_base58_from_bytes(bytes(payload), payload.size(), BASE58_FLAG_CHECKSUM, &address) != WALLY_OK) {
+        return {};
+    }
+    const QString result = QString::fromLatin1(address);
+    wally_free_string(address);
+    return result;
+}
+
 std::optional<QByteArray> addressToScriptPubKey(const QString &address, const CoinParams &params) {
     ensureWallyInit();
     const QByteArray addr = address.trimmed().toLatin1();
@@ -62,7 +106,7 @@ std::optional<QByteArray> addressToScriptPubKey(const QString &address, const Co
 
     // Native SegWit: "<hrp>1…", bech32 (v0) or bech32m (v1+) is checked by libwally.
     const QByteArray hrp = params.bech32Hrp.toLatin1();
-    if (addr.toLower().startsWith(hrp + '1')) {
+    if (!hrp.isEmpty() && addr.toLower().startsWith(hrp + '1')) {
         unsigned char script[WALLY_WITNESSSCRIPT_MAX_LEN];
         size_t written = 0;
         if (wally_addr_segwit_to_bytes(addr.constData(), hrp.constData(), 0, script, sizeof(script), &written) != WALLY_OK) {

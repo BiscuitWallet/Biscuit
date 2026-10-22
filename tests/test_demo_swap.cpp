@@ -58,7 +58,7 @@ private slots:
         QVERIFY(demo::quotes(same).isEmpty());
 
         QuoteRequest unknown = request();
-        unknown.to = {"doge", "Mainnet"};
+        unknown.to = {"xrp", "Mainnet"};
         QVERIFY(demo::quotes(unknown).isEmpty());
 
         QVERIFY(demo::quotes(request("0")).isEmpty());

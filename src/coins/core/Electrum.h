@@ -17,8 +17,9 @@
 #include "HdAccount.h"
 #include "Transactions.h"
 
-// Pure (network-free) part of the Electrum protocol client used by the BTC/LTC
-// wallets: JSON-RPC framing, address discovery, transaction analysis.
+// Pure (network-free) part of the Electrum protocol client used by the
+// BTC/LTC/DOGE wallets: JSON-RPC framing, address discovery, transaction
+// analysis.
 // Protocol: https://electrum-protocol.readthedocs.io
 namespace biscuit::coins::electrum {
 

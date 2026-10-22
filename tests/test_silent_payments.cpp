@@ -216,7 +216,7 @@ private slots:
 
         // As CoinWallet::planSend: plan with a placeholder, derive, replace.
         const QByteArray change = *addressToScriptPubKey("bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el", bitcoin());
-        auto plan = planTransaction(coins, sp::taprootScript(QByteArray(32, '\0')), 100000, 3, change, false);
+        auto plan = planTransaction(bitcoin(), coins, sp::taprootScript(QByteArray(32, '\0')), 100000, 3, change, false);
         QVERIFY(plan.has_value());
         QList<sp::Input> inputs;
         for (const Utxo &u : plan->inputs) {

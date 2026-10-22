@@ -24,7 +24,8 @@ std::optional<HdAccount> HdAccount::fromSeed(const QByteArray &seed, const CoinP
         return std::nullopt;
     }
 
-    const uint32_t path[] = {hardened(84), hardened(params.bip44CoinType), hardened(account)};
+    const uint32_t purpose = params.legacy ? 44 : 84;
+    const uint32_t path[] = {hardened(purpose), hardened(params.bip44CoinType), hardened(account)};
     auto key = std::make_unique<ext_key>();
     const int ret = bip32_key_from_parent_path(&master, path, 3, BIP32_FLAG_KEY_PRIVATE, key.get());
     wally_bzero(&master, sizeof(master));
@@ -67,11 +68,12 @@ QByteArray HdAccount::publicKey(Chain chain, quint32 index) const {
 }
 
 QByteArray HdAccount::scriptPubKey(Chain chain, quint32 index) const {
-    return p2wpkhScriptPubKey(publicKey(chain, index));
+    const QByteArray pub = publicKey(chain, index);
+    return m_params->legacy ? p2pkhScriptPubKey(pub) : p2wpkhScriptPubKey(pub);
 }
 
 QString HdAccount::address(Chain chain, quint32 index) const {
-    return p2wpkhAddress(publicKey(chain, index), *m_params);
+    return scriptAddress(scriptPubKey(chain, index), *m_params);
 }
 
 QByteArray HdAccount::privateKey(Chain chain, quint32 index) const {

@@ -38,8 +38,9 @@ CoinReceiveSwitcher::CoinReceiveSwitcher(Wallet *wallet, QWidget *moneroPage, QW
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(moneroPage);
-    m_pages->addWidget(coinPage(bitcoin()));
-    m_pages->addWidget(coinPage(litecoin()));
+    for (const CoinParams *params : electrumCoins()) {
+        m_pages->addWidget(coinPage(*params));
+    }
     for (const eth::Asset &asset : eth::allAssets()) {
         m_pages->addWidget(accountPage(ethereum(), asset.id));   // same order as the tabs
     }

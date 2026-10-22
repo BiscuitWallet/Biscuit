@@ -112,7 +112,7 @@ void BalanceDialog::updateBalance() {
 
     QStringList notes;
     if (m_vault && m_vault->isUnlocked()) {
-        for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin()}) {
+        for (const auto *params : biscuit::coins::electrumCoins()) {
             const auto entries = m_vault->wallets(*params);
             for (const auto &entry : entries) {
                 const auto balance = entry.wallet->balance();

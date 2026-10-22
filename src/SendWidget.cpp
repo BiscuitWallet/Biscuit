@@ -83,7 +83,7 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     // Biscuit: one Send tab for every coin. A Bitcoin or Litecoin address is
     // detected when pasted, and the amount, fee and send path adapt to it.
     ui->label_PayTo->setHelpText("Recipient of the funds",
-                                 "You may enter a Monero, Bitcoin or Litecoin address, a payment URI, or an alias. "
+                                 "You may enter an address of any coin of this wallet, a payment URI, or an alias. "
                                  "Biscuit detects the coin from the address.",
                                  "send_transaction");
     m_coinSend = new biscuit::coins::CoinSendController(m_wallet, this);
@@ -95,8 +95,7 @@ SendWidget::SendWidget(Wallet *wallet, QWidget *parent)
     biscuit::coins::addWalletCoins(m_coinPicker, true);
     ui->formLayout->insertRow(0, m_coinPicker);
     auto *vault = biscuit::coins::CoinVault::forWallet(m_wallet);
-    for (const auto *params : {&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(), &biscuit::coins::ethereum(),
-                               &biscuit::coins::solana()}) {
+    for (const auto *params : biscuit::coins::walletCoins()) {
         auto *bar = new biscuit::coins::CoinWalletBar(vault, *params, this);
         ui->formLayout->insertRow(1 + m_walletBars.size(), bar);
         m_walletBars << bar;
@@ -209,8 +208,7 @@ void SendWidget::updateCoinMode() {
     const bool solana = coinMode && m_coin->solana;
     m_asset = ethereum ? ticker : QString();
 
-    const QList<const biscuit::coins::CoinParams *> barCoins{&biscuit::coins::bitcoin(), &biscuit::coins::litecoin(),
-                                                             &biscuit::coins::ethereum(), &biscuit::coins::solana()};
+    const auto &barCoins = biscuit::coins::walletCoins();
     for (int i = 0; i < m_walletBars.size(); ++i) {
         // A bar also hides itself while the coin is locked or not added.
         auto *bar = static_cast<biscuit::coins::CoinWalletBar *>(m_walletBars.at(i));
@@ -220,7 +218,8 @@ void SendWidget::updateCoinMode() {
     ui->lineAddress->setPlaceholderText(!m_coin   ? QString("Monero address (4… or 8…)")
                                         : ethereum ? QString("Ethereum address (0x…)")
                                         : solana ? QString("Solana address")
-                                        : QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1" : "ltc1"));
+                                        : QString("%1 address (%2…)").arg(m_coin->name, *m_coin == biscuit::coins::bitcoin() ? "bc1"
+                                                                                        : m_coin->legacy ? "D" : "ltc1"));
     ui->formLayout->setRowVisible(m_xmrBalanceRow, !coinMode);
 
     ui->formLayout->setRowVisible(m_coinHint, coinMode);
@@ -335,7 +334,7 @@ void SendWidget::updateCoinFeeLabel() {
         return;
     }
     const auto rate = m_coinSend->feeRate(*m_coin, m_coinFee->currentData().toInt());
-    QString text = rate ? QString("%1 sat/vB").arg(*rate, 0, 'f', 1) : QString();
+    QString text = rate ? biscuit::coins::feeRateText(*m_coin, *rate) : QString();
     // When the next blocks have room, every speed costs the same (common on
     // Litecoin): say so, it is not a fault.
     const auto fastest = m_coinSend->feeRate(*m_coin, 2);
@@ -742,9 +741,9 @@ void SendWidget::fillFromPaymentLink(const QString &data) {
     const QString text = data.trimmed();
     const QString scheme = text.section(':', 0, 0).toLower();
     const qsizetype q = text.indexOf('?');
-    if (scheme == "bitcoin" || scheme == "litecoin") {
-        // Kept as a link, so that Send also reads its amount; the address in
-        // lower case (QR codes are often in capitals).
+    if (scheme == "bitcoin" || scheme == "litecoin" || scheme == "dogecoin") {
+        // Kept as a link, so that Send also reads its amount; a Bitcoin or
+        // Litecoin address in lower case (QR codes are often in capitals).
         ui->lineAddress->setText(scheme + ":" + Utils::addressFromPaymentText(text) + (q < 0 ? QString() : text.mid(q)));
         return;
     }

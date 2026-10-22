@@ -5,7 +5,7 @@
 // Usage: electrumprobe host:port [host:port ...]
 // Prints the server version, the network (from the genesis block hash) and
 // the fee estimate.
-//        electrumprobe address btc|ltc <address> host:port
+//        electrumprobe address btc|ltc|doge <address> host:port
 // Prints the balance and history the server has for one address.
 
 #include <QCoreApplication>
@@ -34,13 +34,14 @@ namespace {
         const QString hash = QString::fromLatin1(h.toHex());
         if (hash == "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f") return "Bitcoin mainnet";
         if (hash == "12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2") return "Litecoin mainnet";
+        if (hash == "1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691") return "Dogecoin mainnet";
         return "UNKNOWN genesis " + hash;
     }
 }
 
 int syncMode(QCoreApplication &app, const QString &coin, const QString &mnemonic) {
     // Read-only sync of a wallet, to test CoinWallet against real servers.
-    const auto &params = coin == "ltc" ? litecoin() : bitcoin();
+    const auto &params = coin == "ltc" ? litecoin() : coin == "doge" ? dogecoin() : bitcoin();
     auto account = HdAccount::fromSeed(*bip39::mnemonicToSeed(mnemonic), params);
     auto *wallet = new CoinWallet(std::move(*account), {}, &app);
     QObject::connect(wallet, &CoinWallet::statusChanged, [wallet, &app](CoinWallet::Status st) {
@@ -53,7 +54,8 @@ int syncMode(QCoreApplication &app, const QString &coin, const QString &mnemonic
             int shown = 0;
             for (const auto &e : wallet->history()) {
                 if (shown++ == 3) break;
-                std::printf("  %s height %d delta %lld\n", qPrintable(e.txid), e.height, (long long)e.delta);
+                std::printf("  %s height %d delta %lld time %s\n", qPrintable(e.txid), e.height, (long long)e.delta,
+                            qPrintable(wallet->transactionTime(e.txid).toString(Qt::ISODate)));
             }
             std::printf("fee rates: %.1f / %.1f sat/vB\n", wallet->feeRate(2), wallet->feeRate(24));
             std::fflush(stdout);
@@ -66,7 +68,7 @@ int syncMode(QCoreApplication &app, const QString &coin, const QString &mnemonic
 }
 
 int addressMode(QCoreApplication &app, const QString &coin, const QString &address, const QString &hostPort) {
-    const auto &params = coin == "ltc" ? litecoin() : bitcoin();
+    const auto &params = coin == "ltc" ? litecoin() : coin == "doge" ? dogecoin() : bitcoin();
     const auto script = addressToScriptPubKey(address, params);
     if (!script) {
         std::printf("not a valid %s address\n", qPrintable(params.name));

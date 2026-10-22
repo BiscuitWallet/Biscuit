@@ -43,16 +43,16 @@ CoinContactsSwitcher::CoinContactsSwitcher(Wallet *wallet, QWidget *moneroPage, 
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(moneroPage);
-    m_btc = new QTreeWidget(this);
-    m_ltc = new QTreeWidget(this);
-    m_btcStatus = new QLabel(this);
-    m_ltcStatus = new QLabel(this);
     m_eth = new QTreeWidget(this);
     m_ethStatus = new QLabel(this);
     m_sol = new QTreeWidget(this);
     m_solStatus = new QLabel(this);
-    m_pages->addWidget(makePage(bitcoin(), m_btc, m_btcStatus));
-    m_pages->addWidget(makePage(litecoin(), m_ltc, m_ltcStatus));
+    for (const CoinParams *params : electrumCoins()) {
+        auto *tree = new QTreeWidget(this);
+        auto *status = new QLabel(this);
+        m_coinPages.append({tree, status, params});
+        m_pages->addWidget(makePage(*params, tree, status));
+    }
     m_pages->addWidget(makePage(ethereum(), m_eth, m_ethStatus));
     m_pages->addWidget(makePage(solana(), m_sol, m_solStatus));
     layout->addWidget(m_pages);
@@ -115,10 +115,9 @@ QWidget *CoinContactsSwitcher::makePage(const CoinParams &params, QTreeWidget *t
 }
 
 void CoinContactsSwitcher::refresh() {
-    for (auto [tree, status, params] : {std::tuple{m_btc, m_btcStatus, &bitcoin()},
-                                        std::tuple{m_ltc, m_ltcStatus, &litecoin()},
-                                        std::tuple{m_eth, m_ethStatus, &ethereum()},
-                                        std::tuple{m_sol, m_solStatus, &solana()}}) {
+    QList<std::tuple<QTreeWidget *, QLabel *, const CoinParams *>> pages = m_coinPages;
+    pages << std::tuple{m_eth, m_ethStatus, &ethereum()} << std::tuple{m_sol, m_solStatus, &solana()};
+    for (auto [tree, status, params] : pages) {
         tree->setSortingEnabled(false);
         tree->clear();
         const bool unlocked = m_vault->isUnlocked();
@@ -159,7 +158,8 @@ void CoinContactsSwitcher::editContact(const CoinParams &params, int index) {
     address->setMinimumWidth(420);
     address->setPlaceholderText(params.ethereum     ? "0x… (also for USDT and USDC, on Ethereum and Arbitrum)"
                                 : params.solana       ? "Solana address"
-                                : params == bitcoin() ? "bc1…, 1…, 3… or a silent payment address (sp1…)" : "ltc1…, L…, M…");
+                                : params == bitcoin() ? "bc1…, 1…, 3… or a silent payment address (sp1…)"
+                                : params == dogecoin() ? "D…, A… or 9…" : "ltc1…, L…, M…");
     form->addRow("Name:", name);
     form->addRow("Address:", address);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dialog);

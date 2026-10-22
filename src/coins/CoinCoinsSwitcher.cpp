@@ -26,14 +26,8 @@ namespace biscuit::coins {
 
 namespace {
     enum Column { ColAmount = 0, ColAddress, ColStatus, ColCoin };
-    enum Page { PageMonero = 0, PageBitcoin, PageLitecoin };
     constexpr int KeyRole = Qt::UserRole;
     constexpr int SortRole = Qt::UserRole + 1;
-
-    QString explorerUrl(const CoinParams &params, const QString &txid) {
-        return params == bitcoin() ? QString("https://mempool.space/tx/%1").arg(txid)
-                                   : QString("https://litecoinspace.org/tx/%1").arg(txid);
-    }
 
     // Amounts sort by value, not as text.
     class CoinItem : public QTreeWidgetItem {
@@ -63,12 +57,12 @@ CoinCoinsSwitcher::CoinCoinsSwitcher(Wallet *wallet, QWidget *moneroPage, QWidge
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(moneroPage);
-    m_btc = makeTree(bitcoin());
-    m_ltc = makeTree(litecoin());
-    m_btcSummary = new QLabel(this);
-    m_ltcSummary = new QLabel(this);
-    for (auto [tree, summary, params] : {std::tuple{m_btc, m_btcSummary, &bitcoin()},
-                                         std::tuple{m_ltc, m_ltcSummary, &litecoin()}}) {
+    // Bitcoin, Litecoin, Dogecoin: one page each, in the picker's order.
+    for (const CoinParams *params : electrumCoins()) {
+        auto *tree = makeTree(*params);
+        auto *summary = new QLabel(this);
+        m_trees.insert(params->ticker, tree);
+        m_summaries.insert(params->ticker, summary);
         auto *page = new QWidget(m_pages);
         auto *pageLayout = new QVBoxLayout(page);
         pageLayout->setContentsMargins(0, 0, 0, 0);
@@ -128,7 +122,7 @@ QTreeWidget *CoinCoinsSwitcher::makeTree(const CoinParams &params) {
         QMenu menu(this);
         menu.addAction("Send these coins…" + count, [this, keys, p] {
             m_vault->setCoinSelection(*p, keys);
-            emit sendCoins(*p == bitcoin() ? PageBitcoin : PageLitecoin);
+            emit sendCoins(m_picker->indexOf(p->ticker));
         });
         if (keys.size() >= 2) {
             menu.addAction("Consolidate these coins…" + count, [this, keys, p] {
@@ -141,7 +135,7 @@ QTreeWidget *CoinCoinsSwitcher::makeTree(const CoinParams &params) {
         menu.addSeparator();
         menu.addAction("Copy address", [item] { Utils::copyToClipboard(item->text(ColAddress)); });
         menu.addAction("Copy coin (txid:output)", [key] { Utils::copyToClipboard(key); });
-        menu.addAction("View on block explorer", [this, p, txid] { Utils::externalLinkWarning(this, explorerUrl(*p, txid)); });
+        menu.addAction("View on block explorer", [this, p, txid] { Utils::externalLinkWarning(this, explorerTxUrl(*p, txid)); });
         menu.exec(tree->viewport()->mapToGlobal(pos));
     });
     return tree;
@@ -156,8 +150,9 @@ QStringList CoinCoinsSwitcher::selectedKeys(QTreeWidget *tree) const {
 }
 
 void CoinCoinsSwitcher::refresh() {
-    fillTree(m_btc, m_btcSummary, bitcoin());
-    fillTree(m_ltc, m_ltcSummary, litecoin());
+    for (const CoinParams *params : electrumCoins()) {
+        fillTree(m_trees.value(params->ticker), m_summaries.value(params->ticker), *params);
+    }
 }
 
 void CoinCoinsSwitcher::fillTree(QTreeWidget *tree, QLabel *summary, const CoinParams &params) {
@@ -188,17 +183,17 @@ void CoinCoinsSwitcher::fillTree(QTreeWidget *tree, QLabel *summary, const CoinP
         item->setText(ColAmount, format(u.value));
         item->setData(ColAmount, SortRole, QVariant::fromValue<qulonglong>(u.value));
         item->setData(ColAmount, KeyRole, key);
-        item->setText(ColAddress, segwitAddress(c.scriptPubKey, params));
+        item->setText(ColAddress, scriptAddress(c.scriptPubKey, params));
         QString status = u.height <= 0 ? QString("Unconfirmed")
                        : tip > 0 ? QString("%1 confirmations").arg(tip - u.height + 1) : QString("Confirmed");
         if (frozen) status = "Frozen";
         if (chosen.contains(key)) status += ", selected for sending";
-        const bool dust = normalRate > 0 && isDust(u.value, normalRate);
+        const bool dust = normalRate > 0 && isDust(params, u.value, normalRate);
         if (dust) {
             status += ", dust";
-            item->setToolTip(ColStatus, QString("Worth less than the fee to spend it right now (%1 at %2 sat/vB). "
+            item->setToolTip(ColStatus, QString("Worth less than the fee to spend it right now (%1 at %2). "
                                                 "It can wait for lower fees, or stay where it is.")
-                                        .arg(format(inputCost(normalRate))).arg(normalRate, 0, 'f', 1));
+                                        .arg(format(inputCost(params, normalRate)), feeRateText(params, normalRate)));
             ++dustCount;
             dustTotal += u.value;
         }
