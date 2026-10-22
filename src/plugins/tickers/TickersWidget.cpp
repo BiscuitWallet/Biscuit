@@ -76,7 +76,7 @@ void TickersWidget::setup() {
 }
 
 // Biscuit: no BTC ticker (nor any ratio with BTC) when Bitcoin is not in this
-// wallet; the same for Litecoin, Ethereum, USDT and USDC.
+// wallet; the same for the other coins and tokens.
 // While the wallet's coins are locked, which ones it holds is not known: all shown.
 void TickersWidget::updateVisibility() {
     if (!m_wallet) {
