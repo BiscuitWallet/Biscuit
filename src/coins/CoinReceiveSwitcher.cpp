@@ -176,16 +176,29 @@ QWidget *CoinReceiveSwitcher::accountPage(const CoinParams &params, const QStrin
     addressRow->addWidget(w.address);
     addressRow->addWidget(copy);
     form->addRow("Address", addressRow);
-    // Arbitrum only: the network exchanges ask for when withdrawing.
-    auto *hint = new QLabel(params.solana
-        ? QString("Receive SOL on the Solana network. The first payment to a new address must be at least %1 SOL "
-                  "(Solana's minimum for an address that is not empty).").arg(sol::formatAmount(sol::rentExemptMinimum))
-        : asset == "ETH"
-        ? QString("Receive ETH on the Arbitrum One network: when withdrawing from an exchange, choose Arbitrum. "
-                  "The same address also receives USDT and USDC on Arbitrum.")
-        : QString("Receive %1 on the Arbitrum One network only: when withdrawing from an exchange, choose Arbitrum. "
-                  "%1 sent on another network, such as Tron or BNB Chain, does not arrive here. Sending it later "
-                  "costs a fraction of a cent in ETH, paid from this same address.").arg(asset), page);
+    const eth::Asset *info = eth::findAsset(asset);
+    const bool arbitrum = info && info->network == &eth::arbitrumOne();
+    const QString symbol = info ? info->symbol : asset;
+    QString hintText;
+    if (params.solana) {
+        hintText = QString("Receive SOL on the Solana network. The first payment to a new address must be at least %1 SOL "
+                           "(Solana's minimum for an address that is not empty).").arg(sol::formatAmount(sol::rentExemptMinimum));
+    } else if (asset == "ETH") {
+        hintText = "Receive ETH on the Ethereum network. The same address also receives USDT and USDC (ERC-20).";
+    } else if (!arbitrum) {
+        hintText = QString("Receive %1 on the Ethereum network only (ERC-20). %1 sent on another network, such as Tron "
+                           "or BNB Chain, is lost. Sending it later costs a small network fee in ETH, paid from this "
+                           "same address.").arg(symbol);
+    } else if (symbol == "ETH") {
+        hintText = "Receive ETH on the Arbitrum One network: when withdrawing from an exchange, choose that network. "
+                   "It pays the network fees of USDT and USDC on Arbitrum. ETH sent on Ethereum shows in your "
+                   "Ethereum balance instead.";
+    } else {
+        hintText = QString("Receive %1 on the Arbitrum One network only: when withdrawing from an exchange, choose that "
+                           "network. %1 sent on Tron is lost. Sending it later costs a fraction of a cent in ETH on "
+                           "Arbitrum, paid from this same address.").arg(symbol);
+    }
+    auto *hint = new QLabel(hintText, page);
     hint->setWordWrap(true);
     hint->setStyleSheet("color: gray;");
     hint->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);

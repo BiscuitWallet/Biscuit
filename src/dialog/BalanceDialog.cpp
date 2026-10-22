@@ -127,22 +127,19 @@ void BalanceDialog::updateBalance() {
         // Ethereum: ETH, then each token there is some of (no unconfirmed
         // amount: a payment counts once it is in a block).
         const auto ethEntries = m_vault->wallets(biscuit::coins::ethereum());
-        // What is left on Ethereum itself (only watched) shows too, by name.
-        QList<biscuit::coins::eth::Asset> ethAssets = biscuit::coins::eth::allAssets();
-        ethAssets << biscuit::coins::eth::mainnetAssets();
         for (const auto &entry : ethEntries) {
-            for (const auto &info : ethAssets) {
-                const QString &asset = info.symbol;
+            for (const auto &info : biscuit::coins::eth::allAssets()) {
+                const QString &asset = info.symbol;   // "USDT.ARB": USDT, from the wallet on Arbitrum
                 const auto amount = entry.on(*info.network)->balance(asset);
-                // ETH, and each token added to this wallet (at zero too); a
-                // token not added still shows once some arrived.
+                // ETH, and each asset added to this wallet (at zero too); one
+                // not added still shows once some arrived.
                 const bool added = m_vault->assetState(info.id) == biscuit::coins::CoinVault::CoinState::Ready;
                 if (!added && amount == 0) {
                     continue;
                 }
                 const int decimals = info.decimals;
                 const QString text = QString("%1 %2").arg(biscuit::coins::eth::formatAmount(amount, decimals), asset);
-                QString name = info.id == "ETH" ? QString("Ethereum") : biscuit::coins::eth::assetName(info.id);
+                QString name = info.id == "ETH" ? QString("Ethereum") : QString("%1 (%2)").arg(asset, info.network->name);
                 if (ethEntries.size() > 1) name += QString(" · %1").arg(entry.name);
                 ++row;
                 cell(row, ColCoin, name);

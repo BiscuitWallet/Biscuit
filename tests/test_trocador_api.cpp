@@ -268,18 +268,19 @@ private slots:
         const auto parsed = trocador::parseCoins(coins, nullptr);
         QVERIFY(parsed.has_value());
         const QList<AssetInfo> offered = walletAssets(*parsed);
-        // ETH and USDT on Arbitrum are offered (Biscuit holds them), never
-        // USDT on Ethereum, LTC on BSC, Lightning BTC, nor the bridged USDC.e
-        // or other tokens on Arbitrum.
-        QCOMPARE(offered.size(), 5);
+        // USDT on Ethereum and ETH and USDT on Arbitrum are offered (Biscuit
+        // holds them), never LTC on BSC, Lightning BTC, nor the bridged
+        // USDC.e or other tokens on Arbitrum.
+        QCOMPARE(offered.size(), 6);
         QCOMPARE(offered.at(0).asset, Asset({"xmr", "Mainnet"}));
         QCOMPARE(offered.at(1).asset, Asset({"btc", "Mainnet"}));
         QCOMPARE(offered.at(2).asset, Asset({"ltc", "Mainnet"}));
-        QCOMPARE(offered.at(3).asset, Asset({"eth", "Arbitrum"}));
-        QCOMPARE(offered.at(3).asset.displayName(), QString("ETH"));
-        QCOMPARE(offered.at(4).asset, Asset({"usdt", "Arbitrum"}));
-        QCOMPARE(offered.at(4).asset.displayName(), QString("USDT"));
-        QCOMPARE(Asset({"usdt", "ERC20"}).displayName(), QString("USDT (ERC20)"));   // an older trade
+        QCOMPARE(offered.at(3).asset, Asset({"usdt", "ERC20"}));
+        QCOMPARE(offered.at(3).asset.displayName(), QString("USDT (ERC20)"));
+        QCOMPARE(offered.at(4).asset, Asset({"eth", "Arbitrum"}));
+        QCOMPARE(offered.at(4).asset.displayName(), QString("ETH (Arbitrum)"));
+        QCOMPARE(offered.at(5).asset, Asset({"usdt", "Arbitrum"}));
+        QCOMPARE(offered.at(5).asset.displayName(), QString("USDT (Arbitrum)"));
         QCOMPARE(Asset({"eth", "ERC20"}).displayName(), QString("ETH"));
     }
 

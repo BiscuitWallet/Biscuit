@@ -13,7 +13,6 @@
 
 #include "Amount.h"
 #include "CoinParams.h"
-#include "CoinSendController.h"
 #include "CoinSetupDialog.h"
 #include "CoinVault.h"
 #include "CoinWallet.h"
@@ -42,17 +41,27 @@ QString CoinWalletBar::format(quint64 amount) const {
 }
 
 namespace {
-    QString ethereumText(const EthWallet *eth, const QString &asset) {
-        return QString("%1 %2").arg(eth::formatAmount(eth->balance(asset), eth->decimals(asset)), asset);
+    // `wallet`: the one on the asset's network ("USDT.ARB": Arbitrum).
+    QString ethereumText(const EthWallet *wallet, const QString &assetId) {
+        const eth::Asset *asset = eth::findAsset(assetId);
+        if (!wallet || !asset) {
+            return {};
+        }
+        return QString("%1 %2").arg(eth::formatAmount(wallet->balance(asset->symbol), asset->decimals), eth::assetName(assetId));
     }
 
     QString solanaText(const SolWallet *sol) {
         return QString("%1 SOL").arg(sol::formatAmount(sol->balance()));
     }
 
-    // An Ethereum wallet: the asset of the tab ("ETH", "USDT"…).
+    const EthWallet *walletOf(const CoinVault::Entry &entry, const QString &assetId) {
+        const eth::Asset *asset = eth::findAsset(assetId);
+        return asset && entry.eth ? entry.on(*asset->network) : nullptr;
+    }
+
+    // An Ethereum wallet: the asset of the tab ("ETH", "USDT", "USDT.ARB"…).
     QString entryText(const CoinVault::Entry &entry, const CoinParams &params, const QString &asset = "ETH") {
-        return entry.eth ? ethereumText(entry.eth, asset)
+        return entry.eth ? ethereumText(walletOf(entry, asset), asset)
                : entry.sol ? solanaText(entry.sol)
                            : QString("%1 %2").arg(swap::amount::fromAtomic(entry.wallet->balance().total(), params.decimals), params.ticker);
     }
@@ -73,23 +82,10 @@ void CoinWalletBar::updateBalances() {
         }
     }
     if (m_params.ethereum) {
-        const EthWallet *eth = m_vault->ethereum();
+        const EthWallet *eth = m_vault->evmWallet(m_asset);
         QString text = eth ? QString("Balance: <b>%1</b>").arg(ethereumText(eth, m_asset)) : QString();
         if (eth && eth->status() != EthWallet::Status::Synchronized) {
             text += " · <span style=\"color: gray;\">Synchronizing…</span>";
-        }
-        // What reached the same address on Ethereum (watched only): said, with
-        // a way out. The ETH tab also says it for tokens without a tab.
-        if (const EthWallet *l1 = m_vault->evmWallet(eth::assetId(eth::mainnet(), m_asset))) {
-            QStringList held;
-            for (const eth::Asset &asset : eth::mainnetAssets()) {
-                const bool here = asset.symbol == m_asset
-                                  || (m_asset == "ETH" && m_vault->assetState(asset.symbol) != CoinVault::CoinState::Ready);
-                if (here && l1->balance(asset.symbol) > 0) {
-                    held << QString("<a href=\"%1\">%2 on Ethereum: move it…</a>").arg(asset.id, ethereumText(l1, asset.symbol));
-                }
-            }
-            if (!held.isEmpty()) text += "<br>" + held.join(" · ");
         }
         m_balance->setText(text);
         return;
@@ -192,8 +188,8 @@ void CoinWalletBar::rebuild() {
             menu.addAction("Rename…", [this, id, name] { rename(id, name); });
             menu.addAction("Show seed…", [this, id, mainSeed] { showCoinSeed(m_vault, this, mainSeed ? QString() : id); });
             if (m_params.ethereum && m_asset != "ETH") {
-                // A token tab: hides the token, the Ethereum wallet stays.
-                menu.addAction(QString("Remove %1 from Biscuit…").arg(m_asset), [this] { confirmRemoveToken(); });
+                // A token or Arbitrum tab: hides it, the Ethereum wallet stays.
+                menu.addAction(QString("Remove %1 from Biscuit…").arg(eth::assetName(m_asset)), [this] { confirmRemoveToken(); });
             } else {
                 menu.addAction(QString("Remove \"%1\"…").arg(name), [this, id, name, mainSeed] { confirmRemove(id, name, mainSeed); });
             }
@@ -219,9 +215,6 @@ void CoinWalletBar::rebuild() {
     m_layout->addStretch();
     m_balance = new QLabel(this);
     m_balance->setTextFormat(Qt::RichText);
-    connect(m_balance, &QLabel::linkActivated, this, [this](const QString &asset) {
-        if (m_vault) CoinSendController(m_vault->moneroWallet()).moveFromEthereum(this, asset);
-    });
     m_layout->addWidget(m_balance);
     updateBalances();
 }
@@ -240,16 +233,24 @@ void CoinWalletBar::rename(const QString &id, const QString &name) {
 }
 
 void CoinWalletBar::confirmRemoveToken() {
+    const eth::Asset *asset = eth::findAsset(m_asset);
+    if (!asset) {
+        return;
+    }
+    const QString name = eth::assetName(m_asset);
     const eth::u128 held = m_vault->ethereumBalance(m_asset);
     QString text = QString("%1 is no longer shown in this wallet. The Ethereum wallets stay, and so does any %1 on "
-                           "their addresses: add %1 again with + to see it.").arg(m_asset);
+                           "their addresses: add %1 again with + to see it.").arg(name);
+    if (asset->network == &eth::arbitrumOne() && asset->symbol == "ETH") {
+        text += " USDT and USDC on Arbitrum, whose fees it pays, are no longer shown either.";
+    }
     if (held > 0) {
-        text = QString("Your Ethereum wallets hold %1 %2. ").arg(eth::formatAmount(held, eth::findAsset(m_asset)->decimals), m_asset) + text;
+        text = QString("Your Ethereum wallets hold %1 %2. ").arg(eth::formatAmount(held, asset->decimals), name) + text;
     }
     QMessageBox box(this);
-    box.setWindowTitle(QString("Remove %1").arg(m_asset));
+    box.setWindowTitle(QString("Remove %1").arg(name));
     box.setIcon(QMessageBox::Question);
-    box.setText(QString("Remove %1 from Biscuit?").arg(m_asset));
+    box.setText(QString("Remove %1 from Biscuit?").arg(name));
     box.setInformativeText(text);
     box.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     box.setDefaultButton(QMessageBox::Cancel);
@@ -258,7 +259,7 @@ void CoinWalletBar::confirmRemoveToken() {
     }
     QString error;
     if (!m_vault->setTokenEnabled(m_asset, false, &error)) {
-        Utils::showError(this, QString("Unable to remove %1").arg(m_asset), error);
+        Utils::showError(this, QString("Unable to remove %1").arg(name), error);
     }
 }
 
@@ -277,10 +278,8 @@ void CoinWalletBar::confirmRemove(const QString &id, const QString &name, bool m
             if (entry.eth) {
                 QStringList held;   // every asset there is some of
                 for (const eth::Asset &asset : eth::allAssets()) {
-                    if (entry.eth->balance(asset.symbol) > 0) held << ethereumText(entry.eth, asset.symbol);
-                }
-                for (const eth::Asset &asset : eth::mainnetAssets()) {
-                    if (entry.l1->balance(asset.symbol) > 0) held << ethereumText(entry.l1, asset.symbol) + " on Ethereum";
+                    const EthWallet *wallet = entry.on(*asset.network);
+                    if (wallet->balance(asset.symbol) > 0) held << ethereumText(wallet, asset.id);
                 }
                 holdsCoins = !held.isEmpty();
                 balance = held.join(", ");

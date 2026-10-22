@@ -239,18 +239,21 @@ void Settings::setupNetworkTab() {
     coinLayout->addStretch();
     ui->tabWidget_network->addTab(coinServers, "Bitcoin && Litecoin");
 
-    // Biscuit: the user's own Arbitrum node, and Blockscout for the history.
+    // Biscuit: the user's own Ethereum and Arbitrum nodes, and Blockscout for
+    // the history.
     auto *ethServers = new QWidget(this);
     auto *ethLayout = new QVBoxLayout(ethServers);
-    auto *ethIntro = new QLabel("Biscuit's ETH, USDT and USDC are on Arbitrum One. By default Biscuit uses public "
-                                "Arbitrum nodes, and Blockscout for the history. Set your own node (Nitro on Umbrel, "
-                                "Start9 or a machine of yours) and Biscuit reads balances and sends transactions only "
-                                "through it.", ethServers);
+    auto *ethIntro = new QLabel("By default Biscuit uses public Ethereum and Arbitrum nodes, and Blockscout for the "
+                                "history. Set your own node (Geth, Nethermind, Erigon, or Nitro for Arbitrum… on Umbrel, "
+                                "Start9 or a machine of yours) and Biscuit reads balances and sends transactions on that "
+                                "network only through it.", ethServers);
     ethIntro->setWordWrap(true);
     ethLayout->addWidget(ethIntro);
     auto *ethForm = new QFormLayout;
-    for (auto [key, label, placeholder] : {std::tuple{Config::arbitrumNode, "Arbitrum node:", "Public nodes (e.g. http://umbrel.local:8547)"},
-                                           std::tuple{Config::arbitrumBlockscout, "History:", "arbitrum.blockscout.com (or your own Blockscout)"}}) {
+    for (auto [key, label, placeholder] : {std::tuple{Config::ethereumNode, "Ethereum node:", "Public nodes (e.g. http://umbrel.local:8545)"},
+                                           std::tuple{Config::ethereumBlockscout, "Ethereum history:", "eth.blockscout.com (or your own Blockscout)"},
+                                           std::tuple{Config::arbitrumNode, "Arbitrum node:", "Public nodes (e.g. http://umbrel.local:8547)"},
+                                           std::tuple{Config::arbitrumBlockscout, "Arbitrum history:", "arbitrum.blockscout.com (or your own Blockscout)"}}) {
         auto *edit = new QLineEdit(conf()->get(key).toString(), ethServers);
         edit->setPlaceholderText(placeholder);
         edit->setClearButtonEnabled(true);
@@ -274,9 +277,9 @@ void Settings::setupNetworkTab() {
         });
     }
     ethLayout->addLayout(ethForm);
-    auto *ethHelp = new QLabel("Your node's JSON-RPC address, usually port 8547. In Tor mode with \"onion services "
-                               "only\", Ethereum works only with .onion addresses here. Leave empty for the public "
-                               "nodes and arbitrum.blockscout.com.", ethServers);
+    auto *ethHelp = new QLabel("Your node's JSON-RPC address, usually port 8545 (8547 for Arbitrum). In Tor mode with "
+                               "\"onion services only\", Ethereum and Arbitrum work only with .onion addresses here. "
+                               "Leave empty for the public nodes and Blockscout.", ethServers);
     ethHelp->setWordWrap(true);
     ethHelp->setStyleSheet("color: gray;");
     ethLayout->addWidget(ethHelp);

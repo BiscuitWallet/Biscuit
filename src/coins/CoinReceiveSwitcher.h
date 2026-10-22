@@ -57,7 +57,7 @@ private:
 
     struct EthWidgets {
         const CoinParams *params = nullptr;   // Ethereum or Solana
-        QString asset;                     // "ETH", "USDT", "USDC", "SOL": one tab each
+        QString asset;                     // "ETH", "USDT", "USDC.ARB", "SOL"…: one tab each
         QStackedWidget *state = nullptr;   // 0 = not added or locked, 1 = address
         QLabel *setupText = nullptr;
         QPushButton *setupButton = nullptr;

@@ -92,9 +92,7 @@ void BalanceTickerWidget::updateDisplay() {
                                                            double(coin->balance().total()) / 1e8);
         }
         if (vault->hasCoin(biscuit::coins::ethereum())) {
-            QList<biscuit::coins::eth::Asset> ethAssets = biscuit::coins::eth::allAssets();
-            ethAssets << biscuit::coins::eth::mainnetAssets();   // left on Ethereum: still the user's
-            for (const auto &asset : ethAssets) {
+            for (const auto &asset : biscuit::coins::eth::allAssets()) {
                 const QString amount = biscuit::coins::eth::formatAmount(vault->ethereumBalance(asset.id), asset.decimals);
                 balanceFiatAmount += appData()->prices.convert(asset.symbol, fiatCurrency, amount.toDouble());
             }

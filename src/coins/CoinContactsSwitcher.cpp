@@ -157,7 +157,7 @@ void CoinContactsSwitcher::editContact(const CoinParams &params, int index) {
     auto *name = new QLineEdit(isNew ? QString() : contacts[index].name, &dialog);
     auto *address = new QLineEdit(isNew ? QString() : contacts[index].address, &dialog);
     address->setMinimumWidth(420);
-    address->setPlaceholderText(params.ethereum     ? "0x… (ETH, USDT and USDC on Arbitrum)"
+    address->setPlaceholderText(params.ethereum     ? "0x… (also for USDT and USDC, on Ethereum and Arbitrum)"
                                 : params.solana       ? "Solana address"
                                 : params == bitcoin() ? "bc1…, 1…, 3… or a silent payment address (sp1…)" : "ltc1…, L…, M…");
     form->addRow("Name:", name);

@@ -94,10 +94,10 @@ public:
         dataTorOnly,        // Biscuit: third-party data through Tor even outside Tor mode
         electrumServerBTC,  // Biscuit: own Electrum server ("host:port", tcp:// for .onion or local), empty = public servers
         electrumServerLTC,
-        ethereumNode,        // Biscuit 1.1.1: own Ethereum node (JSON-RPC URL), now only for the watched Ethereum
-        ethereumBlockscout,  // Biscuit 1.1.1: own Blockscout for the Ethereum history (now only watched)
+        ethereumNode,        // Biscuit: own Ethereum node (JSON-RPC URL), empty = public nodes
+        ethereumBlockscout,  // Biscuit: own Blockscout for the Ethereum history, empty = eth.blockscout.com
         arbitrumNode,        // Biscuit: own Arbitrum One node (JSON-RPC URL), empty = public nodes
-        arbitrumBlockscout,  // Biscuit: own Blockscout for the history, empty = arbitrum.blockscout.com
+        arbitrumBlockscout,  // Biscuit: own Blockscout for the Arbitrum history, empty = arbitrum.blockscout.com
         solanaNode,          // Biscuit: own Solana node (JSON-RPC URL), empty = public nodes
 
         // Network -> Offline

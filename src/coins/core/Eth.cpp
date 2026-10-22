@@ -463,7 +463,7 @@ std::optional<SignedTransaction> decode(const QByteArray &raw, QString *error) {
 const Network &mainnet() {
     // MEV Blocker and Flashbots also broadcast without going through the
     // public mempool.
-    static const Network n{"Ethereum", ".L1", mainnetChainId,
+    static const Network n{"Ethereum", {}, mainnetChainId,
         {"https://ethereum-rpc.publicnode.com", "https://eth.drpc.org", "https://rpc.mevblocker.io", "https://rpc.flashbots.net"},
         "https://eth.blockscout.com",
         {{"USDT", "Tether USD", QByteArray::fromHex("dac17f958d2ee523a2206206994597c13d831ec7"), 6},
@@ -474,7 +474,7 @@ const Network &mainnet() {
 const Network &arbitrumOne() {
     // Tether's own USDT (USD₮0) and Circle's native USDC, checked on chain
     // (symbol, name, decimals) on 2026-10-18. Not the older bridged USDC.e.
-    static const Network n{"Arbitrum", {}, arbitrumChainId,
+    static const Network n{"Arbitrum", ".ARB", arbitrumChainId,
         {"https://arbitrum-one-rpc.publicnode.com", "https://arbitrum.drpc.org", "https://arb1.arbitrum.io/rpc"},
         "https://arbitrum.blockscout.com",
         {{"USDT", "USD₮0", QByteArray::fromHex("fd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"), 6},
@@ -484,7 +484,7 @@ const Network &arbitrumOne() {
 }
 
 const QList<const Network *> &networks() {
-    static const QList<const Network *> list{&arbitrumOne(), &mainnet()};
+    static const QList<const Network *> list{&mainnet(), &arbitrumOne()};
     return list;
 }
 
@@ -504,29 +504,21 @@ QString assetId(const Network &network, const QString &symbol) {
     return symbol + network.suffix;
 }
 
-namespace {
-    QList<Asset> assetsOf(const Network &n) {
-        QList<Asset> assets{{assetId(n, "ETH"), &n, "ETH", etherDecimals}};
-        for (const Token &t : n.tokens) assets.append({assetId(n, t.symbol), &n, t.symbol, t.decimals});
-        return assets;
-    }
-}
-
 const QList<Asset> &allAssets() {
-    static const QList<Asset> list = assetsOf(arbitrumOne());
-    return list;
-}
-
-const QList<Asset> &mainnetAssets() {
-    static const QList<Asset> list = assetsOf(mainnet());
+    static const QList<Asset> list = [] {
+        QList<Asset> assets;
+        for (const Network *n : networks()) {
+            assets.append({assetId(*n, "ETH"), n, "ETH", etherDecimals});
+            for (const Token &t : n->tokens) assets.append({assetId(*n, t.symbol), n, t.symbol, t.decimals});
+        }
+        return assets;
+    }();
     return list;
 }
 
 const Asset *findAsset(const QString &id) {
-    for (const QList<Asset> *list : {&allAssets(), &mainnetAssets()}) {
-        for (const Asset &a : *list) {
-            if (a.id == id) return &a;
-        }
+    for (const Asset &a : allAssets()) {
+        if (a.id == id) return &a;
     }
     return nullptr;
 }
@@ -536,7 +528,7 @@ QString assetName(const QString &id) {
     if (!a) {
         return id;
     }
-    return a->network == &mainnet() ? QString("%1 on %2").arg(a->symbol, a->network->name) : a->symbol;
+    return a->network == &mainnet() ? a->symbol : QString("%1 (%2)").arg(a->symbol, a->network->name);
 }
 
 QByteArray erc20TransferData(const QByteArray &to, u128 amount) {

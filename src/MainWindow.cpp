@@ -772,9 +772,7 @@ void MainWindow::onBalanceUpdated(quint64 balance, quint64 spendable) {
                 addValue(params->ticker, double(total) / 1e8);
             }
         }
-        QList<biscuit::coins::eth::Asset> ethAssets = biscuit::coins::eth::allAssets();
-        ethAssets << biscuit::coins::eth::mainnetAssets();   // left on Ethereum, by name
-        for (const auto &asset : ethAssets) {
+        for (const auto &asset : biscuit::coins::eth::allAssets()) {
             const auto amount = vault->ethereumBalance(asset.id);
             if (amount > 0) {
                 const QString text = biscuit::coins::eth::formatAmount(amount, asset.decimals);
@@ -977,6 +975,13 @@ void MainWindow::updateCoinsSyncStatus() {
             } else if (disconnected) {
                 offline << params->name;
             }
+        }
+        // Arbitrum, while an asset on it is shown (otherwise never contacted).
+        const EthWallet *arbitrum = vault->arbitrumEnabled() ? vault->evmWallet("ETH.ARB") : nullptr;
+        if (arbitrum && arbitrum->status() == EthWallet::Status::Connecting) {
+            pending << arbitrum->network().name;
+        } else if (arbitrum && arbitrum->status() == EthWallet::Status::Disconnected) {
+            offline << arbitrum->network().name;
         }
     }
     QString text = pending.isEmpty() ? QString("Synchronized") : QString("Synchronizing %1…").arg(pending.join(", "));

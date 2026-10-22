@@ -16,6 +16,7 @@
 #include <QVBoxLayout>
 
 #include "Amount.h"
+#include "coins/CoinPicker.h"
 #include "coins/CoinVault.h"
 #include "coins/CoinWallet.h"
 #include "coins/core/CoinParams.h"
@@ -50,10 +51,8 @@ namespace {
 
     QIcon coinIcon(const QString &ticker) {
         if (ticker == "XMR") return PixelIcons::icon("monero");
-        if (ticker == "ETH") return PixelIcons::icon("ethereum");
         if (ticker == "SOL") return PixelIcons::icon("solana");
-        if (ticker == "USDT") return PixelIcons::icon("tether");
-        if (ticker == "USDC") return PixelIcons::icon("usdc");
+        if (biscuit::coins::eth::findAsset(ticker)) return biscuit::coins::ethereumAssetIcon(ticker);
         return icons()->icon(ticker == "BTC" ? "bitcoin.png" : "litecoin.png");
     }
 }
@@ -150,15 +149,16 @@ void HomeWidget::updateRecent() {
                             statusText(e.height <= 0, false, confirmations, 6)});
             }
         }
-        // Ethereum and its tokens, every Ethereum wallet; on Ethereum itself
-        // (only watched) too, by name.
+        // Ethereum and its tokens, on each network, every Ethereum wallet.
         for (const auto &entry : vault->wallets(biscuit::coins::ethereum())) {
-            for (const auto *wallet : {entry.eth, entry.l1}) {
+            for (const auto *network : biscuit::coins::eth::networks()) {
+                const auto *wallet = entry.on(*network);
                 for (const auto &e : wallet->history()) {
-                    const QString name = biscuit::coins::eth::assetName(biscuit::coins::eth::assetId(wallet->network(), e.asset));
-                    all.append({e.time, e.asset,
+                    const QString id = biscuit::coins::eth::assetId(*network, e.asset);
+                    all.append({e.time, id,
                                 QString("%1%2 %3").arg(e.incoming ? "+" : "-",
-                                                       biscuit::coins::eth::formatAmount(e.amount, wallet->decimals(e.asset)), name),
+                                                       biscuit::coins::eth::formatAmount(e.amount, wallet->decimals(e.asset)),
+                                                       biscuit::coins::eth::assetName(id)),
                                 e.failed ? QString("Failed") : e.block == 0 ? QString("Pending") : QString("Confirmed")});
                 }
             }

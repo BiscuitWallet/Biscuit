@@ -46,7 +46,7 @@ PageOtherCoins::PageOtherCoins(WizardFields *fields, QWidget *parent)
                              "Leave everything unticked to use Monero only.", this);
     intro->setWordWrap(true);
     layout->addWidget(intro);
-    // Coins, then the tokens on Arbitrum: a token needs Ethereum (its fees are
+    // Coins, then the tokens on Ethereum: a token needs Ethereum (its fees are
     // paid in ETH), so ticking one ticks Ethereum too.
     for (const QString &ticker : biscuit::coins::addableTickers()) {
         auto *check = new QCheckBox(biscuit::coins::assetLabel(ticker), this);
@@ -54,9 +54,8 @@ PageOtherCoins::PageOtherCoins(WizardFields *fields, QWidget *parent)
         layout->addWidget(check);
         m_coins << check;
     }
-    auto *tokenNote = new QLabel("ETH, USDT and USDC are on Arbitrum One, where sends cost a few cents. The network "
-                                 "fees of USDT and USDC are paid in ETH, from the same address: keep a little ETH "
-                                 "there to send them.", this);
+    auto *tokenNote = new QLabel("USDT and USDC run on Ethereum: their network fees are paid in ETH, from the "
+                                 "same address. Keep a little ETH there to send them.", this);
     tokenNote->setWordWrap(true);
     tokenNote->setStyleSheet("color: gray;");
     layout->addWidget(tokenNote);

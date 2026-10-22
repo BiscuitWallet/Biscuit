@@ -42,7 +42,7 @@ private:
     QTreeWidget *m_all;
     QTreeWidget *m_btc;
     QTreeWidget *m_ltc;
-    QHash<QString, QTreeWidget *> m_ethTrees;   // "ETH", "USDT", "USDC"
+    QHash<QString, QTreeWidget *> m_ethTrees;   // "ETH", "USDT", "USDC.ARB"…
     QTreeWidget *m_sol;
 };
 

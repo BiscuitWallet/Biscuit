@@ -370,7 +370,11 @@ QString assetLabel(const QString &ticker) {
     if (!params) {
         return ticker;
     }
-    return params->ticker == ticker ? params->name : ticker;
+    if (params->ticker == ticker) {
+        return params->name;
+    }
+    const eth::Asset *asset = eth::findAsset(ticker);
+    return asset ? QString("%1 (on %2)").arg(asset->symbol, asset->network->name) : ticker;
 }
 
 bool addAssetToWallet(CoinVault *vault, const QString &ticker, QWidget *parent) {
@@ -397,22 +401,41 @@ bool addAssetToWallet(CoinVault *vault, const QString &ticker, QWidget *parent) 
     if (vault->assetState(ticker) == CoinVault::CoinState::Ready) {
         return true;
     }
-    // What a token on Arbitrum means, before it is added: always said.
+    // What a token or Arbitrum means, before it is added: always said.
+    const eth::Asset *asset = eth::findAsset(ticker);
+    const bool arbitrum = asset && asset->network == &eth::arbitrumOne();
+    const QString name = eth::assetName(ticker);
+    const QString symbol = asset ? asset->symbol : ticker;
     const bool withEthereum = !vault->hasCoin(ethereum());
     QMessageBox box(parent);
-    box.setWindowTitle(QString("Add %1").arg(ticker));
+    box.setWindowTitle(QString("Add %1").arg(name));
     box.setIcon(QMessageBox::Information);
-    box.setText(withEthereum ? QString("Add %1? It uses your Ethereum wallet, which is added with it.").arg(ticker)
-                             : QString("Add %1 to this wallet?").arg(ticker));
-    box.setInformativeText(QString(
-        "%1 here is %1 on Arbitrum One, a network built on Ethereum where sends cost a few cents. It is on the "
-        "same address as your ETH.\n\n"
-        "Network fees are paid in ETH, not in %1: to send %1, this address needs a little ETH. One dollar of "
-        "it covers many sends.\n\n"
-        "Only receive %1 sent on Arbitrum One: when withdrawing from an exchange, choose Arbitrum. %1 sent on "
-        "Tron, BNB Chain or any other network does not arrive here.")
-        .arg(ticker));
-    auto *add = box.addButton(QString("Add %1").arg(ticker), QMessageBox::AcceptRole);
+    box.setText(withEthereum ? QString("Add %1? It uses your Ethereum wallet, which is added with it.").arg(name)
+                             : QString("Add %1 to this wallet?").arg(name));
+    if (!arbitrum) {
+        box.setInformativeText(QString(
+            "%1 here is %1 on the Ethereum network (ERC-20), on the same address as your Ethereum wallet.\n\n"
+            "Network fees are paid in ETH, not in %1: to send %1, this address needs a little ETH. A send usually "
+            "costs a few cents (more when the network is busy), so a few dollars of ETH cover many sends.\n\n"
+            "Only receive %1 sent on the Ethereum network: %1 sent on Tron, BNB Chain or any other network is lost.")
+            .arg(ticker));
+    } else if (symbol == "ETH") {
+        box.setInformativeText(
+            "Arbitrum is a network built on Ethereum, where sends cost a fraction of a cent. ETH on Arbitrum is "
+            "on the same address as your Ethereum wallet, with its own balance: it pays the network fees of USDT "
+            "and USDC on Arbitrum.\n\n"
+            "Only receive ETH sent on Arbitrum One: when withdrawing from an exchange, choose that network. "
+            "ETH sent on Ethereum shows in your Ethereum balance instead.");
+    } else {
+        box.setInformativeText(QString(
+            "Arbitrum is a network built on Ethereum, where sends cost a fraction of a cent. %1 on Arbitrum is "
+            "on the same address as your Ethereum wallet, with its own balance.\n\n"
+            "Network fees are paid in ETH on Arbitrum, which is added with it: to send %1, this address needs a "
+            "little ETH on Arbitrum. One dollar of it covers many sends.\n\n"
+            "Only receive %1 sent on Arbitrum One: when withdrawing from an exchange, choose that network. "
+            "%1 sent on Tron is lost; on any other network, it does not show in Biscuit.").arg(symbol));
+    }
+    auto *add = box.addButton(QString("Add %1").arg(name), QMessageBox::AcceptRole);
     box.addButton(QMessageBox::Cancel);
     box.setDefaultButton(add);
     box.exec();
@@ -424,7 +447,7 @@ bool addAssetToWallet(CoinVault *vault, const QString &ticker, QWidget *parent) 
     }
     QString error;
     if (!vault->setTokenEnabled(ticker, true, &error)) {
-        QMessageBox::warning(parent, QString("Add %1").arg(ticker), error);
+        QMessageBox::warning(parent, QString("Add %1").arg(name), error);
         return false;
     }
     return true;
