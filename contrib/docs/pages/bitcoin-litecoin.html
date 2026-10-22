@@ -1,8 +1,12 @@
 <html><body>
 <h1>Bitcoin and Litecoin in Biscuit</h1>
 <p>Bitcoin and Litecoin share the same wallet code in Biscuit. They are light wallets: instead of downloading the blockchain, Biscuit asks <a href="electrum.html">Electrum servers</a> about your addresses, so they&rsquo;re ready in seconds.</p>
+<figure>
+  <img src="/img/gallery/main-receive-btc.png" width="1002" height="665" loading="lazy" alt="The Receive tab for Bitcoin: an address and its QR code">
+  <figcaption>A Bitcoin address, with a new one after each payment</figcaption>
+</figure>
   <h2>Seeds and addresses</h2>
-  <p>Your first Bitcoin and Litecoin wallets come from one 12-word BIP39 seed, made when you <a href="create-wallet.html">create your wallet</a>. Biscuit uses native SegWit addresses and the standard paths, so the same seed opens your coins in Sparrow, Electrum or any BIP39 wallet:</p>
+  <p>Bitcoin and Litecoin are optional: add them when you <a href="create-wallet.html">create your wallet</a>, or later with the <b>+</b> next to the coins. Your first Bitcoin and Litecoin wallets come from one 12-word BIP39 seed, the same as your first Ethereum wallet if you added one. Biscuit uses native SegWit addresses and the standard paths, so the same seed opens your coins in Sparrow, Electrum or any BIP39 wallet:</p>
   <table border="0" cellspacing="0" cellpadding="5">
     <thead><tr><th>Coin</th><th>Addresses</th><th>Path</th></tr></thead>
     <tbody>
@@ -16,9 +20,9 @@
   <ul>
     <li><b>Add wallet</b>, above the address, creates a new one (<b>Create a new seed</b>) or restores one (<b>Restore from seed</b>, 12 or 24 words, with an optional BIP39 passphrase).</li>
     <li>Switch between them with the buttons above the address on Send and Receive.</li>
-    <li>Right-click a button to <b>Rename</b> it, <b>Show seed</b> or remove it. Removing a wallet removes it from Biscuit only: with its seed, you can add it back at any time.</li>
+    <li>Right-click a button to <b>Rename</b> it, <b>Show seed</b> or remove it, the first one included. Removing a wallet removes it from Biscuit only: with its seed, you can add it back at any time. When a coin has no wallet left, it leaves the tabs.</li>
   </ul>
-  <p>Back up the seed of each wallet you add: it isn&rsquo;t the same as your first one. <b>Wallet &rsaquo; Bitcoin and Litecoin seeds</b> shows them all.</p>
+  <p>Back up the seed of each wallet you add: it isn&rsquo;t the same as your first one. The seeds menu, in <b>Wallet</b> or behind the seed button of the status bar, shows them all.</p>
   <h2>In this section</h2>
   <ul>
     <li><a href="btc-addresses.html">Addresses</a>: why the address changes, and every address you ever used.</li>

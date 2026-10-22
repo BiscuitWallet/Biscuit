@@ -1,0 +1,24 @@
+<html><body>
+<h1>Ethereum fees and speeding up</h1>
+<p>Every transaction on Ethereum pays a network fee in ETH, whatever it sends. Sending USDT or USDC too: the fee comes from the ETH on the same address.</p>
+<figure>
+  <img src="/img/gallery/main-send.png" width="1002" height="665" loading="lazy" alt="Sending 25 USDT: the fee in dollars and in ETH, gwei, and a red line because the wallet has no ETH">
+  <figcaption>The fee before you send, and a warning when there isn&rsquo;t enough ETH for it</figcaption>
+</figure>
+  <h2>Keep a little ETH</h2>
+  <p>To send USDT or USDC, your Ethereum address needs some ETH. A send usually costs a few cents, more when the network is busy, so a few dollars of ETH cover many sends. If there isn&rsquo;t enough, the Send tab says so in red before you try. You can get ETH from another wallet, or with a <a href="exchange-swaps.html">swap</a>.</p>
+  <p>Receiving costs nothing: the sender pays.</p>
+  <p>Why it works this way, and how not to get stuck with USDT and no ETH: <a href="https://biscuitwallet.com/journal/why-you-need-eth-to-send-usdt/">Why do I need ETH to send USDT?</a></p>
+  <h2>What the Send tab shows</h2>
+  <ul>
+    <li><b>About</b>: what the send will most likely cost, in your currency and in ETH.</li>
+    <li><b>At most</b>: the most it can cost, if fees rise before it is in a block. You only pay what is used, usually about the first figure. Hover the line for the exact amounts.</li>
+    <li><b>The gas price</b>, in gwei: grey when the network is calm, orange when it is busy, red when it is very busy. On most days Ethereum stays under 1 gwei; when it is busy, fees can be ten times higher for a few hours, and waiting is often cheaper.</li>
+  </ul>
+  <p>A USDT or USDC send costs two to three times more than an ETH send: it goes through the token&rsquo;s contract.</p>
+  <p><b>Max</b> sends all your ETH but a small reserve for the fee, kept as low as it safely can be, so almost nothing stays behind. If the network gets busier in the meantime, the payment waits a little; you can speed it up.</p>
+<a name="speed-up"></a>
+  <h2>Speeding up a payment</h2>
+  <p>If one of your payments stays <b>Pending</b> in History, the fee was probably too low for a sudden rise. Right-click it and choose <b>Speed up (raise the fee)</b>. Biscuit sends the same payment again with a higher fee; it replaces the waiting one, and only one of the two can ever go through.</p>
+
+</body></html>

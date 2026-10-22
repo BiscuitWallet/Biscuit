@@ -1,6 +1,10 @@
 <html><body>
 <h1>Send</h1>
-<p>Open the <b>Send</b> tab and paste the address. Biscuit recognizes the coin by itself: a Monero, Bitcoin or Litecoin address switches the tab to that coin.</p>
+<p>Open the <b>Send</b> tab and paste the address. Biscuit recognizes the coin by itself: a Monero, Bitcoin, Litecoin or Ethereum address switches the tab to that coin. On the USDT or USDC tab, an Ethereum address stays there: you choose what you send.</p>
+<figure>
+  <img src="/img/gallery/main-send.png" width="1002" height="665" loading="lazy" alt="The Send tab for USDT: an address, an amount, and the network fee in dollars and in ETH">
+  <figcaption>Send: here 25 USDT, with the network fee in your currency</figcaption>
+</figure>
   <h2>Monero</h2>
   <ol>
     <li><b>Pay to</b>: paste an address, a <code>monero:</code> payment link, an OpenAlias name (<code>name@domain</code>) or a QR code image. <b>Scan</b> reads a QR code with your webcam, see <a href="qr-scanner.html">Webcam QR scanner</a>.</li>
@@ -17,6 +21,14 @@
     <li>Biscuit shows the destination, the network fee in satoshis per virtual byte, and the total. Confirm to send.</li>
   </ol>
   <p>Biscuit only sends once the wallet is synchronized. A slow payment can be sped up afterwards: see <a href="btc-fees.html">Fees and speeding up</a>.</p>
+  <h2>Ethereum, USDT and USDC</h2>
+  <ol>
+    <li>Pick <b>Ethereum</b>, <b>USDT</b> or <b>USDC</b> at the top, and paste the address (<code>0x&hellip;</code>). An address with a typo in its upper and lower case letters is refused: that is its checksum.</li>
+    <li>Enter the amount, or <b>Max</b>. ETH has 18 decimals, USDT and USDC 6.</li>
+    <li>The network fee shows under it: about how much it costs, in ETH and in your currency, then at most, and how busy Ethereum is right now.</li>
+    <li>Biscuit asks the node for the details, then shows the destination, the network and the fee. Confirm to send.</li>
+  </ol>
+  <p>Sending USDT or USDC costs a fee in ETH, from the same address: Biscuit says so when there isn&rsquo;t enough. See <a href="eth-fees.html">Ethereum fees and speeding up</a>.</p>
   <h2>Before you click Send</h2>
   <ul>
     <li>Check the address you pasted against the original, at least the first and last characters.</li>

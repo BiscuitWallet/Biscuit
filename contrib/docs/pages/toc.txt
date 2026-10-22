@@ -12,7 +12,7 @@ Get started
   receive|Receive
   send|Send
 Your wallet
-  wallets|One wallet, three coins
+  wallets|One wallet, several coins
   backups|Seeds and backups
   balance|Balance
   history|History
@@ -43,9 +43,14 @@ Bitcoin and Litecoin
   btc-coin-control|Coin control
   silent-payments|Silent payments
   electrum|Electrum servers
+Ethereum, USDT and USDC
+  ethereum|Overview
+  eth-fees|Fees and speeding up
+  eth-nodes|Nodes and history
 Swaps
   swaps|Which swap?
   exchange-swaps|Exchange swaps
+  exchange-ratings|Exchange ratings
   atomic-swaps|Atomic swaps
 Home tab
   home-tab|The Home tab

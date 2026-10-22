@@ -26,7 +26,8 @@ class SwapManager : public QObject {
 public:
     explicit SwapManager(Wallet *wallet, QObject *parent = nullptr);
 
-    // Built-in providers minus the ones disabled in the settings.
+    // Built-in providers minus the ones disabled in the settings and the ones
+    // unusable with the current network settings (Trocador in Tor mode).
     QList<SwapProvider *> providers() const;
     SwapProvider *provider(const QString &id) const;
     bool demoMode() const;

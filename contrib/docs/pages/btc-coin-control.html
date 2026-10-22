@@ -6,10 +6,16 @@
   <dl>
     <dt>Freeze</dt><dd>The coin is never spent, not by Max and not by swaps, until you unfreeze it or choose it yourself.</dd>
     <dt>Send these coins&hellip;</dt><dd>Opens Send limited to these coins.</dd>
+    <dt>Consolidate these coins&hellip;</dt><dd>Combines them into one, see below.</dd>
     <dt>Copy</dt><dd>The address, or the coin itself as <code>txid:output</code>.</dd>
   </dl>
   <h2>Why it matters</h2>
   <p>Spending coins from different addresses in one payment shows on the blockchain that they belong to the same person. If some coins came from an exchange that knows your name, and others from somewhere private, spending them together links the two. Freeze the ones you want to keep apart, or send them on their own.</p>
   <p>Freezing also protects against &ldquo;dust&rdquo;: tiny amounts some people send to many addresses, hoping you&rsquo;ll spend them with your other coins.</p>
+  <h2>Dust</h2>
+  <p>A coin worth no more than the fee to spend it shows as <b>dust</b>: moving it would cost more than it brings. Hover its status for the cost at the current fee. Dust is still yours; when fees are lower, it may be worth spending again.</p>
+  <h2>Consolidating small coins</h2>
+  <p>Every coin you spend adds to the fee of a payment. With many small coins, payments get expensive. <b>Consolidate&hellip;</b>, under the list, combines them into one coin, sent to a new address of the same wallet at the slow fee, while fees are low. Select coins first to combine only those; otherwise every coin that isn&rsquo;t frozen is used. Coins worth less than their fee are left out. Biscuit shows what you keep and the fee before anything is sent.</p>
+  <p>Combining coins links their addresses on the blockchain, as spending them together would. Only consolidate coins whose link you don&rsquo;t mind, and freeze the others first.</p>
 
 </body></html>

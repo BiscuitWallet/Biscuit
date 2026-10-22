@@ -16,11 +16,11 @@
     <thead><tr><th>File</th><th>What it holds</th></tr></thead>
     <tbody>
       <tr><th><code>name.keys</code></th><td>The Monero keys and wallet settings. Lose it without your seed, and the coins are gone.</td></tr>
-      <tr><th><code>name</code></th><td>The Monero cache: transactions, labels, contacts, notes, transaction keys, your Polyseed. Biscuit rebuilds most of it by syncing, but not labels, notes or transaction keys.</td></tr>
-      <tr><th><code>name.btcltc</code></th><td>Your Bitcoin and Litecoin wallets: seeds, addresses, labels, contacts, swap history.</td></tr>
+      <tr><th><code>name</code></th><td>The Monero cache: transactions, labels, contacts, notes, transaction keys, your Polyseed, and the history of your exchange swaps. Biscuit rebuilds most of it by syncing, but not labels, notes or transaction keys.</td></tr>
+      <tr><th><code>name.btcltc</code></th><td>Your other coins, if you added any (Bitcoin, Litecoin, Ethereum, USDT, USDC): seeds, addresses, labels and contacts. Its name is older than Ethereum in Biscuit.</td></tr>
     </tbody>
   </table>
-  <p>All three are encrypted with your password. The Monero files use Monero&rsquo;s own scheme (ChaCha20, with a key derived from the password by CryptoNight). The Bitcoin and Litecoin file uses XChaCha20-Poly1305, with a key derived by Argon2id, which is deliberately slow and memory-hungry to make guessing passwords expensive.</p>
+  <p>All three are encrypted with your password. The Monero files use Monero&rsquo;s own scheme (ChaCha20, with a key derived from the password by CryptoNight). The file of your other coins uses XChaCha20-Poly1305, with a key derived by Argon2id, which is deliberately slow and memory-hungry to make guessing passwords expensive.</p>
   <p>If the Monero cache can&rsquo;t be read, Biscuit renames it <code>name.old_cache</code> and builds a new one.</p>
   <h2>The settings folder</h2>
   <table border="0" cellspacing="0" cellpadding="5">

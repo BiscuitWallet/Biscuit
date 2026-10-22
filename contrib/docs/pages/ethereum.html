@@ -1,0 +1,31 @@
+<html><body>
+<h1>Ethereum, USDT and USDC in Biscuit</h1>
+<p>Ethereum is optional in Biscuit, like Bitcoin and Litecoin. USDT and USDC, the two dollar tokens, are added on top of it: they live on your Ethereum address, on the Ethereum network.</p>
+<figure>
+  <img src="/img/gallery/main-receive-eth.png" width="1002" height="665" loading="lazy" alt="The Receive tab for Ethereum: the address, which also receives USDT and USDC, and its QR code">
+  <figcaption>One Ethereum address receives ETH, USDT and USDC</figcaption>
+</figure>
+  <h2>Adding them</h2>
+  <p>Tick them when you <a href="create-wallet.html">create your wallet</a>, or add them later with the <b>+</b> next to the coins on Send and Receive. Each is added on its own: Ethereum alone gives you ETH, and USDT or USDC appear only once you add them. Adding USDT or USDC adds Ethereum too, because their network fees are paid in ETH.</p>
+  <h2>Seed and address</h2>
+  <p>Your first Ethereum wallet comes from the same 12 words as your first Bitcoin and Litecoin wallets. Biscuit uses the address most Ethereum wallets use for these words, so they can be restored elsewhere:</p>
+  <table border="0" cellspacing="0" cellpadding="5">
+    <thead><tr><th>Coin</th><th>Address</th><th>Path</th></tr></thead>
+    <tbody>
+      <tr><th>Ethereum, USDT, USDC</th><td><code>0x&hellip;</code></td><td><code>m/44&rsquo;/60&rsquo;/0&rsquo;/0/0</code></td></tr>
+    </tbody>
+  </table>
+  <p>One address receives ETH, USDT and USDC. Unlike Bitcoin, it doesn&rsquo;t change after a payment: anyone who knows it can see what it received on a block explorer.</p>
+  <h2>Ethereum network only</h2>
+  <p>USDT and USDC exist on many networks. Biscuit holds them on Ethereum (ERC-20) only. USDT or USDC sent to your address from another network, such as Tron, BNB Chain or Solana, is lost: always tell the sender to use Ethereum. Biscuit says so on the receive page, and swaps only offer the Ethereum versions.</p>
+  <p>Biscuit only handles the real USDT and USDC contracts. Tokens with the same name sent to your address by strangers are ignored.</p>
+  <h2>Several wallets</h2>
+  <p>As with Bitcoin and Litecoin, you can keep several Ethereum wallets in the same Biscuit wallet: <b>Add wallet</b>, above the address, creates one or restores one from its 12 or 24 words, for example the seed of a wallet you used elsewhere. Switch with the buttons above the address; right-click one to rename it, show its seed or remove it. Back up the seed of each wallet you add.</p>
+  <h2>In this section</h2>
+  <ul>
+    <li><a href="eth-fees.html">Fees and speeding up</a>: why sending USDT costs ETH, what the gas price means, and a payment that waits too long.</li>
+    <li><a href="eth-nodes.html">Nodes and history</a>: where Biscuit reads your balance and history, and using your own node.</li>
+  </ul>
+  <p>Contacts work for Ethereum too, one address book for ETH, USDT and USDC: see <a href="contacts.html">Contacts</a>.</p>
+
+</body></html>

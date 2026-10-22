@@ -1,0 +1,12 @@
+<html><body>
+<h1>Ethereum nodes and history</h1>
+<p>Biscuit doesn&rsquo;t download the Ethereum blockchain. It asks public Ethereum nodes for your balances, fees and nonce, and sends your transactions through them. The list of your past transactions comes from Blockscout, an open source explorer.</p>
+  <h2>What they see</h2>
+  <p>To give your balance, a node has to know your address, as an Electrum server does for Bitcoin. Biscuit asks one node at a time and moves to the next if it doesn&rsquo;t answer. Blockscout only ever shows the history: your balance, the fees and what you send never depend on it.</p>
+  <p>Biscuit uses these public nodes: PublicNode, dRPC, MEV Blocker and Flashbots, and <a href="https://eth.blockscout.com/">eth.blockscout.com</a> for the history.</p>
+  <h2>Your own node</h2>
+  <p>In <b>Settings &rsaquo; Network &rsaquo; Ethereum</b>, set the address of your own node (Geth, Nethermind, Erigon&hellip; on Umbrel, Start9 or a machine of yours, usually port 8545), and Biscuit reads and sends through it only. You can set your own Blockscout for the history too. Addresses start with <code>https://</code>; <code>http://</code> is accepted for an .onion address or a machine on your local network.</p>
+  <h2>Tor</h2>
+  <p>In <a href="tor.html">Tor mode</a>, nodes and Blockscout are reached through Tor. With <b>onion services only</b>, Ethereum works only with .onion addresses in the settings, the history included: none of the built-in ones is one.</p>
+
+</body></html>
