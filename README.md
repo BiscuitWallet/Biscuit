@@ -15,7 +15,17 @@
 </p>
 
 <p align="center">
-  <img src="https://biscuitwallet.com/img/gallery/atomic-search.png" width="760" alt="Biscuit looking for atomic swap makers over Tor, with offers to swap Bitcoin for Monero">
+  <a href="https://github.com/BiscuitWallet/Biscuit/releases/latest"><img src="https://img.shields.io/github/v/release/BiscuitWallet/Biscuit?label=release&color=8b5e34" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/platforms-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-8b5e34" alt="Windows, macOS and Linux">
+  <a href="https://biscuitwallet.com/docs/verify/"><img src="https://img.shields.io/badge/builds-reproducible%20(Guix)-8b5e34" alt="Reproducible builds with Guix"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-8b5e34" alt="BSD 3-Clause License"></a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://biscuitwallet.com/img/gallery/atomic-search-dark.png">
+    <img src="https://biscuitwallet.com/img/gallery/atomic-search.png" width="760" alt="Biscuit looking for atomic swap makers over Tor, with offers to swap Bitcoin for Monero">
+  </picture>
 </p>
 
 Biscuit started as a fork of [Feather Wallet](https://featherwallet.org), which is about as good as a Monero wallet gets on a computer. We added everything we love: more cryptos next to Monero, each one optional, swaps between any two, atomic swaps with no exchange in the middle, Tor for the whole app, and lots of little details. It runs on Windows, macOS and Linux.
@@ -68,7 +78,7 @@ Please report vulnerabilities privately, as described in [SECURITY.md](SECURITY.
 
 ## Support Biscuit
 
-Biscuit is made and looked after with a lot of love. If you've grown fond of it too, [donations](https://biscuitwallet.com/donate/) help us keep going.
+Biscuit is made and looked after with a lot of love. If you've grown fond of it too, [donations](https://biscuitwallet.com/donate/) help us keep going. A star on this repository helps too: it is how other people find Biscuit on GitHub.
 
 ## Credits
 
