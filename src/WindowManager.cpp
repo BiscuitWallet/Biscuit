@@ -832,6 +832,13 @@ void WindowManager::initWizard() {
 }
 
 void WindowManager::showWizard(WalletWizard::Page startPage) {
+    // Biscuit: a hidden wizard kept from before a light / dark switch could
+    // come back with the old page colour behind the new text colour. It is
+    // reset below anyway, so build a fresh one.
+    if (m_wizard && !m_wizard->isVisible()) {
+        m_wizard->deleteLater();
+        m_wizard = nullptr;
+    }
     if (!m_wizard) {
         m_wizard = this->createWizard(startPage);
     }
