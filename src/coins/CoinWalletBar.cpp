@@ -215,6 +215,9 @@ void CoinWalletBar::rebuild() {
     m_layout->addStretch();
     m_balance = new QLabel(this);
     m_balance->setTextFormat(Qt::RichText);
+    // On two lines in a narrow window, rather than keeping the window wide.
+    m_balance->setWordWrap(true);
+    m_balance->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     m_layout->addWidget(m_balance);
     updateBalances();
 }

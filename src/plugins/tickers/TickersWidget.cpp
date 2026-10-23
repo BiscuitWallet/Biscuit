@@ -7,6 +7,7 @@
 #include "coins/CoinPicker.h"
 #include "coins/CoinVault.h"
 #include "utils/config.h"
+#include "widgets/OverflowRowLayout.h"
 #include "WindowManager.h"
 
 TickersWidget::TickersWidget(QWidget *parent, Wallet *wallet)
@@ -18,6 +19,13 @@ TickersWidget::TickersWidget(QWidget *parent, Wallet *wallet)
     // Biscuit: Home's sections are separated by titles; this line was drawn
     // bright white in dark mode.
     ui->line->hide();
+    // Biscuit: the tickers that don't fit are left out, so that they never
+    // keep the window from getting narrower.
+    auto *row = new QWidget(this);
+    m_tickerRow = new OverflowRowLayout(row);
+    m_tickerRow->setContentsMargins(0, 0, 0, 0);
+    m_tickerRow->setSpacing(ui->tickerLayout->spacing());
+    ui->tickerLayout->addWidget(row);
     this->setup();
 
     // TODO: this is a hack: find a better way to route settings signals to plugins
@@ -40,7 +48,7 @@ TickersWidget::TickersWidget(QWidget *parent, Wallet *wallet)
 void TickersWidget::setup() {
     QStringList tickers = conf()->get(Config::tickers).toStringList();
 
-    Utils::clearLayout(ui->tickerLayout);
+    Utils::clearLayout(m_tickerRow);
     Utils::clearLayout(ui->fiatTickerLayout);
 
     m_tickerWidgets.clear();
@@ -56,12 +64,12 @@ void TickersWidget::setup() {
             auto* tickerWidget = new RatioTickerWidget(this, m_wallet, symbols[0], symbols[1]);
             m_tickerWidgets.append(tickerWidget);
             m_tickerSymbols.append(symbols);
-            ui->tickerLayout->addWidget(tickerWidget);
+            m_tickerRow->addWidget(tickerWidget);
         } else {
             auto* tickerWidget = new PriceTickerWidget(this, m_wallet, ticker);
             m_tickerWidgets.append(tickerWidget);
             m_tickerSymbols.append({ticker});
-            ui->tickerLayout->addWidget(tickerWidget);
+            m_tickerRow->addWidget(tickerWidget);
         }
     }
 

@@ -9,6 +9,8 @@
 #include "Wallet.h"
 #include "widgets/TickerWidget.h"
 
+class OverflowRowLayout;
+
 namespace Ui {
     class TickersWidget;
 }
@@ -31,6 +33,7 @@ private:
 
     QScopedPointer<Ui::TickersWidget> ui;
     Wallet *m_wallet;
+    OverflowRowLayout *m_tickerRow;
 
     QList<TickerWidgetBase*> m_tickerWidgets;
     QList<QStringList> m_tickerSymbols;   // per widget: "XMR", or "XMR", "BTC" for a ratio

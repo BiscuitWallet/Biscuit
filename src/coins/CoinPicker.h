@@ -13,8 +13,9 @@ class QToolButton;
 namespace biscuit::coins {
 
 // The coins as a segmented control (same native look as the main tabs):
-// every coin stays in sight, unlike a drop-down list. A line runs under it
-// across the whole width, like under the main tabs.
+// every coin stays in sight, unlike a drop-down list (behind scroll arrows
+// when the window is too narrow). A line runs under it across the whole
+// width, like under the main tabs.
 class CoinPicker : public QWidget
 {
     Q_OBJECT

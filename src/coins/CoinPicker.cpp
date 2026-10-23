@@ -25,8 +25,9 @@ CoinPicker::CoinPicker(QWidget *parent)
 {
     m_tabs->setDrawBase(false);
     m_tabs->setExpanding(false);
-    // Every coin in sight: never scroll arrows, the bar is as wide as its tabs.
-    m_tabs->setUsesScrollButtons(false);
+    // Every coin in sight when there is room; in a narrow window, scroll
+    // arrows, so that a long list of coins never keeps the window wide.
+    m_tabs->setUsesScrollButtons(true);
     m_tabs->setElideMode(Qt::ElideNone);
     m_tabs->setIconSize(QSize(16, 16));
     auto *layout = new QHBoxLayout(this);
@@ -109,7 +110,8 @@ void CoinPicker::paintEvent(QPaintEvent *event) {
     const int overlap = style()->pixelMetric(QStyle::PM_TabBarBaseOverlap, nullptr, m_tabs);
     base.rect = QRect(0, m_tabs->geometry().bottom() - overlap + 1, width(), overlap);
     base.tabBarRect = m_tabs->geometry();
-    base.selectedTabRect = m_tabs->tabRect(m_tabs->currentIndex()).translated(m_tabs->pos());
+    // Scrolled out of sight, the selected tab leaves no gap in the line.
+    base.selectedTabRect = m_tabs->tabRect(m_tabs->currentIndex()).translated(m_tabs->pos()).intersected(m_tabs->geometry());
     QStylePainter(this).drawPrimitive(QStyle::PE_FrameTabBarBase, base);
 }
 
