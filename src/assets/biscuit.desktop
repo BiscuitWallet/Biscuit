@@ -2,11 +2,11 @@
 Type=Application
 Name=Biscuit
 GenericName=Crypto Wallet
-Comment=A light multi-coin desktop wallet
+Comment=A private multi-crypto desktop wallet
 Icon=biscuit
 Exec=biscuit
 Terminal=false
 Categories=Finance;Network;
 StartupNotify=false
 StartupWMClass=biscuit
-Keywords=crypto;currency;wallet;Monero;Bitcoin;Litecoin;XMR;BTC;LTC;
+Keywords=crypto;currency;wallet;Monero;Bitcoin;Litecoin;Dogecoin;Ethereum;Arbitrum;Solana;USDT;USDC;XMR;BTC;LTC;DOGE;ETH;SOL;

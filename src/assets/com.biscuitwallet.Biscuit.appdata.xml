@@ -3,7 +3,7 @@
 <component type="desktop-application">
   <id>com.biscuitwallet.Biscuit</id>
   <name>Biscuit</name>
-  <summary>Light multi-coin desktop wallet</summary>
+  <summary>Private multi-crypto desktop wallet</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>BSD-3-Clause AND GPL-3.0-only</project_license>
 
@@ -13,15 +13,15 @@
 
   <description>
     <p>
-      Biscuit is a light desktop wallet for several coins, in one window, with
-      one password. It is based on Feather Wallet and keeps its simple, fast
-      interface.
+      Biscuit is a private and modern multi-crypto desktop wallet, Monero first,
+      in one window, with one password. It is built on Feather Wallet and keeps
+      its simple, fast interface.
     </p>
     <!-- The coins: update this line (and the keywords) when a release adds one. -->
-    <p>Coins: Monero, Bitcoin and Litecoin.</p>
+    <p>Coins: Monero, Bitcoin, Litecoin, Dogecoin, Ethereum and Arbitrum (ETH, USDT, USDC) and Solana. Every coin besides Monero is optional.</p>
     <ul>
-      <li>Your keys never leave your computer, and every send waits for your confirmation.</li>
-      <li>Swap between your coins through exchanges, ranked only by what you receive. Biscuit adds no fee.</li>
+      <li>Swap between your coins through exchanges that never ask for identity, ranked only by what you receive. Biscuit adds no fee.</li>
+      <li>Swaps work in Tor mode too, through Biscuit's onion service.</li>
       <li>Atomic swaps from Bitcoin to Monero, with no exchange in the middle.</li>
       <li>Tor if you want it: everything goes through Tor once it is on.</li>
       <li>Your own nodes and servers if you want them.</li>
@@ -73,9 +73,18 @@
     <keyword>monero</keyword>
     <keyword>bitcoin</keyword>
     <keyword>litecoin</keyword>
+    <keyword>dogecoin</keyword>
+    <keyword>ethereum</keyword>
+    <keyword>arbitrum</keyword>
+    <keyword>solana</keyword>
+    <keyword>usdt</keyword>
+    <keyword>usdc</keyword>
     <keyword>xmr</keyword>
     <keyword>btc</keyword>
     <keyword>ltc</keyword>
+    <keyword>doge</keyword>
+    <keyword>eth</keyword>
+    <keyword>sol</keyword>
     <keyword>crypto</keyword>
     <keyword>swap</keyword>
     <keyword>tor</keyword>
@@ -88,8 +97,17 @@
   </supports>
 
   <releases>
+    <release version="1.2.2" date="2026-10-22">
+      <url type="details">https://biscuitwallet.com/journal/biscuit-1-2-2/</url>
+    </release>
+    <release version="1.2.1" date="2026-10-22">
+      <url type="details">https://biscuitwallet.com/journal/biscuit-1-2-1/</url>
+    </release>
+    <release version="1.1.1" date="2026-10-10">
+      <url type="details">https://biscuitwallet.com/journal/biscuit-1-1-1/</url>
+    </release>
     <release version="1.0.12" date="2026-10-07">
-      <url type="details">https://biscuitwallet.com/journal/</url>
+      <url type="details">https://biscuitwallet.com/journal/biscuit-1-0-12/</url>
     </release>
   </releases>
 </component>
