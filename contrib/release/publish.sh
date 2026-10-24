@@ -4,6 +4,7 @@
 #
 #   files/releases/<platform>/biscuit-<version>-<platform>.zip   (Guix builds)
 #   files/releases/linux-appimage/biscuit-<version>.AppImage      (the same AppImage, unzipped)
+#   files/releases/linux-appimage/biscuit-latest.AppImage         (link to the newest one)
 #   files/releases/packages/<version>/…                          (.deb, .rpm, Arch, .tar.gz)
 #   files/releases/source/biscuit-<version>.tar.gz               (source archive)
 #   files/releases/hashes-<version>-plain.txt                    (SHA-256 list, clearsigned)
@@ -51,6 +52,9 @@ if [ -f "$OUTPUT/x86_64-linux-gnu/biscuit-$VERSION.AppImage" ]; then
     mkdir -p "$STAGE/files/releases/linux-appimage"
     cp "$OUTPUT/x86_64-linux-gnu/biscuit-$VERSION.AppImage" "$STAGE/files/releases/linux-appimage/"
     chmod 755 "$STAGE/files/releases/linux-appimage/biscuit-$VERSION.AppImage"
+    # A stable address for the newest AppImage, which AppImageHub downloads to test
+    # it. A link, so it isn't in the signed list (find -type f below).
+    ln -s "biscuit-$VERSION.AppImage" "$STAGE/files/releases/linux-appimage/biscuit-latest.AppImage"
 else
     echo "biscuit-$VERSION.AppImage missing from x86_64-linux-gnu" >&2
     exit 1
