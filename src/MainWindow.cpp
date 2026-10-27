@@ -1926,6 +1926,19 @@ void MainWindow::showUpdateNotification() {
 
     m_statusUpdateAvailable->disconnect();
     connect(m_statusUpdateAvailable, &StatusBarButton::clicked, this, &MainWindow::showUpdateDialog);
+
+    // Biscuit: the status bar line is easy to miss, so a new version is also
+    // offered once in the update dialog, when nothing else is on screen.
+    QTimer::singleShot(3000, this, [this]{
+        if (m_updater->state != Updater::State::UPDATE_AVAILABLE || !this->isVisible()
+                || QApplication::activeModalWidget()
+                || conf()->get(Config::updatePromptedVersion).toString() == m_updater->version) {
+            return;
+        }
+        // Set first: every open wallet window gets the same notice.
+        conf()->set(Config::updatePromptedVersion, m_updater->version);
+        this->showUpdateDialog();
+    });
 #endif
 }
 

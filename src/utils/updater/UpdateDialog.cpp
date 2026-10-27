@@ -75,10 +75,11 @@ void UpdateDialog::updateAvailable() {
     ui->btn_restart->hide();
     ui->progressBar->hide();
     ui->label_header->setText(QString("New Biscuit version %1 is available").arg(m_updater->version));
+    ui->btn_cancel->setText("Later");
     if (Updater::isPackaged()) {
-        ui->btn_download->hide();
-        ui->label_body->setText("Biscuit was installed from a package: update it with your package manager "
-                                "(or download the new version from biscuitwallet.com).");
+        ui->btn_download->setText("Open download page");
+        ui->label_body->setText("Biscuit was installed from a package: download the new package from "
+                                "biscuitwallet.com and install it the same way. Your wallets stay as they are.");
         return;
     }
     ui->label_body->setText("Do you want to download and verify the new version?");
@@ -90,6 +91,12 @@ void UpdateDialog::onUpdateCheckFailed(const QString &errorMsg) {
 }
 
 void UpdateDialog::onDownloadClicked() {
+    if (Updater::isPackaged()) {
+        Utils::externalLinkWarning(this, "https://biscuitwallet.com/download/");
+        this->accept();
+        return;
+    }
+    ui->btn_cancel->setText("Cancel");
     ui->label_body->setText("Downloading update..");
     ui->btn_download->hide();
     ui->progressBar->show();

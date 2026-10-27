@@ -23,6 +23,7 @@ public:
         // General
         firstRun,
         lastRunVersion,   // Biscuit: the version that ran last (Windows icon refresh after updates)
+        updatePromptedVersion,   // Biscuit: the update already offered in a window of its own
         torAllTrafficMigrated,   // Biscuit 1.0.10: Tor mode moved once to "Always over Tor"
         warnOnStagenet,
         warnOnTestnet,
