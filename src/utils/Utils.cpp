@@ -661,6 +661,14 @@ QFont getMonospaceFont()
 QFont relativeFont(int delta) {
     auto font = QApplication::font();
     font.setPointSize(font.pointSize() + delta);
+#ifdef Q_OS_MACOS
+    // Biscuit: full hinting (main.cpp) keeps body text sharp, but at title
+    // sizes it rounds some letters a pixel taller (the r of 18 px Helvetica
+    // Neue). Large text needs no hinting.
+    if (delta > 2) {
+        font.setHintingPreference(QFont::PreferNoHinting);
+    }
+#endif
     return font;
 }
 
