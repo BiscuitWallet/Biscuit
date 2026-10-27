@@ -13,21 +13,23 @@
     <li><b>Payment Request</b> makes a QR code and a link with an amount and a description.</li>
   </ul>
   <p>Received Monero can be spent after 10 confirmations, about 20 minutes. Your <a href="accounts.html#primary">primary address</a> is hidden on purpose; see <a href="accounts.html">Accounts and subaddresses</a>.</p>
-  <h2>Bitcoin and Litecoin</h2>
+  <h2>Bitcoin, Litecoin and Dogecoin</h2>
   <p>The Receive tab shows one address and its QR code. Once it gets a payment, Biscuit shows a new one, so people who paid you can&rsquo;t look up your other payments on a block explorer. Old addresses keep working.</p>
   <ul>
     <li><b>New address</b> gives you a fresh one whenever you want.</li>
     <li><b>All addresses&hellip;</b> lists every address of the wallet.</li>
     <li><b>Keep this address after payments</b> stops the rotation.</li>
   </ul>
-  <p>See <a href="btc-addresses.html">Bitcoin and Litecoin addresses</a> for the details.</p>
+  <p>See <a href="btc-addresses.html">Addresses</a> for the details.</p>
   <h2>Ethereum, USDT and USDC</h2>
-  <p>Your Ethereum wallet has one address, the same for ETH, USDT and USDC. Each has its own tab, with the same address and that coin&rsquo;s balance.</p>
+  <p>Your Ethereum wallet has one address, the same for ETH, USDT and USDC, on Ethereum and on Arbitrum. Each coin of each network has its own tab, with the same address and that coin&rsquo;s balance on that network.</p>
   <ul>
-    <li>Receive USDT and USDC <b>on the Ethereum network only</b> (ERC-20). USDT sent from another network, such as Tron or BNB Chain, is lost. Tell the sender which network to use.</li>
-    <li>To send USDT or USDC later, this address needs a little ETH for the network fee. See <a href="eth-fees.html">Ethereum fees</a>.</li>
+    <li>Tell the sender which network to use: the receive page says which one it is for, Ethereum (ERC-20) or Arbitrum One. USDT sent on another network doesn&rsquo;t show in Biscuit, and is often lost (see <a href="https://biscuitwallet.com/journal/arbitrum-vs-ethereum/#what-happens-if-usdt-is-sent-on-the-wrong-network">what happens on the wrong network</a>).</li>
+    <li>To send USDT or USDC later, this address needs a little ETH on the same network for the fee. See <a href="eth-fees.html">Ethereum fees</a>.</li>
   </ul>
   <p>Ethereum addresses don&rsquo;t change after a payment: anyone who knows yours can see its payments on a block explorer. See <a href="ethereum.html">Ethereum, USDT and USDC</a>.</p>
+  <h2>Solana</h2>
+  <p>Your Solana wallet has one address, which doesn&rsquo;t change after a payment. Biscuit holds SOL only: tokens such as USDT on Solana don&rsquo;t show in Biscuit. A first payment to a new address must be at least 0.00089088 SOL, and the receive page says so. See <a href="solana.html">Solana</a>.</p>
   <h2>Good habits</h2>
   <ul>
     <li>Never type an address by hand. Copy it, scan it, or save it to a file.</li>

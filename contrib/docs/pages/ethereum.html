@@ -1,6 +1,6 @@
 <html><body>
 <h1>Ethereum, USDT and USDC in Biscuit</h1>
-<p>Ethereum is optional in Biscuit, like Bitcoin and Litecoin. USDT and USDC, the two dollar tokens, are added on top of it. Each of them can be held on two networks: Ethereum itself, and Arbitrum, where fees cost a fraction of a cent.</p>
+<p>Ethereum is optional in Biscuit, like every coin besides Monero. USDT and USDC, the two dollar tokens, are added on top of it. Each of them can be held on two networks: Ethereum itself, and Arbitrum, where fees cost a fraction of a cent.</p>
 <figure>
   <img src="/img/gallery/main-receive-eth.png" width="1002" height="665" loading="lazy" alt="The Receive tab for Ethereum: the address, which also receives USDT and USDC, and its QR code">
   <figcaption>One address receives ETH, USDT and USDC, on Ethereum and on Arbitrum</figcaption>
@@ -18,7 +18,7 @@
   </table>
   <p>Your address is the same on both networks, but the balances are separate: ETH sent on Arbitrum shows on the Arbitrum tab, not on the Ethereum one. Each receive page says which network it is for. On Arbitrum, Biscuit holds Tether&rsquo;s USDT and Circle&rsquo;s native USDC, not the older bridged USDC.e.</p>
   <h2>Seed and address</h2>
-  <p>Your first Ethereum wallet comes from the same 12 words as your first Bitcoin and Litecoin wallets, unless you gave it its own words when adding it. Biscuit uses the address most Ethereum wallets use for these words, so they can be restored elsewhere:</p>
+  <p>Your first Ethereum wallet comes from the same 12 words as your other coins, unless you gave it its own words when adding it. Biscuit uses the address most Ethereum wallets use for these words, so they can be restored elsewhere:</p>
   <table border="0" cellspacing="0" cellpadding="5">
     <thead><tr><th>Coin</th><th>Address</th><th>Path</th></tr></thead>
     <tbody>
@@ -27,10 +27,10 @@
   </table>
   <p>One address receives everything. Unlike Bitcoin, it doesn&rsquo;t change after a payment: anyone who knows it can see what it received on a block explorer.</p>
   <h2>Other networks</h2>
-  <p>USDT and USDC exist on many more networks. Biscuit holds them on Ethereum and Arbitrum only. USDT or USDC sent to your address from another network, such as Tron or BNB Chain, is lost: always tell the sender which of the two networks to use. Biscuit says so on the receive page, and swaps only offer the versions Biscuit holds.</p>
+  <p>USDT and USDC exist on many more networks. Biscuit holds them on Ethereum and Arbitrum only. USDT or USDC sent to your address on another network doesn&rsquo;t show in Biscuit. From Tron, whose addresses start with T, it can&rsquo;t even reach a 0x address. On networks that use 0x addresses, such as BNB Chain, Polygon or Base, your 12 words still control it: restore them in a wallet that supports that network to get it back. Sent to an exchange on a network it doesn&rsquo;t support, it is usually lost. Always tell the sender which of the two networks to use. Biscuit says so on the receive page, and swaps only offer the versions Biscuit holds.</p>
   <p>Biscuit only handles the real USDT and USDC contracts. Tokens with the same name sent to your address by strangers are ignored.</p>
   <h2>Several wallets</h2>
-  <p>As with Bitcoin and Litecoin, you can keep several Ethereum wallets in the same Biscuit wallet: <b>Add wallet</b>, above the address, creates one or restores one from its 12 or 24 words, for example the seed of a wallet you used elsewhere. Switch with the buttons above the address; right-click one to rename it, show its seed or remove it. Back up the seed of each wallet you add.</p>
+  <p>As with the other coins, you can keep several Ethereum wallets in the same Biscuit wallet: <b>Add wallet</b>, above the address, creates one or restores one from its 12 or 24 words, for example the seed of a wallet you used elsewhere. Switch with the buttons above the address; right-click one to rename it, show its seed or remove it. Back up the seed of each wallet you add.</p>
   <h2>In this section</h2>
   <ul>
     <li><a href="eth-fees.html">Fees and speeding up</a>: why sending USDT costs ETH, what the gas price means, and a payment that waits too long.</li>

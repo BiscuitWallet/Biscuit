@@ -1,6 +1,6 @@
 <html><body>
 <h1>Send</h1>
-<p>Open the <b>Send</b> tab and paste the address. Biscuit recognizes the coin by itself: a Monero, Bitcoin, Litecoin or Ethereum address switches the tab to that coin. On the USDT or USDC tab, an Ethereum address stays there: you choose what you send.</p>
+<p>Open the <b>Send</b> tab and paste the address. Biscuit recognizes the coin by itself: a Monero, Bitcoin, Litecoin, Dogecoin, Ethereum or Solana address switches the tab to that coin. On the USDT or USDC tab, an Ethereum address stays there: you choose what you send.</p>
 <figure>
   <img src="/img/gallery/main-send.png" width="1002" height="665" loading="lazy" alt="The Send tab for USDT: an address, an amount, and the network fee in dollars and in ETH">
   <figcaption>Send: here 25 USDT, with the network fee in your currency</figcaption>
@@ -13,14 +13,14 @@
     <li>Click <b>Send</b>. Biscuit builds the transaction and shows the amount, the fee and the destination. Check them, then confirm.</li>
   </ol>
   <p>The payment shows in History right away, with a gear icon until it&rsquo;s in a block. More: <a href="monero-fees.html">Fees and confirmations</a>, <a href="pay-to-many.html">Pay to many</a>, <a href="coin-control.html">Coin control</a>.</p>
-  <h2>Bitcoin and Litecoin</h2>
+  <h2>Bitcoin, Litecoin and Dogecoin</h2>
   <ol>
-    <li>Paste the address, or a silent payment address (<code>sp1&hellip;</code>), or double-click a <a href="contacts.html">contact</a>.</li>
+    <li>Paste the address, or for Bitcoin a silent payment address (<code>sp1&hellip;</code>), or double-click a <a href="contacts.html">contact</a>.</li>
     <li>Enter the amount, at most 8 decimals, or <b>Max</b>. Its value in your currency shows next to it.</li>
     <li>Choose how fast it should confirm: <b>Fast</b>, <b>Normal</b> or <b>Slow</b>.</li>
-    <li>Biscuit shows the destination, the network fee in satoshis per virtual byte, and the total. Confirm to send.</li>
+    <li>Biscuit shows the destination, the network fee (in satoshis per virtual byte, or for Dogecoin in DOGE per kB), and the total. Confirm to send.</li>
   </ol>
-  <p>Biscuit only sends once the wallet is synchronized. A slow payment can be sped up afterwards: see <a href="btc-fees.html">Fees and speeding up</a>.</p>
+  <p>Biscuit only sends once the wallet is synchronized. A slow Bitcoin or Litecoin payment can be sped up afterwards: see <a href="btc-fees.html">Fees and speeding up</a>. A Dogecoin payment can&rsquo;t, but with a block every minute it rarely needs to be: see <a href="dogecoin.html">Dogecoin</a>.</p>
   <h2>Ethereum, USDT and USDC</h2>
   <ol>
     <li>Pick <b>Ethereum</b>, <b>USDT</b> or <b>USDC</b> at the top, and paste the address (<code>0x&hellip;</code>). An address with a typo in its upper and lower case letters is refused: that is its checksum.</li>
@@ -29,6 +29,13 @@
     <li>Biscuit asks the node for the details, then shows the destination, the network and the fee. Confirm to send.</li>
   </ol>
   <p>Sending USDT or USDC costs a fee in ETH, from the same address: Biscuit says so when there isn&rsquo;t enough. See <a href="eth-fees.html">Ethereum fees and speeding up</a>.</p>
+  <h2>Solana</h2>
+  <ol>
+    <li>Paste the address, or double-click a <a href="contacts.html">contact</a>. Solana addresses have no checksum: Biscuit warns you when the address holds no SOL, never used or emptied, so check it before you send.</li>
+    <li>Enter the amount, or <b>Max</b>. A first payment to a new address must be at least 0.00089088 SOL.</li>
+    <li>The fee shows under it, a fraction of a cent. Confirm to send.</li>
+  </ol>
+  <p>A payment that doesn&rsquo;t reach a block within a minute or two expires and shows as failed: nothing was sent. See <a href="solana.html">Solana</a>.</p>
   <h2>Before you click Send</h2>
   <ul>
     <li>Check the address you pasted against the original, at least the first and last characters.</li>

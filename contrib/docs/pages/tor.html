@@ -7,12 +7,14 @@
 </figure>
   <h2>What goes through Tor</h2>
   <ul>
-    <li>Bitcoin and Litecoin: the Electrum servers.</li>
+    <li>Bitcoin, Litecoin and Dogecoin: the Electrum servers.</li>
+    <li>Ethereum and Arbitrum: the nodes and Blockscout. Solana: the nodes.</li>
     <li>Prices, the Journal and updates, from <a href="onion.html">our onion service</a>.</li>
+    <li>Exchange swaps, through our onion service.</li>
     <li>Atomic swaps.</li>
     <li>Monero: depends on the <b>Node traffic</b> setting below.</li>
   </ul>
-  <p>The onion at the bottom right of the window shows the mode: purple in Tor mode, grey for a direct connection. Click it to change. In Tor mode, exchange swaps use only Biscuit&rsquo;s own exchanges, through its onion address; Trocador is off (see <a href="exchange-swaps.html#tor">why</a>). <a href="atomic-swaps.html">Atomic swaps</a> work too.</p>
+  <p>The onion at the bottom right of the window shows the mode: purple in Tor mode, grey for a direct connection. Click it to change. In Tor mode, exchange swaps use only Biscuit&rsquo;s own exchanges, through its onion address; Trocador is off (see <a href="exchange-swaps.html#tor">why</a>). <a href="atomic-swaps.html">Atomic swaps</a> work too. A step-by-step guide: <a href="https://biscuitwallet.com/journal/swap-crypto-over-tor/">How to swap crypto over Tor</a>.</p>
   <h2>Monero node traffic</h2>
   <p>The <b>Node traffic</b> setting decides how Biscuit reaches Monero nodes in Tor mode:</p>
   <dl>
@@ -25,7 +27,7 @@
   </dl>
   <p>Before Biscuit 1.0.10, the default was <b>Switch to Tor after initial synchronization</b>, and every wallet synced outside Tor each time it was opened. Biscuit 1.0.10 moves anyone who had that setting to <b>Always over Tor</b>, once; you can choose it again in <b>Settings &rsaquo; Network &rsaquo; Proxy</b>. A <a href="nodes.html">node on your own network</a> is always reached directly, whatever the setting.</p>
   <h2>Only onion services</h2>
-  <p><b>Only allow connections to onion services</b> keeps every connection inside the Tor network: Monero uses .onion nodes only, and prices come from our onion. Bitcoin and Litecoin stay offline unless you set your own <a href="electrum.html">Electrum server</a> with an .onion address: no public onion Electrum server is built in yet.</p>
+  <p><b>Only allow connections to onion services</b> keeps every connection inside the Tor network: Monero uses .onion nodes only, and prices come from our onion. Bitcoin, Litecoin and Dogecoin stay offline unless you set your own <a href="electrum.html">Electrum server</a> with an .onion address: no public onion Electrum server is built in yet. The same goes for Ethereum, Arbitrum and Solana with your own .onion node.</p>
   <h2>Which Tor</h2>
   <ul>
     <li>By default (<b>Automatic: Biscuit starts and manages Tor</b>), Biscuit starts its own Tor, and stops it when Biscuit closes, even if it closes abruptly.</li>

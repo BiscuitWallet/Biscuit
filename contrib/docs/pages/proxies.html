@@ -6,9 +6,9 @@
     <li>Install and start an I2P router, such as <a href="https://github.com/PurpleI2P/i2pd/releases">i2pd</a>.</li>
     <li>In Biscuit, set <b>Proxy</b> to <b>i2p</b>, with its SOCKS address (i2pd uses 127.0.0.1:4447), and apply.</li>
   </ol>
-  <p>With <b>Let Biscuit manage this list</b> ticked on the Node tab, Biscuit connects to a Monero node on I2P from its built-in list. Prices and the Journal aren&rsquo;t fetched over I2P. Bitcoin and Litecoin go through the same proxy, and public Electrum servers usually can&rsquo;t be reached that way: use your own server on your local network.</p>
+  <p>With <b>Let Biscuit manage this list</b> ticked on the Node tab, Biscuit connects to a Monero node on I2P from its built-in list. Prices and the Journal aren&rsquo;t fetched over I2P. Bitcoin, Litecoin and Dogecoin go through the same proxy, and public Electrum servers usually can&rsquo;t be reached that way: use your own server on your local network.</p>
   <h2>Your own SOCKS5 proxy</h2>
-  <p>Set <b>Proxy</b> to <b>socks5</b> and enter its host and port. A Tor you run yourself counts too: choose <b>Tor</b> and untick <b>Automatic</b>. Biscuit treats any proxy like Tor mode: exchange swaps are off.</p>
+  <p>Set <b>Proxy</b> to <b>socks5</b> and enter its host and port. A Tor you run yourself counts too: choose <b>Tor</b> and untick <b>Automatic</b>. With any proxy, Trocador is off, as in Tor mode. A Tor you run yourself still gets Biscuit&rsquo;s own exchanges, through our onion address. Over I2P or another SOCKS5 proxy, which may not reach our onion, <a href="exchange-swaps.html">exchange swaps</a> are off; <a href="atomic-swaps.html">atomic swaps</a> still work, always over Tor.</p>
   <h2>Offline mode</h2>
   <p><b>Settings &rsaquo; Network &rsaquo; Offline &rsaquo; Disable all network connections (offline mode)</b> stops every connection. Biscuit then can&rsquo;t sync or send, but it can sign: that&rsquo;s the mode for the offline computer in <a href="offline-signing.html">offline signing</a>.</p>
 
