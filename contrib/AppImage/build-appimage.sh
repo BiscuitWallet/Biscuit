@@ -11,12 +11,16 @@ mkdir -p "$APPDIR"
 mkdir -p "$APPDIR/usr/share/applications/"
 mkdir -p "$APPDIR/usr/bin"
 mkdir -p "$APPDIR/usr/share/metainfo"
+mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 
 cp "src/assets/biscuit.desktop" "$APPDIR/usr/share/applications/biscuit.desktop"
 cp "src/assets/biscuit.desktop" "$APPDIR/biscuit.desktop"
 # What app stores (AppImageHub, software centers) show about Biscuit.
 cp "src/assets/com.biscuitwallet.Biscuit.appdata.xml" "$APPDIR/usr/share/metainfo/com.biscuitwallet.Biscuit.appdata.xml"
-cp "src/assets/images/appicons/64x64.png" "$APPDIR/biscuit.png"
+cp "src/assets/images/appicons/256x256.png" "$APPDIR/biscuit.png"
+cp "src/assets/images/appicons/256x256.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/biscuit.png"
+# The AppImage's own icon (file managers, AppImageHub require it)
+ln -s biscuit.png "$APPDIR/.DirIcon"
 cp "build/bin/biscuit" "$APPDIR/usr/bin/biscuit"
 chmod +x "$APPDIR/usr/bin/biscuit"
 if [ -f "build/bin/biscuit-swapd" ]; then
@@ -37,4 +41,6 @@ rm -f biscuit.AppImage
 
 cat /feather/contrib/depends/${HOST}/runtime >> biscuit.AppImage
 cat biscuit.squashfs >> biscuit.AppImage
+# AppImage type 2 magic ("AI", 2) at offset 8, as per the AppImage spec; the runtime built from source lacks it
+printf 'AI\x02' | dd conv=notrunc of=biscuit.AppImage bs=1 seek=8 count=3
 chmod a+x biscuit.AppImage
