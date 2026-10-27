@@ -18,9 +18,24 @@
 
 namespace biscuit::coins {
 
+namespace {
+    // With scroll arrows, Qt gives a tab bar a fixed minimum width (two arrows
+    // and 75 px), even when its tabs need less: one short tab (Monero alone,
+    // in Windows' smaller font) then sat in a wider bar, far from the +.
+    class CoinTabBar : public QTabBar {
+    public:
+        using QTabBar::QTabBar;
+        QSize minimumSizeHint() const override {
+            QSize size = QTabBar::minimumSizeHint();
+            size.setWidth(qMin(size.width(), sizeHint().width()));
+            return size;
+        }
+    };
+}
+
 CoinPicker::CoinPicker(QWidget *parent)
     : QWidget(parent)
-    , m_tabs(new QTabBar(this))
+    , m_tabs(new CoinTabBar(this))
     , m_add(new QToolButton(this))
 {
     m_tabs->setDrawBase(false);
